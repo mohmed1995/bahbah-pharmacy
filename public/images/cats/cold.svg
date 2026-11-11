@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+    <circle cx="32" cy="32" r="30" fill="#FEF3C7"/>
+    <!-- الكبسولة مائلة -->
+    <g transform="rotate(-45 32 32)">
+      <rect x="22" y="16" width="20" height="32" rx="10" fill="#FFFFFF" stroke="#D97706" stroke-width="2.5"/>
+      <path d="M22 26C22 20.5 26.5 16 32 16C37.5 16 42 20.5 42 26V32H22V26Z" fill="#F59E0B"/>
+      <line x1="22" y1="32" x2="42" y2="32" stroke="#D97706" stroke-width="2.5"/>
+    </g>
+    <!-- نجمة تسكين -->
+    <circle cx="46" cy="18" r="4" fill="#EF4444"/>
+  </svg>

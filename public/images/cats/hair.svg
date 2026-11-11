@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+    <circle cx="32" cy="32" r="30" fill="#FAF5FF"/>
+    <!-- تموجات الشعر الحريري -->
+    <path d="M26 16C21 24 21 34 25 44C27 49 31 52 35 48C39 44 37 38 33 34C29 30 30 22 36 16" stroke="#9333EA" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <path d="M34 20C32 26 32 32 36 38C38 41 42 43 44 40" stroke="#C084FC" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  </svg>

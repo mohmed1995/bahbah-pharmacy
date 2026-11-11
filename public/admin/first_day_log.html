@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>ورقة ملاحظات تجربة اليوم الأول — صيدلية بحبح</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm; }
+    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; margin: 0; padding: 15px; color: #111; font-size: 13px; line-height: 1.4; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #005a9c; padding-bottom: 8px; margin-bottom: 12px; }
+    h1 { margin: 0; font-size: 20px; color: #005a9c; }
+    .meta { font-size: 13px; color: #555; }
+    .rules { background: #fdf6e2; border: 1px solid #eedaa2; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; }
+    .rules b { color: #b71c1c; }
+    table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+    th, td { border: 1px solid #ccc; padding: 7px 6px; text-align: right; }
+    th { background: #f0f4f8; font-weight: bold; font-size: 12px; }
+    tr:nth-child(even) { background: #fafafa; }
+    .score { text-align: center; }
+    .sign { margin-top: 15px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }
+    .btn-print { background: #005a9c; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: inherit; margin-bottom: 10px; }
+    @media print { .btn-print { display: none; } }
+  </style>
+</head>
+<body>
+  <button class="btn-print" onclick="window.print()">🖨️ طباعة الورقة (A4 بالعرض)</button>
+
+  <div class="header">
+    <div>
+      <h1>صيدلية بحبح — ورقة ملاحظات تشغيل اليوم الأول (10 عملاء)</h1>
+      <div class="meta">ديروط · النسخة التجريبية المخففة (ب) · حماية الخصوصية: بدون كتابة أي أسماء عملاء إطلاقاً</div>
+    </div>
+    <div style="text-align: left;">
+      <div><b>التاريخ:</b> ____ / ____ / 2026</div>
+      <div><b>الصيدلاني المسؤول:</b> د. ___________________</div>
+    </div>
+  </div>
+
+  <div class="rules">
+    <b>قواعد تشغيل اليوم الأول:</b>
+    (1) العملاء 1-4: بمساعدة الصيدلاني داخل المحل. (2) العملاء 5-7: تجربة مع الدليفري على الباب. (3) العملاء 8-10: يطلبون بأنفسهم تماماً دون أي مساعدة لاختبار سهولة الاستخدام.
+    | <b>قاعدة التوقف:</b> في حال حدوث أي خطأ دوائي أو سعر غير صحيح يرفضه المريض، يتم إيقاف التطبيق والتعامل يدوياً فوراً.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 55px;">الرمز</th>
+        <th style="width: 85px;">المجموعة</th>
+        <th style="width: 100px;">القناة (واتساب/محل/كود)</th>
+        <th style="width: 160px;">نوع الطلب</th>
+        <th style="width: 75px;">زمن التجهيز</th>
+        <th style="width: 110px;">أصناف ناقصة؟</th>
+        <th>المشكلة / ملاحظة العميل أو الصيدلاني</th>
+        <th style="width: 70px;" class="score">التقييم (1-5)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>C-01</b></td>
+        <td>1 (صيدلاني)</td>
+        <td>محل / QR شاشة</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-02</b></td>
+        <td>1 (صيدلاني)</td>
+        <td>محل / QR شاشة</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-03</b></td>
+        <td>1 (صيدلاني)</td>
+        <td>واتساب مباشر</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-04</b></td>
+        <td>1 (صيدلاني)</td>
+        <td>واتساب مباشر</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-05</b></td>
+        <td>2 (دليفري)</td>
+        <td>QR شنطة توصيل</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-06</b></td>
+        <td>2 (دليفري)</td>
+        <td>QR شنطة توصيل</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-07</b></td>
+        <td>2 (دليفري)</td>
+        <td>QR شنطة توصيل</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-08</b></td>
+        <td><b>3 (مستقل)</b></td>
+        <td>رابط PWA مباشر</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-09</b></td>
+        <td><b>3 (مستقل)</b></td>
+        <td>رابط PWA مباشر</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+      <tr>
+        <td><b>C-10</b></td>
+        <td><b>3 (مستقل)</b></td>
+        <td>رابط PWA مباشر</td>
+        <td>[ ] بحث بالاسم  [ ] صورة روشتة</td>
+        <td>___ دقيقة</td>
+        <td>[ ] لا  [ ] نعم: _________</td>
+        <td></td>
+        <td class="score">⭐ / 5</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="sign">
+    <div>إجمالي الطلبات المكتملة بنجاح: _____ من 10</div>
+    <div>متوسط زمن التجهيز: _____ دقيقة</div>
+    <div>قرار نهاية اليوم: [ ] الاستمرار في اليوم الثاني بنفس الطريقة  [ ] إيقاف مؤقت لمعالجة مشكلة حرجة</div>
+  </div>
+</body>
+</html>

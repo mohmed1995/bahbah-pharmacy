@@ -1,0 +1,48 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>ملخص الأداء</title>
+<style>
+:root{--ink:#10201F;--teal:#0E5A57;--line:#D8E2E0;--bg:#F4F7F6}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Tahoma,sans-serif}
+header{background:var(--teal);color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center}header a{color:#fff}
+main{max-width:760px;margin:auto;padding:12px;display:grid;gap:10px}
+.c{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}.c h2{margin:0 0 6px;font-size:16px}
+.k{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 0}.k b{font-size:18px}
+.m{color:#5B6E6C;font-size:13px}.warn{background:#FBE7E7;border:1px solid #A12727;color:#7A1C1C;padding:12px;border-radius:12px;font-weight:700}
+.r{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+input,select{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;flex:1;min-width:100px}
+button,a.b{border:1px solid var(--teal);background:#fff;color:var(--teal);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer;text-decoration:none}
+.f{background:var(--teal);color:#fff}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #F2A900;outline-offset:2px}
+</style></head><body>
+<header><b>ملخص الأداء</b><span><select id="days"><option value="7">آخر 7 أيام</option><option value="30">آخر 30 يوم</option></select> <a href="/admin">رجوع</a></span></header>
+<main id="m"></main>
+<script>
+const h=(t,p={},...k)=>{const e=document.createElement(t);Object.assign(e,p);e.append(...k);return e;};
+const api=(u,b)=>fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{}).then(async r=>({ok:r.ok,j:await r.json()}));
+const K=(l,v)=>h('div',{className:'k'},l,h('b',{},String(v)));
+const pct=(a,b)=>b>=20?Math.round(100*a/b)+'%':`${a} من ${b}`;
+const card=(t,...k)=>h('div',{className:'c'},h('h2',{},t),...k);
+const wa=(ph,txt)=>`https://wa.me/${ph}?text=${encodeURIComponent(txt)}`;
+async function load(){
+  const s=(await api('/api/admin/stats?days='+document.getElementById('days').value)).j, ready=(await api('/api/admin/watch/ready')).j, M=document.getElementById('m'); M.replaceChildren();
+  if(s.highRecent) M.append(h('div',{className:'warn'},`⛔ ${s.highRecent} خطأ خطير في آخر 7 أيام. أوقفوا التوسع وراجعوا السبب قبل أي زبائن جدد.`));
+  const o=s.orders;
+  M.append(card('الاستخدام',K('عمليات بحث (تقريبية)',s.searches),K('ضغطات "اطلب على واتساب"',s.wa.reduce((a,x)=>a+x.n,0)),...s.wa.map(x=>h('div',{className:'m'},`${x.s}: ${x.n}`))));
+  M.append(card('الطلبات المسجّلة',K('طلبات',o.n),K('إجمالي المبيعات (ج)',o.total.toFixed(0)),K('عملاء جدد',o.newCustomers),K('عملاء طلبوا أكتر من مرة',pct(o.repeatCustomers,o.allCustomers)),
+    h('div',{className:'m'},'الأرقام دي بتعتمد على تسجيل الصيدلاني للطلبات المكتملة. غير المسجّل غير محسوب.')));
+  const r=s.reminders; M.append(card('التذكيرات',K('مستحقة الآن',r.due),K('أُرسلت في الفترة',r.sent),K('رجعوا طلبوا خلال 7 أيام',`${r.returned7d} من ${r.sent}`),K('وافقوا على التذكير',r.optedIn),K('طلبوا الإيقاف',r.stopped),
+    h('div',{className:'m'},'اللي اتبعتلهم من أقل من 7 أيام لسه ممكن يرجعوا.')));
+  M.append(card('تنبيهات التوفر الجاهزة للإبلاغ',...(ready.length?ready.map(w=>h('div',{className:'k'},h('span',{},w.product),h('span',{},
+    h('a',{className:'b f',target:'_blank',rel:'noopener',href:wa(w.phone,`أهلاً، دواء ${w.product} توفر الآن في صيدلية بحبح (الكمية محدودة). تحب نجهزه لك ونوصله؟ لو مش عايز إشعارات ردّ بـ "إيقاف".`)},'ابعت'),' ',
+    h('button',{onclick:async()=>{await api(`/api/admin/watch/${w.id}/done`,{});load();}},'تم'),' ',
+    h('button',{onclick:async()=>{await api(`/api/admin/watch/${w.id}/stop`,{});load();}},'إيقاف')))):[h('div',{className:'m'},'لا يوجد حاليًا.')])));
+  M.append(card('أكتر أدوية الناس بتسأل عليها وهي ناقصة',h('div',{className:'m'},'للشراء: اللي طالبين تنبيه، واللي اتبحث عنه ومفيش نتيجة أو غير متوفر.'),
+    ...s.watchTop.map(x=>K(x.name,x.n+' تنبيه')),...s.gaps.map(x=>K(x.q,x.n+' بحث'))));
+  const ph=h('input',{placeholder:'رقم العميل',inputMode:'tel'}),tot=h('input',{placeholder:'المبلغ',inputMode:'decimal'}),src=h('select',{},...['bag','qr','group','phone','other'].map(v=>h('option',{},v))),out=h('div',{role:'status'});
+  M.append(card('سجّل طلب مكتمل',h('div',{className:'r'},ph,tot,src),h('div',{className:'r'},h('button',{className:'f',onclick:async()=>{const x=await api('/api/admin/orders',{phone:ph.value,total:tot.value,src:src.value});out.textContent=x.ok?'تم التسجيل':x.j.error;if(x.ok)load();}},'حفظ'),out)));
+  const sev=h('select',{},h('option',{value:''},'الخطورة'),h('option',{value:'low'},'بسيطة'),h('option',{value:'medium'},'متوسطة'),h('option',{value:'high'},'خطيرة (دواء أو تركيز غلط)')),note=h('input',{placeholder:'وصف مختصر بدون أسماء مرضى',maxLength:300}),out2=h('div',{role:'status'});
+  M.append(card('سجّل خطأ أو شكوى',h('div',{className:'r'},sev,note),h('div',{className:'r'},h('button',{className:'f',onclick:async()=>{const x=await api('/api/admin/incidents',{severity:sev.value,note:note.value});out2.textContent=x.ok?'تم التسجيل':x.j.error;if(x.ok)load();}},'حفظ'),out2)),
+    ...s.incidents.slice(0,5).map(i=>h('div',{className:'m'},`${i.at.slice(0,10)} · ${i.severity} · ${i.note||''}`))));
+}
+document.getElementById('days').onchange=load; load();
+</script></body></html>

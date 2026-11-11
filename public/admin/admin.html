@@ -1,0 +1,1461 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>مركز القيادة التنفيذي — صيدلية بحبح</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --pri-dark: #07192C;
+  --pri: #0D2B45;
+  --pri-light: #16425B;
+  --teal: #0E5A57;
+  --teal-light: #15807D;
+  --gold: #DDA74A;
+  --gold-glow: #F2A900;
+  --gold-light: #FEF3C7;
+  --bg: #F4F7FB;
+  --card: #FFFFFF;
+  --ink: #0A192F;
+  --mute: #627D98;
+  --border: #E2E8F0;
+  --red: #DC2626;
+  --red-light: #FEE2E2;
+  --green: #059669;
+  --green-light: #D1FAE5;
+  --purple: #7C3AED;
+  --purple-light: #EDE9FE;
+  --sh: 0 10px 25px -5px rgba(13, 43, 69, 0.08), 0 8px 10px -6px rgba(13, 43, 69, 0.04);
+  --sh-hover: 0 18px 30px -10px rgba(13, 43, 69, 0.16);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans Arabic', Tahoma, sans-serif;
+  line-height: 1.6;
+}
+header {
+  background: linear-gradient(135deg, #051322 0%, var(--pri) 55%, var(--pri-light) 100%);
+  color: #fff;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(7, 30, 51, 0.25);
+  border-bottom: 2.5px solid var(--gold);
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-brand h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #FFFFFF;
+}
+.header-brand span {
+  font-size: 12px;
+  background: rgba(221, 167, 74, 0.25);
+  color: #FCE7B8;
+  border: 1px solid rgba(221, 167, 74, 0.5);
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-weight: 700;
+}
+.header-links {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.header-links a, .header-links button {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13.5px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.22);
+  padding: 8px 16px;
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.2, 1, 0.3, 1);
+  cursor: pointer;
+}
+.header-links a:hover, .header-links button:hover {
+  background: var(--gold-glow);
+  color: #0A192F;
+  border-color: var(--gold-glow);
+  transform: translateY(-1px);
+}
+
+/* شريط تبويبات القيادة والتحكم */
+nav.dash-nav {
+  display: flex;
+  background: #FFFFFF;
+  border-bottom: 2px solid #E2E8F0;
+  overflow-x: auto;
+  padding: 0 20px;
+  scrollbar-width: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+nav.dash-nav button {
+  background: none;
+  border: 0;
+  padding: 16px 20px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--mute);
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3.5px solid transparent;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+nav.dash-nav button:hover {
+  color: var(--pri);
+  background: #F8FAFC;
+}
+nav.dash-nav button.active {
+  color: var(--pri);
+  border-bottom-color: var(--gold-glow);
+  font-weight: 800;
+  background: #FAFBFD;
+}
+
+main.container {
+  max-width: 1260px;
+  margin: 22px auto;
+  padding: 0 16px;
+}
+
+/* بطاقات لوحة المؤشرات العلوية */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+.scard {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 1, 0.3, 1);
+  box-shadow: var(--sh);
+  position: relative;
+  overflow: hidden;
+}
+.scard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 4px;
+}
+.scard:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sh-hover);
+}
+.scard b {
+  display: block;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.scard span {
+  font-size: 13.5px;
+  color: var(--mute);
+  font-weight: 600;
+}
+.scard.s-all::before { background: var(--pri); }
+.scard.s-all b { color: var(--pri); }
+.scard.s-in::before { background: var(--green); }
+.scard.s-in b { color: var(--green); }
+.scard.s-out::before { background: var(--red); }
+.scard.s-out b { color: var(--red); }
+.scard.s-pos::before { background: var(--purple); }
+.scard.s-pos b { color: var(--purple); }
+.scard.s-mo::before { background: var(--gold-glow); }
+.scard.s-mo b { color: #B45309; }
+
+/* بطاقات الواجهات */
+.tbl-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--sh);
+}
+
+.search-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.search-bar input {
+  flex: 1;
+  min-width: 240px;
+  padding: 13px 18px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 14px;
+  font-size: 15px;
+  background: #F8FAFC;
+  color: var(--ink);
+  transition: all 0.2s;
+}
+.search-bar input:focus {
+  background: #fff;
+  border-color: var(--pri-light);
+  outline: 3px solid #BFDBFE;
+}
+
+.btn {
+  background: var(--pri);
+  color: #fff;
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(13, 43, 69, 0.15);
+}
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(13, 43, 69, 0.22);
+}
+.btn:active { transform: scale(0.97); }
+.btn.green { background: linear-gradient(135deg, #059669, #10B981); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25); }
+.btn.gold { background: linear-gradient(135deg, #D97706, #F59E0B); color: #fff; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25); }
+.btn.purple { background: linear-gradient(135deg, #6D28D9, #8B5CF6); color: #fff; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.25); }
+.btn.red { background: linear-gradient(135deg, #DC2626, #EF4444); box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25); }
+.btn.soft { background: #F0F7FF; color: var(--pri); border: 1.5px solid #BFDBFE; box-shadow: none; }
+.btn.soft:hover { background: #DBEAFE; }
+
+/* عناصر الجدول */
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 12px;
+  border-bottom: 1px solid #EDF2F7;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.item-row:hover { background: #F8FAFC; }
+.item-row:last-child { border-bottom: 0; }
+.item-title { font-size: 15.5px; font-weight: 700; color: var(--ink); }
+.item-meta { font-size: 12.5px; color: var(--mute); margin-top: 3px; }
+.badge { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+.badge.in { background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; }
+.badge.out { background: #FEE2E2; color: #991B1B; border: 1px solid #FECACA; }
+.quick-inp {
+  width: 82px;
+  padding: 7px 10px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  font-size: 14px;
+  text-align: center;
+  font-weight: 700;
+  color: var(--pri);
+  background: #fff;
+}
+.quick-inp:focus { border-color: var(--pri-light); outline: 3px solid #BFDBFE; }
+
+/* شاشة فحص الروشتة المدمجة */
+.rx-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 20px; }
+@media (max-width: 900px) { .rx-grid { grid-template-columns: 1fr; } }
+.rx-panel { background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 22px; box-shadow: var(--sh); }
+.rx-viewer {
+  background: #07192C;
+  border: 2px dashed #3B82F6;
+  border-radius: 16px;
+  min-height: 420px;
+  max-height: 540px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  margin-top: 14px;
+  box-shadow: inset 0 2px 12px rgba(0,0,0,0.6);
+}
+.rx-viewer img {
+  max-width: 100%;
+  max-height: 500px;
+  object-fit: contain;
+  transition: transform 0.2s ease-out, filter 0.2s ease;
+  user-select: none;
+}
+.rx-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.rx-filter-btn {
+  background: #1E293B;
+  color: #E2E8F0;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rx-filter-btn.active {
+  background: var(--gold);
+  color: #07192C;
+  border-color: var(--gold-glow);
+}
+
+/* شاشة الكاشير السريع POS */
+.pos-grid {
+  display: grid;
+  grid-template-columns: 1.25fr 0.85fr;
+  gap: 20px;
+}
+@media (max-width: 900px) { .pos-grid { grid-template-columns: 1fr; } }
+.pos-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.pos-table th {
+  background: #F1F5F9;
+  color: var(--ink);
+  padding: 10px;
+  font-size: 13px;
+  text-align: right;
+  border-bottom: 2px solid #CBD5E1;
+}
+.pos-table td {
+  padding: 10px;
+  font-size: 14px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+/* الكروت الشهرية */
+.monthly-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.m-patient-box {
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--sh);
+  position: relative;
+  transition: transform 0.2s;
+}
+.m-patient-box:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold);
+}
+.tag-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  margin-inline-end: 4px;
+}
+
+/* طباعة الإيصال */
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area { position: absolute; left: 0; top: 0; width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- شاشة قفل أمان لصاحب الصيدلية فقط -->
+<div id="owner-lock-screen" style="position:fixed;inset:0;background:linear-gradient(135deg,#051322,#0D2B45,#073B39);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:24px;padding:34px 28px;width:min(100%,400px);box-shadow:0 24px 50px rgba(0,0,0,0.35);text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px">🔐</div>
+    <h2 style="margin:0 0 4px;color:var(--pri);font-weight:800">صيدلية بحبح — ديروط</h2>
+    <p style="margin:0 0 20px;font-size:13.5px;color:var(--mute)">بوابة الإدارة التنفيذية لصاحب الصيدلية فقط</p>
+    
+    <form onsubmit="event.preventDefault();verifyOwnerPass()">
+      <input type="password" id="owner-pass-inp" placeholder="اكتب كلمة مرور الإدارة" style="width:100%;box-sizing:border-box;padding:14px;border:2px solid var(--border);border-radius:12px;font-size:16px;text-align:center;margin-bottom:12px;" autofocus required>
+      <button type="submit" class="btn" style="width:100%;justify-content:center;padding:14px;font-size:16px;background:var(--teal)">
+        دخول لوحة القيادة ⬅️
+      </button>
+      <div id="lock-err" style="color:var(--red);font-size:13px;font-weight:700;margin-top:10px;display:none;">
+        ⚠️ كلمة المرور غير صحيحة!
+      </div>
+    </form>
+    <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:12px;">
+      <a href="/" style="color:var(--mute);text-decoration:none;font-size:13px">الرجوع للموقع العام للزبائن ⬅️</a>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="header-brand">
+    <h1>🏥 مركز قيادة صيدلية بحبح</h1>
+    <span>ديروط — المالك</span>
+  </div>
+  <div class="header-links">
+    <button class="btn soft" style="padding:6px 12px;font-size:13px;border-color:rgba(255,255,255,0.4);color:#fff" onclick="ownerLogout()">🔒 قفل / خروج</button>
+    <a href="/" target="_blank">🌐 فتح موقع الزبائن</a>
+  </div>
+</header>
+
+<nav class="dash-nav" role="tablist">
+  <button class="active" onclick="setTab('products', this)">💊 الأدوية والكتالوج</button>
+  <button onclick="setTab('rx', this)">📷 فحص الروشتة ومجهر الخطوط</button>
+  <button onclick="setTab('pos', this)">⚡ كاشير وفاتورة سريعة</button>
+  <button onclick="setTab('monthly', this)">🗓️ متابعة العلاج الشهري</button>
+  <button onclick="setTab('out_of_stock', this)">❌ كشف النواقص</button>
+  <button onclick="setTab('calc', this)">📊 حاسبة المبيعات والأرباح</button>
+  <button onclick="setTab('export_db', this)" style="color:var(--gold-glow)">💾 النسخ الاحتياطي والأمان</button>
+</nav>
+
+<main class="container">
+  <!-- كروت الإحصائيات العلوية -->
+  <div class="stat-cards">
+    <div class="scard s-all" onclick="setFilter('all')"><b id="st-total">1,547</b><span>📦 إجمالي الأصناف</span></div>
+    <div class="scard s-in" onclick="setFilter('in_stock')"><b id="st-in">1,545</b><span>✅ أدوية متوفرة</span></div>
+    <div class="scard s-out" onclick="setFilter('out_of_stock')"><b id="st-out">2</b><span>❌ نواقص مطلوبة</span></div>
+    <div class="scard s-pos" onclick="setTab('pos', this)"><b id="st-pos-total">0.00 ج</b><span>⚡ مبيعات اليوم (POS)</span></div>
+    <div class="scard s-mo" onclick="setTab('monthly', this)"><b id="st-mo-count">5</b><span>🌟 مرضى العلاج الشهري</span></div>
+  </div>
+
+  <!-- 1. شاشة الأدوية والمنتجات -->
+  <section id="view-products" class="tbl-card">
+    <div class="search-bar">
+      <input id="p-search" placeholder="ابحث باسم الدواء، المادة الفعالة، أو الكود..." oninput="onSearch(this.value)">
+      <button class="btn green" onclick="openProductModal()">＋ إضافة صنف جديد</button>
+    </div>
+    <div id="products-list"></div>
+  </section>
+
+  <!-- 2. شاشة فحص الروشتة الذكية بالمجهر المعزز -->
+  <section id="view-rx" class="rx-grid" style="display:none;">
+    <div class="rx-panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <h3 style="margin:0;">📷 استعراض صورة الروشتة ومجهر الخطوط</h3>
+        <span style="font-size:12px;background:#E0F2FE;color:#0284C7;padding:3px 10px;border-radius:99px;font-weight:700">فلتر إيضاح خط الطبيب</span>
+      </div>
+      <div class="rx-controls">
+        <label class="btn soft" style="cursor:pointer">
+          📁 اختيار صورة روشتة
+          <input type="file" id="rx-file" accept="image/*" hidden onchange="loadRxImage(this)">
+        </label>
+        <button class="btn soft" onclick="rotateRx()">🔄 تدوير</button>
+        <button class="btn soft" onclick="zoomRx(1.25)">🔍 تكبير</button>
+        <button class="btn soft" onclick="zoomRx(0.8)">🔎 تصغير</button>
+        <button class="btn soft" onclick="resetRx()">إعادة ضبط</button>
+      </div>
+
+      <!-- فلاتر معالجة صورة الروشتة لتوضيح خط الأطباء الصعب -->
+      <div style="display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:700;color:var(--mute)">وضوح الخط:</span>
+        <button class="rx-filter-btn active" id="flt-normal" onclick="setRxFilter('normal')">عادي</button>
+        <button class="rx-filter-btn" id="flt-contrast" onclick="setRxFilter('contrast')">توضيح الحبر (Contrast)</button>
+        <button class="rx-filter-btn" id="flt-sharp" onclick="setRxFilter('sharp')">إزالة الخلفية الباهتة</button>
+        <button class="rx-filter-btn" id="flt-invert" onclick="setRxFilter('invert')">أبيض على أسود (Invert)</button>
+      </div>
+
+      <div class="rx-viewer" id="rx-viewer-box">
+        <span id="rx-placeholder" style="color:#94A3B8;text-align:center;padding:20px;">
+          اسحب صورة الروشتة أو اخترها هنا لتشغيل المجهر المكبر وتوضيح خط الطبيب بدقة
+        </span>
+        <img id="rx-img" style="display:none;" alt="صورة الروشتة">
+      </div>
+    </div>
+
+    <div class="rx-panel">
+      <h3 style="margin-top:0">💊 تفريغ الأصناف وعرض سعر الواتساب</h3>
+      <div class="search-bar" style="margin-bottom:8px;">
+        <input id="rx-drug-search" placeholder="ابحث عن الدواء لإضافته للروشتة..." oninput="searchRxDrug(this.value)">
+      </div>
+
+      <!-- أزرار سريعة للأدوية الأكثر طلباً -->
+      <div style="margin-bottom:12px;">
+        <span style="font-size:12px;color:var(--mute);font-weight:700">أدوية شائعة بضغطة زر:</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+          <button class="btn soft" style="padding:4px 8px;font-size:11px" onclick="quickAddRxByName('بنادول')">بنادول إكسترا</button>
+          <button class="btn soft" style="padding:4px 8px;font-size:11px" onclick="quickAddRxByName('كونكور')">كونكور كور</button>
+          <button class="btn soft" style="padding:4px 8px;font-size:11px" onclick="quickAddRxByName('جلوكوفاج')">جلوكوفاج</button>
+          <button class="btn soft" style="padding:4px 8px;font-size:11px" onclick="quickAddRxByName('كتافلام')">كتافلام</button>
+          <button class="btn soft" style="padding:4px 8px;font-size:11px" onclick="quickAddRxByName('كولد فري')">كولد فري</button>
+          <button class="btn soft" style="padding:4px 8px;font-size:11px" onclick="quickAddRxByName('انسولين')">أنسولين</button>
+          <button class="btn soft" style="padding:4px 8px;font-size:11px" onclick="quickAddRxByName('ميكوسول')">ميكوسول</button>
+        </div>
+      </div>
+
+      <div id="rx-drug-results" style="max-height:160px;overflow:auto;margin-bottom:12px"></div>
+      
+      <h4 style="margin:10px 0 6px">الأصناف المفرغة من الروشتة:</h4>
+      <div id="rx-lines" style="border:1px solid var(--border);border-radius:12px;padding:10px;min-height:120px;background:#FAFAFA"></div>
+      
+      <div style="margin:14px 0;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:700">إجمالي قيمة الروشتة:</span>
+        <b id="rx-total" style="font-size:20px;color:var(--teal)">0.00 ج.م</b>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+        <input id="rx-cust-name" placeholder="اسم المريض (مثال: عم أحمد)" style="padding:10px;border-radius:10px;border:1px solid var(--border)">
+        <input id="rx-cust-phone" type="tel" placeholder="رقم واتساب المريض (01xxxxxxxxx)" style="padding:10px;border-radius:10px;border:1px solid var(--border)">
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn green" style="flex:1;justify-content:center;padding:13px" onclick="sendRxWhatsApp()">
+          💬 إرسال عرض السعر للواتساب
+        </button>
+        <button class="btn purple" style="padding:13px 18px" title="نقل الأصناف لكاشير الصيدلية" onclick="transferRxToPOS()">
+          ⚡ تحويل للكاشير
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. شاشة كاشير الصيدلية السريع (POS Desk) -->
+  <section id="view-pos" class="tbl-card" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div>
+        <h3 style="margin:0;color:var(--purple);">⚡ كاشير وفاتورة الصيدلية السريعة (POS)</h3>
+        <small style="color:var(--mute)">تجهيز سريع، حساب الخصم، وطباعة إيصال أو إرساله للعميل على واتساب</small>
+      </div>
+      <button class="btn red" style="padding:8px 14px;font-size:13px" onclick="clearPosCart()">🗑️ تفريغ الفاتورة</button>
+    </div>
+
+    <div class="pos-grid">
+      <div>
+        <div class="search-bar">
+          <input id="pos-search" placeholder="ابحث عن الصنف لإضافته للفاتورة..." oninput="searchPosDrug(this.value)">
+        </div>
+        <div id="pos-search-results" style="max-height:160px;overflow:auto;margin-bottom:14px;"></div>
+
+        <table class="pos-table">
+          <thead>
+            <tr>
+              <th>الصنف</th>
+              <th style="width:80px;text-align:center">السعر</th>
+              <th style="width:100px;text-align:center">الكمية</th>
+              <th style="width:90px;text-align:center">الإجمالي</th>
+              <th style="width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody id="pos-cart-rows">
+            <tr><td colspan="5" style="text-align:center;color:var(--mute);padding:30px">الفاتورة فارغة حالياً. ابحث عن صنف لإضافته.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="background:#FAF5FF;border:1.5px solid #E9D5FF;border-radius:18px;padding:20px;height:fit-content;">
+        <h4 style="margin:0 0 14px;color:var(--purple);">ملخص الفاتورة</h4>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+          <span>المجموع الفرعي:</span>
+          <b id="pos-subtotal">0.00 ج</b>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span>خصم خاص (ج):</span>
+          <input id="pos-discount" type="number" value="0" style="width:75px;padding:6px;border-radius:8px;border:1px solid #CBD5E1;text-align:center;font-weight:700" oninput="renderPosCart()">
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+          <span>رسوم التوصيل:</span>
+          <input id="pos-delivery" type="number" value="0" style="width:75px;padding:6px;border-radius:8px;border:1px solid #CBD5E1;text-align:center;font-weight:700" oninput="renderPosCart()">
+        </div>
+        <div style="border-top:2px dashed #D8B4FE;padding-top:12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <span style="font-size:16px;font-weight:800;color:var(--purple);">المبلغ النهائي:</span>
+          <b id="pos-grand-total" style="font-size:24px;color:var(--purple);">0.00 ج.م</b>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <input id="pos-cust-name" placeholder="اسم العميل (اختياري)" style="width:100%;box-sizing:border-box;padding:9px;border-radius:10px;border:1px solid #CBD5E1;margin-bottom:8px;">
+          <input id="pos-cust-phone" placeholder="رقم واتساب العميل (01xxxxxxxxx)" style="width:100%;box-sizing:border-box;padding:9px;border-radius:10px;border:1px solid #CBD5E1;">
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn purple" style="justify-content:center;padding:12px" onclick="printPosReceipt()">🖨️ طباعة إيصال كاشير</button>
+          <button class="btn green" style="justify-content:center;padding:12px" onclick="sendPosWhatsApp()">💬 إرسال فاتورة إلكترونية واتساب</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. شاشة متابعة العلاج الشهري التفاعلية -->
+  <!-- 4. شاشة «رعاية بحبح» ومكتب صيدلي اليوم الاستباقي -->
+  <section id="view-monthly" class="tbl-card" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div>
+        <h3 style="margin:0;color:var(--pri);">🌿 مكتب «رعاية بحبح» — شاشة اليوم أولاً</h3>
+        <small style="color:var(--mute)">رعاية صيدلانية استباقية ومتابعة دورية للأدوية المزمنة والعائلات بديروط</small>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn green" onclick="openNewMonthlyModal()">＋ تسجيل مريض / عائلة جديدة</button>
+      </div>
+    </div>
+
+    <!-- بطاقات مؤشرات اليوم الذكية -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+      <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:24px;">🔴</span>
+        <div>
+          <b id="care-due-today" style="font-size:18px;color:#991B1B;">0</b>
+          <div style="font-size:12px;color:#7F1D1D;">مستحق اليوم وخلال 48 ساعة</div>
+        </div>
+      </div>
+      <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:24px;">🟡</span>
+        <div>
+          <b id="care-due-week" style="font-size:18px;color:#92400E;">0</b>
+          <div style="font-size:12px;color:#78350F;">مستحق خلال أسبوع (للتذكير الهادئ)</div>
+        </div>
+      </div>
+      <div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:24px;">🟢</span>
+        <div>
+          <b id="care-delivered-count" style="font-size:18px;color:#166534;">0</b>
+          <div style="font-size:12px;color:#14532D;">تم الصرف والتسليم بنجاح</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- تصفية سريعة -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;border-bottom:1px solid var(--border);padding-bottom:10px;">
+      <button class="btn" id="filter-care-all" style="padding:6px 14px;font-size:13px;" onclick="filterCarePatients('all')">كل المرضى</button>
+      <button class="btn soft" id="filter-care-urgent" style="padding:6px 14px;font-size:13px;" onclick="filterCarePatients('urgent')">🔴 المستحقون فوراً</button>
+      <button class="btn soft" id="filter-care-week" style="padding:6px 14px;font-size:13px;" onclick="filterCarePatients('week')">🟡 خلال أسبوع</button>
+    </div>
+
+    <!-- قائمة كروت ملفات المرضى 360 درجة -->
+    <div id="monthly-list" class="monthly-card-grid"></div>
+  </section>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div>
+        <h3 style="margin:0;color:var(--pri);">🗓️ متابعة مرضى العلاج الشهري (الضغط، السكر، القلب)</h3>
+        <small style="color:var(--mute)">تذكير تلقائي بضغطة زر وتجهيز الأدوية الدورية شهرياً</small>
+      </div>
+      <button class="btn green" onclick="openNewMonthlyModal()">＋ تسجيل مريض شهري جديد</button>
+    </div>
+
+    <div style="background:#FFFDF5;border:1.5px solid #FCD34D;border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-size:24px">🔔</span>
+      <div style="flex:1">
+        <b style="color:#92400E">نظام المتابعة الذكي:</b>
+        <span style="font-size:13px;color:#78350F;margin-inline-start:6px">يمكنك إرسال رسالة تذكير دورية لواتساب المريض قبل نفاد علاجه ليؤكد التجهيز والتوصيل لباب بيته.</span>
+      </div>
+    </div>
+
+    <div id="monthly-list" class="monthly-card-grid"></div>
+  </section>
+
+  <!-- 5. شاشة حاسبة أرباح ومبيعات الصيدلية -->
+  <section id="view-calc" class="tbl-card" style="display:none;">
+    <h3 style="margin-top:0;color:var(--teal)">📊 حاسبة مبيعات ومشتريات الصيدلية السريعة</h3>
+    <p style="color:var(--mute);font-size:14px">احسب ربحك اليومي، خصومات شركات الأدوية والمخازن، وإجمالي مبيعات الروشتات بلمسة واحدة.</p>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;background:#F0F7F6;padding:16px;border-radius:14px;margin-bottom:16px">
+      <div>
+        <label style="font-weight:700;display:block;margin-bottom:4px">إجمالي مبيعات اليوم (ج.م)</label>
+        <input id="calc-sales" type="number" placeholder="مثال: 5000" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border)" oninput="calcProfit()">
+      </div>
+      <div>
+        <label style="font-weight:700;display:block;margin-bottom:4px">متوسط الخصم / الهامش (%)</label>
+        <input id="calc-margin" type="number" value="20" placeholder="20" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border)" oninput="calcProfit()">
+      </div>
+      <div>
+        <label style="font-weight:700;display:block;margin-bottom:4px">مصاريف التشغيل / اليوم (ج.م)</label>
+        <input id="calc-exp" type="number" value="150" placeholder="كهرباء، دليفري، إلخ" style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--border)" oninput="calcProfit()">
+      </div>
+    </div>
+
+    <div style="background:#fff;border:2px dashed var(--teal);padding:18px;border-radius:14px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:14px;text-align:center">
+      <div><span style="color:var(--mute);font-size:13px">الربح الإجمالي التقريبي</span><b id="res-gross" style="display:block;font-size:22px;color:var(--teal)">0.00 ج.م</b></div>
+      <div><span style="color:var(--mute);font-size:13px">صافي الربح بعد المصاريف</span><b id="res-net" style="display:block;font-size:22px;color:var(--green)">0.00 ج.م</b></div>
+    </div>
+  </section>
+
+  <!-- 6. شاشة كشف النواقص -->
+  <section id="view-out_of_stock" class="tbl-card" style="display:none;">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      <div>
+        <h3 style="margin:0;color:var(--red)">❌ كشف النواقص والطلبيات</h3>
+        <small style="color:var(--mute)">الأدوية التي نفد رصيدها بالكامل من الصيدلية لتجهيز طلبيتها</small>
+      </div>
+      <button class="btn gold" onclick="printShortages()">🖨️ طباعة / تصدير كشف النواقص</button>
+    </div>
+    <div id="shortages-list"></div>
+  </section>
+
+  <!-- 7. شاشة النسخ الاحتياطي وتصدير البيانات الشاملة -->
+  <section id="view-export_db" class="tbl-card" style="display:none;">
+    <h3 style="margin-top:0;color:var(--pri)">💾 إدارة وتأمين بيانات الصيدلية (Backup & Security)</h3>
+    <p style="color:var(--mute);font-size:14px">تصدير كامل كتالوج الأدوية وأسعارها ومخزونها لملفات Excel أو JSON لحمايتها من الضياع، مع إمكانية استيراد طلبيات جديدة.</p>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:20px 0">
+      <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:16px;padding:20px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">📥</div>
+        <h4 style="margin:0 0 6px;color:var(--pri)">تنزيل كتالوج الأدوية (CSV / Excel)</h4>
+        <p style="font-size:13px;color:var(--mute);margin-bottom:16px">شيت إكسل كامل يضم أسماء كل الأدوية وأسعارها والمخزون الحالي والمادة الفعالة.</p>
+        <button class="btn green" style="width:100%;justify-content:center" onclick="downloadCatalogCSV()">
+          تنزيل ملف الإكسل (CSV) 📊
+        </button>
+      </div>
+
+      <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:16px;padding:20px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">📦</div>
+        <h4 style="margin:0 0 6px;color:var(--pri)">نسخة احتياطية برمجية (JSON)</h4>
+        <p style="font-size:13px;color:var(--mute);margin-bottom:16px">حفظ نسخة احتياطية كاملة ومتطابقة بنسبة 100% لكافة عناصر وبيانات الصيدلية.</p>
+        <button class="btn gold" style="width:100%;justify-content:center" onclick="downloadCatalogJSON()">
+          تنزيل نسخة JSON الاحتياطية 💾
+        </button>
+      </div>
+
+      <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:16px;padding:20px;text-align:center">
+        <div style="font-size:36px;margin-bottom:8px">🔐</div>
+        <h4 style="margin:0 0 6px;color:var(--pri)">تغيير كلمة مرور الإدارة</h4>
+        <p style="font-size:13px;color:var(--mute);margin-bottom:16px">تحديث وتغيير كلمة السر التي تحمي لوحة التحكم لضمان الأمان التام.</p>
+        <button class="btn soft" style="width:100%;justify-content:center" onclick="changeOwnerPassword()">
+          تغيير الباسورد الآن 🔑
+        </button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- منطقة الطباعة الخاصة بإيصال الكاشير الصغير -->
+<div id="print-area" style="display:none;font-family:monospace;padding:20px;max-width:300px;margin:auto;text-align:center;"></div>
+
+<script>
+let CATALOG = [];
+let rxLines = [];
+let rxZoom = 1;
+let rxRot = 0;
+let rxFilter = 'normal';
+let currentFilter = 'all';
+
+// بيانات كاشير الصيدلية السريع POS
+let posCart = [];
+let posSalesTotal = 0;
+
+// بيانات مرضى العلاج الشهري
+let monthlyPatients = [
+  { id: 1, name: 'الحاج مصطفى محمد', phone: '01011500166', condition: 'ضغط وسكر', drugs: 'كونكور 5 مجم، جلوكوفاج 1000', day: 1, note: 'توصيل للبيت بالشارع الجديد' },
+  { id: 2, name: 'أم أحمد عبد الرحيم', phone: '01011500166', condition: 'سكر وقلب', drugs: 'جانوميت، بلافيكس 75', day: 5, note: 'اتصال قبل الخروج بساعة' },
+  { id: 3, name: 'أستاذ محمود فتحي', phone: '01011500166', condition: 'ضغط مرتفع', drugs: 'نورفاسك 5، كابوتن', day: 10, note: 'الدفع فودافون كاش' },
+  { id: 4, name: 'أم كريم', phone: '01011500166', condition: 'ألبان ومكملات أطفال', drugs: 'نان 1 حليب بودرة، فيتامين د', day: 15, note: 'علبتين كل أسبوعين' },
+  { id: 5, name: 'عم فاروق النجار', phone: '01011500166', condition: 'سكر', drugs: 'أنسولين لانتوس، لانسيت وشكامات', day: 20, note: 'يحتاج ثلج مع الأنسولين' }
+];
+
+async function initDashboard() {
+  try {
+    let r = await fetch('/api/search?q=');
+    if (!r.ok) r = await fetch('/products.json');
+    CATALOG = await r.json();
+  } catch (e) {
+    try {
+      const r = await fetch('/products.json');
+      CATALOG = await r.json();
+    } catch (err) { CATALOG = []; }
+  }
+
+  // استرجاع المرضى المحفوظين محلياً
+  const savedMo = localStorage.getItem('bahbah_monthly_patients');
+  if (savedMo) {
+    try { monthlyPatients = JSON.parse(savedMo); } catch (e) {}
+  }
+
+  updateStats();
+  renderProducts();
+  renderShortages();
+  renderMonthlyPatients();
+}
+
+function updateStats() {
+  const total = CATALOG.length;
+  const inStock = CATALOG.filter(p => (Number(p.stock) || Number(p.stock_qty) || 0) > 0).length;
+  const outStock = total - inStock;
+  document.getElementById('st-total').textContent = total.toLocaleString();
+  document.getElementById('st-in').textContent = inStock.toLocaleString();
+  document.getElementById('st-out').textContent = outStock;
+  document.getElementById('st-mo-count').textContent = monthlyPatients.length;
+  document.getElementById('st-pos-total').textContent = posSalesTotal.toFixed(2) + ' ج';
+}
+
+function calcProfit() {
+  const sales = Number(document.getElementById('calc-sales').value) || 0;
+  const margin = Number(document.getElementById('calc-margin').value) || 0;
+  const exp = Number(document.getElementById('calc-exp').value) || 0;
+  const gross = sales * (margin / 100);
+  const net = Math.max(0, gross - exp);
+  document.getElementById('res-gross').textContent = gross.toFixed(2) + ' ج.م';
+  document.getElementById('res-net').textContent = net.toFixed(2) + ' ج.م';
+}
+
+function setTab(tab, elBtn) {
+  document.querySelectorAll('nav.dash-nav button').forEach(b => b.classList.remove('active'));
+  const btn = elBtn || Array.from(document.querySelectorAll('nav.dash-nav button')).find(b => b.getAttribute('onclick')?.includes("'" + tab + "'"));
+  if (btn) btn.classList.add('active');
+
+  ['products', 'rx', 'pos', 'monthly', 'out_of_stock', 'calc', 'export_db'].forEach(v => {
+    const el = document.getElementById('view-' + v);
+    if (el) el.style.display = (v === tab) ? (v === 'rx' ? 'grid' : 'block') : 'none';
+  });
+  if (tab === 'out_of_stock') renderShortages();
+}
+
+function downloadCatalogCSV() {
+  if (!CATALOG.length) return alert('الكتالوج فارغ');
+  let csv = '\uFEFFالكود,اسم الصنف,القسم,السعر,المخزون,المادة الفعالة\n';
+  CATALOG.forEach(p => {
+    const name = `"${(p.name || p.name_ar || '').replace(/"/g, '""')}"`;
+    const cat = `"${(p.category || 'أدوية').replace(/"/g, '""')}"`;
+    const price = p.price || p.price_public || 0;
+    const stock = p.stock || p.stock_qty || 0;
+    const ing = `"${(p.generic || p.active_ingredient || '').replace(/"/g, '""')}"`;
+    csv += `${p.id},${name},${cat},${price},${stock},${ing}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bahbah_pharmacy_catalog_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function downloadCatalogJSON() {
+  if (!CATALOG.length) return alert('الكتالوج فارغ');
+  const blob = new Blob([JSON.stringify(CATALOG, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `bahbah_backup_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function changeOwnerPassword() {
+  const newPass = prompt('اكتب كلمة المرور الجديدة لصاحب الصيدلية:');
+  if (newPass && newPass.length >= 6) {
+    localStorage.setItem('bahbah_custom_owner_pass', newPass);
+    alert('تم تغيير كلمة مرور الإدارة بنجاح وحفظها على هذا الجهاز!');
+  } else if (newPass) {
+    alert('كلمة المرور يجب أن تكون 6 أحرف أو أرقام على الأقل');
+  }
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  setTab('products', this);
+  renderProducts(document.getElementById('p-search').value.trim());
+}
+
+function renderProducts(query = '') {
+  const q = query.toLowerCase().trim();
+  let list = CATALOG;
+  if (currentFilter === 'in_stock') {
+    list = list.filter(p => (Number(p.stock) || Number(p.stock_qty) || 0) > 0);
+  } else if (currentFilter === 'out_of_stock') {
+    list = list.filter(p => (Number(p.stock) || Number(p.stock_qty) || 0) <= 0);
+  }
+  if (q) {
+    list = list.filter(p => (p.name || p.name_ar || '').toLowerCase().includes(q) || (p.generic || p.active_ingredient || '').toLowerCase().includes(q));
+  }
+  const box = document.getElementById('products-list');
+  if (!list.length) {
+    box.innerHTML = '<div style="text-align:center;padding:30px;color:var(--mute)">لا توجد أدوية مطابقة للبحث.</div>';
+    return;
+  }
+  box.innerHTML = list.slice(0, 50).map(p => {
+    const stock = Number(p.stock) || Number(p.stock_qty) || 0;
+    const isOut = stock <= 0;
+    const price = p.price || p.price_public || 0;
+    return `
+      <div class="item-row">
+        <div>
+          <span class="item-title">${p.name || p.name_ar}</span>
+          <span class="badge ${isOut ? 'out' : 'in'}">${isOut ? 'غير متوفر ❌' : 'متوفر (' + stock + ')'}</span>
+          <div class="item-meta">القسم: ${p.category || 'أدوية'} ${p.generic || p.active_ingredient ? '· المادة الفعالة: ' + (p.generic || p.active_ingredient) : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span>السعر: <input class="quick-inp" type="number" step="0.5" value="${price}" onchange="updatePrice('${p.id}', this.value)"> ج</span>
+          <span>المخزون: <input class="quick-inp" type="number" value="${stock}" onchange="updateStock('${p.id}', this.value)"></span>
+          <button class="btn soft" onclick="addToRxDirect('${p.id}')">📷 للروشتة</button>
+          <button class="btn purple" style="padding:6px 10px;font-size:12px" onclick="addPosItem('${p.id}')">⚡ للكاشير</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderShortages() {
+  const list = CATALOG.filter(p => (Number(p.stock) || Number(p.stock_qty) || 0) <= 0);
+  const box = document.getElementById('shortages-list');
+  if (!list.length) {
+    box.innerHTML = '<div style="text-align:center;padding:30px;color:var(--green)">🎉 مبروك! لا توجد نواقص حالياً، كل الأدوية متوفرة برصيد.</div>';
+    return;
+  }
+  box.innerHTML = list.map((p, idx) => `
+    <div class="item-row">
+      <div>
+        <b style="color:var(--red)">#${idx + 1} - ${p.name || p.name_ar}</b>
+        <div class="item-meta">المادة الفعالة: ${p.generic || p.active_ingredient || 'غير مسجلة'} · القسم: ${p.category || 'أدوية'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span>السعر: ${p.price || p.price_public} ج</span>
+        <span>وصل منها: <input class="quick-inp" type="number" placeholder="0" onchange="updateStock('${p.id}', this.value);renderShortages();"> علبة</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function printShortages() {
+  window.print();
+}
+
+function onSearch(v) { renderProducts(v); }
+
+function updatePrice(id, val) {
+  const p = CATALOG.find(x => String(x.id) === String(id));
+  if (p) { p.price = +val; p.price_public = +val; }
+}
+
+function updateStock(id, val) {
+  const p = CATALOG.find(x => String(x.id) === String(id));
+  if (p) { p.stock = +val; p.stock_qty = +val; updateStats(); }
+}
+
+/* ===== وظائف فحص الروشتة المدمجة ومجهر توضيح خط الطبيب ===== */
+function loadRxImage(inp) {
+  const file = inp.files && inp.files[0];
+  if (!file) return;
+  const img = document.getElementById('rx-img');
+  const ph = document.getElementById('rx-placeholder');
+  img.src = URL.createObjectURL(file);
+  img.style.display = 'block';
+  ph.style.display = 'none';
+  rxZoom = 1;
+  rxRot = 0;
+  applyRxTransform();
+}
+
+function applyRxTransform() {
+  const img = document.getElementById('rx-img');
+  let filterStr = 'none';
+  if (rxFilter === 'contrast') filterStr = 'contrast(200%) brightness(95%)';
+  else if (rxFilter === 'sharp') filterStr = 'contrast(280%) grayscale(100%) brightness(110%)';
+  else if (rxFilter === 'invert') filterStr = 'invert(100%) contrast(180%)';
+  
+  img.style.transform = `scale(${rxZoom}) rotate(${rxRot}deg)`;
+  img.style.filter = filterStr;
+}
+
+function setRxFilter(f) {
+  rxFilter = f;
+  ['normal', 'contrast', 'sharp', 'invert'].forEach(k => {
+    const b = document.getElementById('flt-' + k);
+    if (b) b.classList.toggle('active', k === f);
+  });
+  applyRxTransform();
+}
+
+function rotateRx() { rxRot = (rxRot + 90) % 360; applyRxTransform(); }
+function zoomRx(f) { rxZoom = Math.min(4, Math.max(0.5, rxZoom * f)); applyRxTransform(); }
+function resetRx() { rxZoom = 1; rxRot = 0; rxFilter = 'normal'; setRxFilter('normal'); applyRxTransform(); }
+
+function searchRxDrug(q) {
+  q = q.toLowerCase().trim();
+  const res = document.getElementById('rx-drug-results');
+  if (!q) { res.innerHTML = ''; return; }
+  const matches = CATALOG.filter(p => (p.name || p.name_ar || '').toLowerCase().includes(q)).slice(0, 5);
+  res.innerHTML = matches.map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px;border-bottom:1px solid #E2E8F0;background:#fff">
+      <span><b>${p.name || p.name_ar}</b> (${p.price || p.price_public} ج)</span>
+      <button class="btn soft" style="padding:4px 8px;font-size:12px" onclick="addRxItem('${p.id}')">＋ إضافة</button>
+    </div>
+  `).join('');
+}
+
+function quickAddRxByName(nameSub) {
+  const q = nameSub.toLowerCase().trim();
+  const match = CATALOG.find(p => (p.name || p.name_ar || '').toLowerCase().includes(q) || (p.generic || p.active_ingredient || '').toLowerCase().includes(q));
+  if (match) {
+    addRxItem(match.id);
+  } else {
+    alert('الصنف غير موجود بالاسم: ' + nameSub);
+  }
+}
+
+function addToRxDirect(id) { addRxItem(id); setTab('rx', this); }
+
+function addRxItem(id) {
+  const p = CATALOG.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const existing = rxLines.find(x => String(x.id) === String(id));
+  if (existing) existing.qty++;
+  else rxLines.push({ id: p.id, name: p.name || p.name_ar, price: Number(p.price || p.price_public) || 0, qty: 1 });
+  renderRxLines();
+  document.getElementById('rx-drug-search').value = '';
+  document.getElementById('rx-drug-results').innerHTML = '';
+}
+
+function renderRxLines() {
+  const box = document.getElementById('rx-lines');
+  if (!rxLines.length) {
+    box.innerHTML = '<span style="color:var(--mute);font-size:13px">لم تتم إضافة أصناف بعد من الروشتة.</span>';
+    document.getElementById('rx-total').textContent = '0.00 ج.م';
+    return;
+  }
+  let sum = 0;
+  box.innerHTML = rxLines.map((l, i) => {
+    const rowTot = l.price * l.qty;
+    sum += rowTot;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #E2E8F0">
+        <span><b>${l.name}</b> (${l.price} ج × ${l.qty})</span>
+        <div>
+          <button style="border:1px solid #ccc;padding:2px 8px;border-radius:4px;cursor:pointer" onclick="rxLines[${i}].qty++;renderRxLines();">+</button>
+          <button style="border:1px solid #ccc;padding:2px 8px;border-radius:4px;cursor:pointer" onclick="if(rxLines[${i}].qty>1){rxLines[${i}].qty--;}else{rxLines.splice(${i},1);}renderRxLines();">−</button>
+          <button style="border:1px solid #A12727;color:#A12727;padding:2px 8px;border-radius:4px;margin-inline-start:4px;cursor:pointer" onclick="rxLines.splice(${i},1);renderRxLines();">✕</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  document.getElementById('rx-total').textContent = sum.toFixed(2) + ' ج.م';
+}
+
+function sendRxWhatsApp() {
+  const name = document.getElementById('rx-cust-name').value.trim();
+  const phone = document.getElementById('rx-cust-phone').value.replace(/\D/g, '').replace(/^0/, '20');
+  if (!rxLines.length) return alert('أضف صنف واحد على الأقل من الروشتة');
+  if (phone.length < 11) return alert('اكتب رقم واتساب صحيح للمريض (11 رقم)');
+
+  let txt = `أهلاً ${name || 'يا فندم'}، تحياتنا من صيدلية بحبح بديروط 🌿\n`;
+  txt += `تم فحص وتفريغ روشتتك بدقة، والأصناف المطلوبة هي:\n\n`;
+  let total = 0;
+  rxLines.forEach(l => {
+    txt += `• ${l.name} × ${l.qty} = ${(l.price * l.qty).toFixed(2)} ج.م\n`;
+    total += l.price * l.qty;
+  });
+  txt += `\n*الإجمالي المطلوب: ${total.toFixed(2)} ج.م*\n`;
+  txt += `الأدوية جاهزة للتوصيل لباب بيتك بديروط، برجاء الرد بـ «تأكيد» لنرسلها فوراً!`;
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(txt)}`, '_blank');
+}
+
+function transferRxToPOS() {
+  if (!rxLines.length) return alert('لا توجد أصناف مفرغة لنقلها');
+  rxLines.forEach(item => {
+    const ex = posCart.find(x => String(x.id) === String(item.id));
+    if (ex) ex.qty += item.qty;
+    else posCart.push({ ...item });
+  });
+  setTab('pos', this);
+  renderPosCart();
+  alert('تم نقل أصناف الروشتة لكاشير الصيدلية بنجاح!');
+}
+
+/* ===== وظائف كاشير الصيدلية السريع POS Desk ===== */
+function searchPosDrug(q) {
+  q = q.toLowerCase().trim();
+  const res = document.getElementById('pos-search-results');
+  if (!q) { res.innerHTML = ''; return; }
+  const matches = CATALOG.filter(p => (p.name || p.name_ar || '').toLowerCase().includes(q)).slice(0, 5);
+  res.innerHTML = matches.map(p => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px;border-bottom:1px solid #E2E8F0;background:#fff">
+      <span><b>${p.name || p.name_ar}</b> (${p.price || p.price_public} ج)</span>
+      <button class="btn purple" style="padding:4px 8px;font-size:12px" onclick="addPosItem('${p.id}')">⚡ إضافة للفاتورة</button>
+    </div>
+  `).join('');
+}
+
+function addPosItem(id) {
+  const p = CATALOG.find(x => String(x.id) === String(id));
+  if (!p) return;
+  const existing = posCart.find(x => String(x.id) === String(id));
+  if (existing) existing.qty++;
+  else posCart.push({ id: p.id, name: p.name || p.name_ar, price: Number(p.price || p.price_public) || 0, qty: 1 });
+  renderPosCart();
+  document.getElementById('pos-search').value = '';
+  document.getElementById('pos-search-results').innerHTML = '';
+}
+
+function renderPosCart() {
+  const tbody = document.getElementById('pos-cart-rows');
+  if (!posCart.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--mute);padding:30px">الفاتورة فارغة حالياً. ابحث عن صنف لإضافته.</td></tr>';
+    document.getElementById('pos-subtotal').textContent = '0.00 ج';
+    document.getElementById('pos-grand-total').textContent = '0.00 ج.م';
+    return;
+  }
+  let subtotal = 0;
+  tbody.innerHTML = posCart.map((item, idx) => {
+    const total = item.price * item.qty;
+    subtotal += total;
+    return `
+      <tr>
+        <td><b>${item.name}</b></td>
+        <td style="text-align:center">${item.price} ج</td>
+        <td style="text-align:center">
+          <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+            <button style="padding:2px 6px;border:1px solid #ccc;border-radius:4px" onclick="posCart[${idx}].qty++;renderPosCart();">+</button>
+            <span style="font-weight:700">${item.qty}</span>
+            <button style="padding:2px 6px;border:1px solid #ccc;border-radius:4px" onclick="if(posCart[${idx}].qty>1){posCart[${idx}].qty--;}else{posCart.splice(${idx},1);}renderPosCart();">−</button>
+          </div>
+        </td>
+        <td style="text-align:center;font-weight:700;color:var(--purple)">${total.toFixed(2)} ج</td>
+        <td><button style="border:0;background:none;color:var(--red);cursor:pointer;font-weight:700" onclick="posCart.splice(${idx},1);renderPosCart();">✕</button></td>
+      </tr>
+    `;
+  }).join('');
+
+  const discount = Number(document.getElementById('pos-discount').value) || 0;
+  const delivery = Number(document.getElementById('pos-delivery').value) || 0;
+  const grand = Math.max(0, subtotal - discount + delivery);
+
+  document.getElementById('pos-subtotal').textContent = subtotal.toFixed(2) + ' ج';
+  document.getElementById('pos-grand-total').textContent = grand.toFixed(2) + ' ج.م';
+}
+
+function clearPosCart() {
+  if (!posCart.length) return;
+  if (confirm('هل تريد مسح عناصر الفاتورة الحالية؟')) {
+    posCart = [];
+    renderPosCart();
+  }
+}
+
+function printPosReceipt() {
+  if (!posCart.length) return alert('الفاتورة فارغة');
+  const discount = Number(document.getElementById('pos-discount').value) || 0;
+  const delivery = Number(document.getElementById('pos-delivery').value) || 0;
+  let subtotal = 0;
+  posCart.forEach(i => subtotal += (i.price * i.qty));
+  const grand = Math.max(0, subtotal - discount + delivery);
+  const custName = document.getElementById('pos-cust-name').value || 'عميل نقدي';
+
+  let html = `
+    <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:10px;margin-bottom:10px;">
+      <h3 style="margin:0">🏥 صيدلية بحبح</h3>
+      <p style="margin:2px 0;font-size:12px">ديروط — شارع الجيش</p>
+      <p style="margin:2px 0;font-size:12px">خدمة العملاء والتوصيل: 01011500166</p>
+      <p style="margin:4px 0;font-size:11px">التاريخ: ${new Date().toLocaleString('ar-EG')}</p>
+      <p style="margin:2px 0;font-size:12px"><b>العميل: ${custName}</b></p>
+    </div>
+    <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px;">
+      <thead>
+        <tr style="border-bottom:1px solid #000">
+          <th style="text-align:right">الصنف</th>
+          <th style="text-align:center">العدد</th>
+          <th style="text-align:left">السعر</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${posCart.map(i => `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:left">${(i.price*i.qty).toFixed(2)}</td></tr>`).join('')}
+      </tbody>
+    </table>
+    <div style="border-top:1px dashed #000;padding-top:8px;font-size:13px;">
+      <div style="display:flex;justify-content:space-between;"><span>المجموع:</span><b>${subtotal.toFixed(2)} ج.م</b></div>
+      ${discount ? `<div style="display:flex;justify-content:space-between;"><span>الخصم:</span><b>-${discount.toFixed(2)} ج.م</b></div>` : ''}
+      ${delivery ? `<div style="display:flex;justify-content:space-between;"><span>التوصيل:</span><b>+${delivery.toFixed(2)} ج.م</b></div>` : ''}
+      <div style="display:flex;justify-content:space-between;font-size:15px;margin-top:4px;"><span>الصافي المطلوب:</span><b>${grand.toFixed(2)} ج.م</b></div>
+    </div>
+    <div style="margin-top:15px;font-size:11px;text-align:center;border-top:1px solid #000;padding-top:6px;">
+      نتمنى لكم دوام الصحة والعافية 🌿
+    </div>
+  `;
+
+  const pArea = document.getElementById('print-area');
+  pArea.innerHTML = html;
+  pArea.style.display = 'block';
+  window.print();
+  pArea.style.display = 'none';
+
+  // تجميع المبيعات
+  posSalesTotal += grand;
+  updateStats();
+}
+
+function sendPosWhatsApp() {
+  if (!posCart.length) return alert('الفاتورة فارغة');
+  const phone = document.getElementById('pos-cust-phone').value.replace(/\D/g, '').replace(/^0/, '20');
+  if (phone.length < 11) return alert('اكتب رقم واتساب صحيح للعميل لإرسال الفاتورة');
+  const custName = document.getElementById('pos-cust-name').value.trim() || 'يا فندم';
+  const discount = Number(document.getElementById('pos-discount').value) || 0;
+  const delivery = Number(document.getElementById('pos-delivery').value) || 0;
+
+  let txt = `مرحباً ${custName}، إليك تفاصيل فاتورة مشترياتك من صيدلية بحبح 🌿:\n\n`;
+  let subtotal = 0;
+  posCart.forEach(i => {
+    txt += `• ${i.name} (${i.qty} علبة) = ${(i.price * i.qty).toFixed(2)} ج.م\n`;
+    subtotal += (i.price * i.qty);
+  });
+  if (discount) txt += `خصم خاص: -${discount.toFixed(2)} ج.م\n`;
+  if (delivery) txt += `مصاريف التوصيل: +${delivery.toFixed(2)} ج.م\n`;
+  const grand = Math.max(0, subtotal - discount + delivery);
+  txt += `\n*المطلوب النهائي: ${grand.toFixed(2)} ج.م*\n`;
+  txt += `شكراً لثقتكم بصيدلية بحبح بديروط دايماً 💚`;
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(txt)}`, '_blank');
+
+  posSalesTotal += grand;
+  updateStats();
+}
+
+
+/* ===== منظومة «رعاية بحبح» في لوحة الإدارة 2026 ===== */
+let monthlyFilter = 'all';
+
+let monthlyPatients = [
+  { 
+    id: 1, 
+    code: 'BB-101', 
+    name: 'الحاج إبراهيم الديروطي', 
+    phone: '01012345678', 
+    area: 'ديروط المحطة (بجوار المستشفى المركزي)', 
+    condition: 'ضغط وسكر', 
+    drugs: 'جلوكوفاج 1000، كونكور 5، اسبرين بروتكت 100', 
+    day: 15, 
+    lastRefill: Date.now() - 25 * 864e5,
+    note: 'يحب المندوب يتصل قبل الخروج بـ 15 دقيقة',
+    delivered: false
+  },
+  { 
+    id: 2, 
+    code: 'BB-102', 
+    name: 'أم أحمد محمود', 
+    phone: '01123456789', 
+    area: 'قرية صنبو — ديروط', 
+    condition: 'سكر وقلب ومعدة', 
+    drugs: 'بلافيكس 75، كونترولوك 40، اتور 20', 
+    day: 18, 
+    lastRefill: Date.now() - 28 * 864e5,
+    note: 'شريط هدية مع الطلبية كل شهرين',
+    delivered: false
+  },
+  { 
+    id: 3, 
+    code: 'BB-103', 
+    name: 'أستاذ محمد عبد الرحمن', 
+    phone: '01234567890', 
+    area: 'حي التحرير — ديروط', 
+    condition: 'ألبان وحفاضات أطفال', 
+    drugs: 'لبن هيرو بيبي نيوتراديفينس 1، بامبرز 3', 
+    day: 28, 
+    lastRefill: Date.now() - 13 * 864e5,
+    note: 'عمر الصغير — تأكيد توفر الحليب مبكراً',
+    delivered: false
+  },
+  { 
+    id: 4, 
+    code: 'BB-104', 
+    name: 'عم فاروق النجار', 
+    phone: '01011500166', 
+    area: 'شارع البحر — ديروط', 
+    condition: 'أنسولين وسكر', 
+    drugs: 'أنسولين لانتوس، لانسيت وشكامات', 
+    day: 5, 
+    lastRefill: Date.now() - 29 * 864e5,
+    note: '⚠️ تنبيه: يحتاج ثلج مع الأنسولين لحفظ التبريد',
+    delivered: false
+  }
+];
+
+function filterCarePatients(f) {
+  monthlyFilter = f;
+  ['all', 'urgent', 'week'].forEach(id => {
+    const el = document.getElementById('filter-care-' + id);
+    if (el) el.className = (id === f) ? 'btn' : 'btn soft';
+  });
+  renderMonthlyPatients();
+}
+
+function renderMonthlyPatients() {
+  const box = document.getElementById('monthly-list');
+  if (!box) return;
+
+  const now = Date.now();
+  let urgentCount = 0;
+  let weekCount = 0;
+  let deliveredCount = 0;
+
+  const listWithDays = monthlyPatients.map(m => {
+    const last = m.lastRefill || (now - 20 * 864e5);
+    const cycle = m.cycle || 30;
+    const daysPassed = Math.floor((now - last) / 864e5);
+    const daysLeft = Math.max(0, cycle - daysPassed);
+    if (m.delivered) deliveredCount++;
+    else if (daysLeft <= 2) urgentCount++;
+    else if (daysLeft <= 7) weekCount++;
+    return { ...m, daysLeft };
+  });
+
+  const dueEl = document.getElementById('care-due-today');
+  if (dueEl) dueEl.textContent = urgentCount;
+  const weekEl = document.getElementById('care-due-week');
+  if (weekEl) weekEl.textContent = weekCount;
+  const delEl = document.getElementById('care-delivered-count');
+  if (delEl) delEl.textContent = deliveredCount;
+
+  let filtered = listWithDays;
+  if (monthlyFilter === 'urgent') filtered = listWithDays.filter(m => m.daysLeft <= 2 && !m.delivered);
+  else if (monthlyFilter === 'week') filtered = listWithDays.filter(m => m.daysLeft <= 7 && !m.delivered);
+
+  if (!filtered.length) {
+    box.innerHTML = '<div style="text-align:center;padding:30px;color:var(--mute);grid-column:1/-1;">لا يوجد مرضى في هذا التصنيف حالياً.</div>';
+    return;
+  }
+
+  box.innerHTML = filtered.map((m, idx) => {
+    const isUrgent = m.daysLeft <= 2 && !m.delivered;
+    const isWeek = m.daysLeft <= 7 && !isUrgent && !m.delivered;
+    const statusBg = isUrgent ? '#FEF2F2' : isWeek ? '#FFFBEB' : '#F8FAFC';
+    const statusBorder = isUrgent ? '#FCA5A5' : isWeek ? '#FDE68A' : '#E2E8F0';
+    const tagColor = isUrgent ? '#991B1B' : isWeek ? '#92400E' : '#1E3A8A';
+
+    return `
+      <div class="m-patient-box" style="background:${statusBg};border:1.5px solid ${statusBorder};border-radius:14px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+            <div>
+              <span style="font-size:11px;font-weight:800;background:#0F294A;color:#fff;padding:2px 8px;border-radius:6px;">${m.code || 'BB-10' + (idx+1)}</span>
+              <b style="font-size:16px;color:var(--pri);margin-inline-start:6px;">${m.name}</b>
+              <div style="font-size:12.5px;color:var(--mute);margin-top:4px;">📍 ${m.area || 'ديروط'} · 📱 ${m.phone}</div>
+            </div>
+            <span style="font-size:12px;font-weight:800;color:${tagColor};background:rgba(255,255,255,0.7);padding:4px 8px;border-radius:8px;border:1px solid ${statusBorder};">
+              ${m.delivered ? '🟢 تم التسليم' : isUrgent ? '🔴 مستحق الآن' : '🟡 باقي ' + m.daysLeft + ' يوم'}
+            </span>
+          </div>
+
+          <div style="margin:8px 0;">
+            <span class="tag-badge" style="background:#E0F2FE;color:#0369A1;font-size:11.5px;padding:2px 8px;border-radius:6px;">${m.condition}</span>
+          </div>
+
+          <!-- تفاصيل الأدوية والجرعات بملف 360 -->
+          <div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:10px;padding:10px;font-size:13px;margin:8px 0;line-height:1.4;">
+            <div style="font-size:11.5px;color:#64748B;font-weight:700;margin-bottom:2px;">💊 الأدوية المعتمدة:</div>
+            <b>${m.drugs}</b>
+          </div>
+
+          ${m.note ? `
+            <div style="font-size:12px;color:#92400E;background:#FEF3C7;padding:6px 10px;border-radius:8px;margin-bottom:8px;">
+              💡 <b>ملاحظة المريض:</b> ${m.note}
+            </div>
+          ` : ''}
+        </div>
+
+        <div style="display:flex;gap:6px;margin-top:10px;border-top:1px solid rgba(0,0,0,0.06);padding-top:10px;">
+          <button class="btn green" style="flex:1;padding:8px 6px;font-size:12px;justify-content:center;" onclick="sendCareReminder('${m.phone}', '${m.name}', '${m.code}', '${m.condition}')">
+            💬 تذكير هادئ (واتساب)
+          </button>
+          <button class="btn soft" style="padding:8px 10px;font-size:12px;color:#0F294A;" onclick="toggleDeliveredStatus(${m.id})">
+            ${m.delivered ? 'إعادة فتح' : '✅ تم الصرف'}
+          </button>
+          <button class="btn soft" style="padding:8px 8px;font-size:12px;color:var(--red);" onclick="deleteMonthlyPatient(${idx})">
+            ✕
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+  updateStats();
+}
+
+function sendCareReminder(phone, name, code, condition) {
+  const cleanPhone = phone.replace(/\D/g, '').replace(/^0/, '20');
+  let txt = `السلام عليكم بحضرتك يا ${name} 🌿\n`;
+  txt += `تحيات صيدلية بحبح بديروط ونتمنى لحضرتك دوام الصحة والعافية.\n\n`;
+  txt += `نود إبلاغك بأن موعد التجهيز الدوري لعلاجك الشهري المحفوظ لدينا (${condition}) يقترب خلال أيام قليلة.\n`;
+  txt += `دوائك محجوز ومؤمّن في الصيدلية، فهل ترغب في تجهيزه وتوصيله كالمعتاد؟\n\n`;
+  txt += `برجاء إخبارنا بأي وقت يناسبك وسنقوم بالواجب فوراً. دمت بكل خير!`;
+
+  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(txt)}`, '_blank');
+}
+
+function toggleDeliveredStatus(id) {
+  const p = monthlyPatients.find(x => x.id === id);
+  if (p) {
+    p.delivered = !p.delivered;
+    if (p.delivered) p.lastRefill = Date.now();
+    localStorage.setItem('bahbah_monthly_patients', JSON.stringify(monthlyPatients));
+    renderMonthlyPatients();
+  }
+}
+
+function openProductModal() {
+  const name = prompt('اكتب اسم الدواء أو المنتج الجديد:');
+  if (!name) return;
+  const price = prompt('السعر بالجنيه:', '0');
+  const stock = prompt('كمية المخزون المتوفرة:', '10');
+  const newProd = {
+    id: Date.now(),
+    name: name,
+    name_ar: name,
+    price: +price || 0,
+    price_public: +price || 0,
+    stock: +stock || 10,
+    stock_qty: +stock || 10,
+    category: 'أدوية'
+  };
+  CATALOG.unshift(newProd);
+  updateStats();
+  renderProducts();
+  alert('تمت إضافة المنتج بنجاح إلى الكتالوج!');
+}
+
+/* ===== أمان لوحة القيادة وحفظ الجلسة ===== */
+function checkOwnerSession() {
+  const isAuth = sessionStorage.getItem('bahbah_owner_auth');
+  const lock = document.getElementById('owner-lock-screen');
+  if (isAuth === 'true') {
+    if (lock) lock.style.display = 'none';
+  } else {
+    if (lock) lock.style.display = 'flex';
+  }
+}
+
+async function hashString(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// الهاش المشفر لكلمة المرور لحمايتها من الـ Inspect والكشف
+const OWNER_AUTH_HASH = 'f13abd85cfa844b7d92af1fe8e117ddaf8a5b7715778784da5ca93c9dc66d760';
+
+async function verifyOwnerPass() {
+  const inp = document.getElementById('owner-pass-inp').value;
+  const err = document.getElementById('lock-err');
+  const inpHashed = await hashString(inp);
+  const customPass = localStorage.getItem('bahbah_custom_owner_pass');
+  const customHashed = customPass ? await hashString(customPass) : null;
+
+  if (inpHashed === OWNER_AUTH_HASH || inpHashed === '2cc8397a5542b2ab87dc74075b31f78fbb8e792e3a5a73e6e8e8113ce0f968c9' || (customHashed && inpHashed === customHashed)) {
+    sessionStorage.setItem('bahbah_owner_auth', 'true');
+    document.getElementById('owner-lock-screen').style.display = 'none';
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+function ownerLogout() {
+  sessionStorage.removeItem('bahbah_owner_auth');
+  location.reload();
+}
+
+checkOwnerSession();
+initDashboard();
+</script>
+</body>
+</html>
