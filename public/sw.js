@@ -1,5 +1,5 @@
 // غيّر رقم V بعد أي تعديل في الواجهة عشان العملاء ياخدوا التحديث
-const V='bahbah-v31',SHELL=['./','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./pharmacy-hero-brand-bg.webp','./bahbah-logo.webp','./bahbah-logo.png','./products.json','./pharmacy-bg.jpg'];
+const V='bahbah-v32',SHELL=['./','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png','./pharmacy-hero-brand-bg.webp','./bahbah-logo.webp','./bahbah-logo.png','./products.json','./pharmacy-bg.jpg'];
 const EMPTY=()=>new Response('[]',{headers:{'Content-Type':'application/json'}});
 self.addEventListener('install',e=>e.waitUntil(caches.open(V).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>clients.claim())));

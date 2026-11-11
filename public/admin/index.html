@@ -1197,60 +1197,8 @@ function sendPosWhatsApp() {
 /* ===== منظومة «رعاية بحبح» في لوحة الإدارة 2026 ===== */
 let monthlyFilter = 'all';
 
-let monthlyPatients = [
-  { 
-    id: 1, 
-    code: 'BB-101', 
-    name: 'الحاج إبراهيم الديروطي', 
-    phone: '01012345678', 
-    area: 'ديروط المحطة (بجوار المستشفى المركزي)', 
-    condition: 'ضغط وسكر', 
-    drugs: 'جلوكوفاج 1000، كونكور 5، اسبرين بروتكت 100', 
-    day: 15, 
-    lastRefill: Date.now() - 25 * 864e5,
-    note: 'يحب المندوب يتصل قبل الخروج بـ 15 دقيقة',
-    delivered: false
-  },
-  { 
-    id: 2, 
-    code: 'BB-102', 
-    name: 'أم أحمد محمود', 
-    phone: '01123456789', 
-    area: 'قرية صنبو — ديروط', 
-    condition: 'سكر وقلب ومعدة', 
-    drugs: 'بلافيكس 75، كونترولوك 40، اتور 20', 
-    day: 18, 
-    lastRefill: Date.now() - 28 * 864e5,
-    note: 'شريط هدية مع الطلبية كل شهرين',
-    delivered: false
-  },
-  { 
-    id: 3, 
-    code: 'BB-103', 
-    name: 'أستاذ محمد عبد الرحمن', 
-    phone: '01234567890', 
-    area: 'حي التحرير — ديروط', 
-    condition: 'ألبان وحفاضات أطفال', 
-    drugs: 'لبن هيرو بيبي نيوتراديفينس 1، بامبرز 3', 
-    day: 28, 
-    lastRefill: Date.now() - 13 * 864e5,
-    note: 'عمر الصغير — تأكيد توفر الحليب مبكراً',
-    delivered: false
-  },
-  { 
-    id: 4, 
-    code: 'BB-104', 
-    name: 'عم فاروق النجار', 
-    phone: '01011500166', 
-    area: 'شارع البحر — ديروط', 
-    condition: 'أنسولين وسكر', 
-    drugs: 'أنسولين لانتوس، لانسيت وشكامات', 
-    day: 5, 
-    lastRefill: Date.now() - 29 * 864e5,
-    note: '⚠️ تنبيه: يحتاج ثلج مع الأنسولين لحفظ التبريد',
-    delivered: false
-  }
-];
+// المرضى بيتحملوا من localStorage (bahbah_monthly_patients). الأسماء التجريبية اتشالت.
+let monthlyPatients = [];
 
 function filterCarePatients(f) {
   monthlyFilter = f;
