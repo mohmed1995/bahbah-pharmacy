@@ -5982,7 +5982,7 @@ function getClinicalInfo(p) {
   }
 
   // 3. أدوية الضغط والقلب (مثبطات بيتا - كونكور ومثيلاته)
-  if (/كونكور|بيسوبرولول|concor|bisoprolol|بيستول|اتينولول|كار Always|انديرال|بلوك/.test(name)) {
+  if (/كونكور|بيسوبرولول|concor|bisoprolol|بيستول|اتينولول|كارفيديلول|carvedilol|انديرال|بلوك/.test(name)) {
     return {
       cat: 'تنظيم ضربات القلب وخفض ضغط الدم المرتفع',
       dose: 'قرص واحد يومياً صباحاً في نفس الميعاد بانتظام.',
@@ -6232,425 +6232,13 @@ const rail = a => a.length
 /* ===== 3.2 فاحص التفاعلات الدوائية والتوافق الصيدلاني (Interaction Checker) ===== */
 let checkerSelected = [];
 
-function openInteractionChecker() {
-  vib(12);
-  checkerSelected = [];
-  $('dlg').classList.add('wide-dialog');
-  renderInteractionModal();
-  if (!$('dlg').open) $('dlg').showModal();
-}
 
-function renderInteractionModal() {
-  const warnings = checkInteractions(checkerSelected);
 
-  $('dlgBody').innerHTML = `
-    <div class="checker-container">
-      <!-- هيدر الشاشة المطور -->
-      <div class="checker-header-hero">
-        <h3 class="checker-title">
-          <span>⚡</span> فاحص التداخلات والتعارضات الدوائية الذكي
-        </h3>
-        <p class="checker-subtitle">
-          محرك إكلينيكي متكامل يفحص سلامة تناول الأدوية معاً بدقة صيدلانية، ويحذرك من أي خطر نزيف، تسمم كبدي، أو تضاد وظيفي.
-        </p>
-      </div>
 
-      <!-- حقل البحث الذكي مع أيقونة واضحة -->
-      <div class="checker-search-bar">
-        <span class="checker-search-icon">🔍</span>
-        <input id="checkerSearch" class="checker-search-input" type="search" 
-          placeholder="ابحث باسم الدواء التجاري أو العلمي (مثال: كونكور، كتافلام، أسبرين، بنادول، كونترولوك)..." 
-          autocomplete="off"
-          oninput="searchCheckerDrug(this.value)">
-        <div id="checkerResults" class="checker-dropdown-results"></div>
-      </div>
 
-      <!-- شريط الأمثلة السريعة بنقرة واحدة -->
-      <div class="checker-presets-strip">
-        <div class="checker-presets-title">
-          <span>💡</span> تجربة سريعة للتعارضات الأكثر شيوعاً بنقرة واحدة:
-        </div>
-        <div class="checker-presets-scroll">
-          <button type="button" class="checker-preset-pill" onclick="addPresetToChecker('كتافلام', 'اسبرين')">
-            <span>⛔</span> كتافلام + أسبرين
-          </button>
-          <button type="button" class="checker-preset-pill" onclick="addPresetToChecker('بنادول', 'كونجستال')">
-            <span>⚠️</span> بنادول + كونجستال
-          </button>
-          <button type="button" class="checker-preset-pill" onclick="addPresetToChecker('كونكور', 'فينتولين')">
-            <span>⚡</span> كونكور + فينتولين
-          </button>
-          <button type="button" class="checker-preset-pill" onclick="addPresetToChecker('كونترولوك', 'فيروجلوبين')">
-            <span>📉</span> كونترولوك + فيروجلوبين
-          </button>
-          <button type="button" class="checker-preset-pill" onclick="addPresetToChecker('اتور', 'كلاسيد')">
-            <span>⚠️</span> أتور + كلاسيد
-          </button>
-        </div>
-      </div>
 
-      <!-- صندوق الأدوية المحددة للفحص -->
-      <div class="checker-selected-box">
-        <div class="checker-selected-header">
-          <span style="font-size:13px;font-weight:800;color:#0E2F5A;">
-            💊 الأدوية المحددة للفحص (${checkerSelected.length}):
-          </span>
-          ${checkerSelected.length ? `
-            <button type="button" style="border:0;background:none;color:#DC2626;font-size:12px;font-weight:800;cursor:pointer;" onclick="checkerSelected=[];renderInteractionModal();">
-              🗑️ مسح الكل
-            </button>
-          ` : ''}
-        </div>
-        <div class="checker-selected-tags">
-          ${checkerSelected.length ? checkerSelected.map((item, idx) => `
-            <span class="checker-drug-tag">
-              <span>${esc(item.name)}</span>
-              <button type="button" aria-label="حذف" onclick="removeCheckerDrug(${idx})">✕</button>
-            </span>
-          `).join('') : `
-            <span style="color:#94A3B8;font-size:12.5px;padding:4px 0;">
-              لم يتم اختيار أدوية بعد. ابحث بالأعلى أو اختر من شريط الأمثلة السريعة لبدء الفحص.
-            </span>
-          `}
-        </div>
-      </div>
 
-      <!-- نتائج التحليل الإكلينيكي -->
-      <div>
-        ${checkerSelected.length < 2 ? `
-          <div style="background:#F1F5F9;border:1.5px dashed #CBD5E1;border-radius:16px;padding:18px;text-align:center;color:#475569;font-size:13px;">
-            <div style="font-size:28px;margin-bottom:6px">🧪</div>
-            <b>اختر دوائين أو أكثر</b> لمقارنة التفاعلات الكيميائية والإكلينيكية وعرض تقرير الأمان فوراً.
-          </div>
-        ` : warnings.length ? `
-          <div style="margin-bottom:6px;">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
-              <span style="font-size:22px">⚠️</span>
-              <b style="font-size:15px;color:#9F1239;">تم رصد (${warnings.length}) تنبيه إكلينيكي هام:</b>
-            </div>
-            ${warnings.map(w => `
-              <div class="clinical-card ${w.severity || 'moderate'}">
-                <div class="clinical-card-head">
-                  <span class="clinical-card-title">${esc(w.title)}</span>
-                  <span class="clinical-card-badge">${esc(w.badge)}</span>
-                </div>
-                <div class="clinical-card-desc">${esc(w.desc)}</div>
-                <div class="clinical-card-advice">
-                  <span style="font-size:16px">💡</span>
-                  <div><b>إرشاد الصيدلي والبديل:</b> ${esc(w.advice)}</div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        ` : `
-          <div style="background:linear-gradient(135deg, #ECFDF5, #F0FDF4);border:1.5px solid #A7F3D0;border-radius:18px;padding:20px;text-align:center;box-shadow:0 4px 16px rgba(16,185,129,0.08);">
-            <div style="font-size:38px;margin-bottom:6px">✅</div>
-            <h4 style="margin:0 0 6px;color:#065F46;font-size:16px;font-weight:900;">توافق تام — لا يوجد تعارض مسجل بين هذه الأدوية!</h4>
-            <p style="margin:0;color:#047857;font-size:13px;line-height:1.5;">
-              يمكن تناول هذه الأدوية بأمان مع الالتزام بترك فاصل زمني مناسب بين الجرعات واتباع إرشادات الطبيب ومواعيد الطعام.
-            </p>
-          </div>
-        `}
-      </div>
 
-      <!-- أزرار الإجراء السريع -->
-      <div style="display:flex;gap:10px;margin-top:4px;">
-        <a href="https://wa.me/201011500166?text=${encodeURIComponent('السلام عليكم دكتور صيدلية بحبح، عايز استفسر عن أمان تناول الأدوية التالية معاً: ' + checkerSelected.map(x=>x.name).join(' + '))}" target="_blank" rel="noopener" class="btn green" style="flex:1;justify-content:center;padding:13px;font-size:14px;background:#25D366;color:#fff;border-radius:14px;font-weight:800;display:flex;align-items:center;gap:8px;text-decoration:none;box-shadow:0 4px 14px rgba(37,211,102,0.3);">
-          <span>💬</span> استشارة صيدلي بحبح حول هذه التوليفة
-        </a>
-        <button type="button" class="btn soft" style="padding:13px 20px;border-radius:14px;font-size:13.5px;" onclick="$('dlg').classList.remove('wide-dialog');$('dlg').close()">
-          إغلاق
-        </button>
-      </div>
-    </div>
-  `;
-}
-
-function getClinicalPool() {
-  const map = new Map();
-  // 1. من الذاكرة الحالية M
-  Object.values(M).forEach(p => { if (p && p.id != null) map.set(String(p.id), p); });
-  // 2. من DEMO إذا كانت محملة
-  if (Array.isArray(DEMO)) {
-    DEMO.forEach(p => { if (p && p.id != null && !map.has(String(p.id))) map.set(String(p.id), p); });
-  }
-  // 3. من المخزن المحلي
-  if (bbStore && Array.isArray(bbStore.overrides)) {
-    bbStore.overrides.forEach(p => { if (p && p.id != null) map.set(String(p.id), p); });
-  }
-  return Array.from(map.values()).filter(p => !bbStore.deleted.includes(String(p.id)));
-}
-
-function searchCheckerDrug(q) {
-  const cleanQ = bbNorm(q);
-  const box = $('checkerResults');
-  if (!cleanQ || cleanQ.length < 2) { box.style.display = 'none'; return; }
-
-  const pool = getClinicalPool();
-  const matches = pool.filter(p => {
-    if (!p || !p.name) return false;
-    const n = bbNorm(p.name);
-    const g = bbNorm(p.generic);
-    return n.includes(cleanQ) || g.includes(cleanQ);
-  }).slice(0, 8);
-
-  if (!matches.length) {
-    box.innerHTML = '<div style="padding:12px;color:#94A3B8;font-size:13px;text-align:center">لم يتم العثور على أدوية مطابقة. جرّب كتابة الاسم باللغة العربية أو الإنجليزية.</div>';
-    box.style.display = 'block';
-    return;
-  }
-
-  box.innerHTML = matches.map(p => {
-    const isAdded = checkerSelected.some(x => String(x.id) === String(p.id));
-    return `
-      <div style="padding:10px 14px;border-bottom:1px solid #F1F5F9;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:${isAdded ? '#F0FDF4' : '#FFFFFF'};" onclick="selectCheckerDrug('${p.id}')">
-        <div>
-          <b style="font-size:13.5px;color:#0F172A">${esc(p.name)}</b>
-          <div style="font-size:11.5px;color:#64748B">${esc(p.generic || 'إشراف صيدلي معتمد')}</div>
-        </div>
-        <button type="button" class="btn soft" style="padding:5px 10px;font-size:11.5px;font-weight:700;${isAdded ? 'background:#DCFCE7;color:#15803D;' : ''}">
-          ${isAdded ? '✓ مُضاف' : '＋ فحص'}
-        </button>
-      </div>
-    `;
-  }).join('');
-  box.style.display = 'block';
-}
-
-function selectCheckerDrug(id) {
-  const pool = getClinicalPool();
-  const p = pool.find(x => String(x.id) === String(id)) || M[id];
-  if (!p) return;
-  if (!checkerSelected.some(x => String(x.id) === String(id))) {
-    checkerSelected.push(p);
-  }
-  $('checkerSearch').value = '';
-  $('checkerResults').style.display = 'none';
-  renderInteractionModal();
-}
-
-function removeCheckerDrug(idx) {
-  checkerSelected.splice(idx, 1);
-  renderInteractionModal();
-}
-
-function checkInteractions(list) {
-  if (!list || list.length < 2) return [];
-  const warnings = [];
-
-  const items = list.map(x => {
-    const raw = ((x.name || '') + ' ' + (x.generic || '')).toLowerCase();
-    const clean = bbNorm(raw);
-    return { drug: x, raw, clean };
-  });
-
-  const filterGroup = (regex) => items.filter(it => regex.test(it.raw) || regex.test(it.clean));
-
-  // الفئات الدوائية الشاملة
-  const nsaids = filterGroup(/كتافلام|بروفين|فولتارين|ديكلوفيناك|انتيفلام|باي الكوفان|كتوفان|كيتوفان|نابروكسين|نابروزول|فيلدين|سيلبركس|diclofenac|ibuprofen|ketoprofen|meloxicam|celebrex|naproxen/);
-  const bloodThinners = filterGroup(/اسبرين|اسبيرين|بلافيكس|كلوبيدوجريل|وارفارين|ماريفان|زاريلتو|اليكويس|كلكسان|aspirin|plavix|clopidogrel|warfarin|xarelto|eliquis|clexane/);
-  const betaBlockers = filterGroup(/كونكور|بيسوبرولول|اتينولول|انديرال|بروبرانولول|كار Always|concor|bisoprolol|atenolol|inderal/);
-  const salbutamols = filterGroup(/فينتو|سالبوتامول|برونكوفنت|اولفنت|ventolin|salbutamol/);
-  const paracetamols = filterGroup(/باراسيتامول|بانادول|بنادول|كولد فري|كونجستال|سيتال|أدول|كومتركس|123|ترايمد فلو|فلورست|نوفالدول|سيفامول|paracetamol|panadol|cetal/);
-  const ppis = filterGroup(/اوميبرازول|كونترولوك|بانتوزول|اوميز|نيكسيوم|بانتوبرازول|زوركال|omeprazole|pantoprazole|esomeprazole|controloc/);
-  const irons = filterGroup(/حديد|فيروجلوبين|فيروترون|فيفول|هيموجيت|ثيراجران|ferroglobin|ferrotron|iron|ferrous/);
-  const aceArbs = filterGroup(/كابوتين|كابتوبريل|كوزار|لوسارتان|تارجم|ديوفان|فالسارتان|زستريل|ليزينوبريل|عبروفيل|irbesartan|valsartan|losartan|captopril|enalapril/);
-  const nitrates = filterGroup(/داينترا|ايمدور|نيتروجلسرين|نترات|مونوماك|isordil|imdur|nitroglycerin|nitrate/);
-  const edDrugs = filterGroup(/فياجرا|سيلدينافيل|سيالس|تادالافيل|فايركتا|اريك|سنافي|فايركتا|viagra|cialis|sildenafil|tadalafil/);
-  const statins = filterGroup(/اتور|اتورفا|كريستور|ليبيتور|سيمفاستاتين|ator|crestor|lipitor|statin/);
-  const macrolides = filterGroup(/كلاريد|كلاسيد|ازيثرو|كلاريثروميسين|klacid|clarithromycin|azithromycin|zithromax/);
-  const metformins = filterGroup(/جلوكوفاج|ميتفورمين|سيدوفاج|glucophage|metformin/);
-  const quinolones = filterGroup(/سيبرو|سيبروفلوكساسين|تافانيك|ليفوفلوكساسين|cipro|levofloxacin|tavanic/);
-  const antacidsMetal = filterGroup(/مالوكس|جافيسكون|ابيكوجيل|ماجنيسيوم|كالسيوم|maalox|gaviscon|calcium|antacid/);
-
-  // 1. مسكنات NSAIDs + مميعات الدم
-  if (nsaids.length && bloodThinners.length) {
-    warnings.push({
-      severity: 'severe',
-      badge: '⛔ تعارض خطر حاد',
-      title: 'خطر حدوث نزيف وقرحة بالمعدة: ' + nsaids[0].drug.name + ' مع ' + bloodThinners[0].drug.name,
-      desc: 'تناول المسكنات غير الستيرويدية مع الأسبرين أو مضادات التجلط يرفع بشدة احتمال حدوث نزيف معوي أو قرحة حادة في المعدة.',
-      advice: 'استبدل المسكن بالباراسيتامول الآمن (مثل بنادول)، أو استشر صيدلي بحبح فوراً لوصف بديل مناسب وحامي للمعدة.'
-    });
-  }
-
-  // 2. مضاعفة جرعة الباراسيتامول
-  if (paracetamols.length >= 2) {
-    warnings.push({
-      severity: 'severe',
-      badge: '⚠️ خطر تسمم كبدي',
-      title: 'مضاعفة الجرعة: أكثر من دواء يحتوي على الباراسيتامول (' + paracetamols.map(x=>x.drug.name).join(' + ') + ')',
-      desc: 'الجمع بين دواء برد ومسكن آخر يحتوي على نفس المادة قد يتخطى الجرعة اليومية القصوى (4 جرام) مما يجهد الكبد بشدة.',
-      advice: 'اكتفِ بواحد فقط أو افصل بينهما 6 ساعات على الأقل بعد حساب الجرعة الإجمالية.'
-    });
-  }
-
-  // 3. منشطات الأوعية مع أدوية نترات القلب
-  if (edDrugs.length && nitrates.length) {
-    warnings.push({
-      severity: 'severe',
-      badge: '🚫 ممنوع الجمع قطعياً',
-      title: 'تعارض مميت: منشطات الأوعية مع نترات القلب (' + edDrugs[0].drug.name + ' مع ' + nitrates[0].drug.name + ')',
-      desc: 'الجمع بينهما يسبب هبوطاً حاداً ومفاجئاً في ضغط الدم قد يؤدي للإغماء أو توقف التروية الدموية للقلب.',
-      advice: 'ممنوع تناولهما معاً نهائياً تحت أي ظرف. تواصل مع الطبيب المعالج.'
-    });
-  }
-
-  // 4. منظمات القلب بيتا بلوكر مع موسعات الشعب
-  if (betaBlockers.length && salbutamols.length) {
-    warnings.push({
-      severity: 'moderate',
-      badge: '⚡ تضاد وظيفي',
-      title: 'تأثير متعاكس: منظم القلب ' + betaBlockers[0].drug.name + ' مع موسع الشعب ' + salbutamols[0].drug.name,
-      desc: 'موسعات الشعب ومثبطات بيتا لهما تأثيرات متعاكسة؛ موسع الشعب يرفع نبضات القلب والكونكور يبطئها مما يقلل فاعلية البخاخ ويجهد القلب.',
-      advice: 'أخبر طبيب الصدر والقلب لتعديل موسع الشعب لبديل آمن مع أدوية القلب.'
-    });
-  }
-
-  // 5. مضادات الحموضة مع أقراص الحديد
-  if ((ppis.length || antacidsMetal.length) && irons.length) {
-    const acidDrug = (ppis[0] || antacidsMetal[0]).drug.name;
-    warnings.push({
-      severity: 'moderate',
-      badge: '📉 تقليل امتصاص العلاج',
-      title: 'ضعف امتصاص الحديد: مضاد الحموضة ' + acidDrug + ' مع ' + irons[0].drug.name,
-      desc: 'امتصاص الحديد يحتاج لوسط حمضي بالمعدة، وتناول مضاد الحموضة يمنع ذوبان الحديد فيقل امتصاصه بنسبة تتجاوز 60%.',
-      advice: 'افصل بين الدوائين بساعتين إلى 3 ساعات على الأقل (تناول الحديد أولاً ثم مضاد الحموضة لاحقاً).'
-    });
-  }
-
-  // 6. مسكنات NSAIDs مع أدوية الضغط (ACE/ARB)
-  if (nsaids.length && aceArbs.length) {
-    warnings.push({
-      severity: 'moderate',
-      badge: '⚠️ إجهاد وظائف الكلى',
-      title: 'تأثير على وظائف الكلى وضغط الدم: ' + aceArbs[0].drug.name + ' مع ' + nsaids[0].drug.name,
-      desc: 'المسكنات القوية تقلل تروية الكلى وتحبس الأملاح، مما يضعف مفعول أدوية الضغط ويزيد العبء على الكلى.',
-      advice: 'لا تتناول المسكنات لأكثر من يومين متتاليين واشرب سوائل وفيرة مع قياس الضغط دورياً.'
-    });
-  }
-
-  // 7. المضادات الحيوية الكينولون مع المعادن ومضادات الحموضة
-  if (quinolones.length && (antacidsMetal.length || irons.length)) {
-    warnings.push({
-      severity: 'moderate',
-      badge: '📉 تكوّن معقدات غير ممتصة',
-      title: 'ضعف امتصاص المضاد الحيوي: ' + quinolones[0].drug.name + ' مع المعادن أو مضاد الحموضة',
-      desc: 'المعادن الثنائية والثلاثية مثل الكالسيوم والمغنيسيوم والحديد ترتبط بالمضاد الحيوي وتمنع دخوله لمجرى الدم.',
-      advice: 'تناول المضاد الحيوي قبل مكملات المعادن أو الفوار بساعتين على الأقل.'
-    });
-  }
-
-  // 8. أدوية الكوليسترول (ستاتين) مع مضادات حيوية ماكروليد
-  if (statins.length && macrolides.length) {
-    warnings.push({
-      severity: 'severe',
-      badge: '⚠️ خطر آلام وانهيار العضلات',
-      title: 'ارتفاع سمية دواء الكوليسترول: ' + statins[0].drug.name + ' مع ' + macrolides[0].drug.name,
-      desc: 'الماكروليد يثبط إنزيم الكبد المسؤول عن تفكيك أدوية الكوليسترول، مما يرفع نسبتها بالدم لـ 5 أضعاف ويسبب آلاماً عضلية شديدة.',
-      advice: 'يجب إيقاف دواء الكوليسترول مؤقتاً خلال أيام كورس المضاد الحيوي بعد استشارة الصيدلي.'
-    });
-  }
-
-  // 9. تكرار مسكنين NSAID معاً
-  if (nsaids.length >= 2) {
-    warnings.push({
-      severity: 'moderate',
-      badge: '⚠️ تكرار غير مبرر',
-      title: 'تكرار مسكنين من نفس العائلة (' + nsaids.map(x=>x.drug.name).join(' + ') + ')',
-      desc: 'الجمع بين مسكنين غير ستيرويديين لا يعطي تسكيناً مضاعفاً بل يضاعف خطر قرحة المعدة والآثار الجانبية.',
-      advice: 'اكتفِ بمسكن واحد فقط بالجرعة الموصوفة من الطبيب.'
-    });
-  }
-
-  return warnings;
-}
-
-function openClinicalHubModal() {
-  vib(12);
-  $('dlg').classList.add('wide-dialog');
-  $('dlgBody').innerHTML = `
-    <div class="checker-container">
-      <div class="checker-header-hero" style="background:linear-gradient(135deg, #EFF6FF, #DBEAFE);border-color:#93C5FD;">
-        <h3 class="checker-title" style="color:#1E40AF;">
-          <span>🩺</span> المركز الصيدلاني الذكي — صيدلية بحبح
-        </h3>
-        <p class="checker-subtitle" style="color:#1E3A8A;">
-          أدوات طبية احترافية تضمن سلامتك وسلامة أسرتك في ديروط: فحص التداخلات، دقة جرعات الأطفال، ومنبه مواعيد العلاج.
-        </p>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px;">
-        <!-- بطاقة 1: فاحص التداخلات -->
-        <div style="background:#FFF1F2;border:1.5px solid #FDA4AF;border-radius:18px;padding:16px;cursor:pointer;transition:transform 0.2s;" onclick="$('dlg').close();openInteractionChecker();">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <span style="font-size:28px">⚡</span>
-            <div>
-              <b style="font-size:15px;color:#9F1239;display:block">فاحص التعارضات</b>
-              <span style="font-size:11px;background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:99px;font-weight:700">دقيق ومحدث 2026</span>
-            </div>
-          </div>
-          <p style="margin:0;font-size:12px;color:#881337;line-height:1.4">
-            فحص أمان تناول دوائين أو أكثر لمنع قرحة المعدة، نزيف السيولة، أو تسمم الجرعات.
-          </p>
-          <div style="margin-top:10px;font-size:12px;font-weight:800;color:#E11D48;">فتح الفاحص الآن ⬅️</div>
-        </div>
-
-        <!-- بطاقة 2: حاسبة جرعات الأطفال بالوزن -->
-        <div style="background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:18px;padding:16px;cursor:pointer;transition:transform 0.2s;" onclick="$('dlg').close();openDosageCalc();">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <span style="font-size:28px">👶</span>
-            <div>
-              <b style="font-size:15px;color:#166534;display:block">جرعات الأطفال بالوزن</b>
-              <span style="font-size:11px;background:#DCFCE7;color:#15803D;padding:2px 8px;border-radius:99px;font-weight:700">بالسرنجة والمل</span>
-            </div>
-          </div>
-          <p style="margin:0;font-size:12px;color:#14532D;line-height:1.4">
-            حاسبة أوزان دقيقة لخافض الحرارة (سيتال/بروفين) ونقط الرضع لحماية طفلك.
-          </p>
-          <div style="margin-top:10px;font-size:12px;font-weight:800;color:#15803D;">حساب الجرعة الآن ⬅️</div>
-        </div>
-
-        <!-- بطاقة 3: منبه مواعيد العلاج -->
-        <div style="background:#FFFBEB;border:1.5px solid #FCD34D;border-radius:18px;padding:16px;cursor:pointer;transition:transform 0.2s;" onclick="$('dlg').close();openReminderSetup();">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <span style="font-size:28px">⏰</span>
-            <div>
-              <b style="font-size:15px;color:#92400E;display:block">منبه مواعيد علاجي</b>
-              <span style="font-size:11px;background:#FEF3C7;color:#B45309;padding:2px 8px;border-radius:99px;font-weight:700">تنظيم الجرعات</span>
-            </div>
-          </div>
-          <p style="margin:0;font-size:12px;color:#78350F;line-height:1.4">
-            جدول ومواعيد أدويتك اليومية قبل وبعد الأكل لعدم نسيان أي حبة علاج.
-          </p>
-          <div style="margin-top:10px;font-size:12px;font-weight:800;color:#B45309;">عرض وتعديل المنبه ⬅️</div>
-        </div>
-
-        <!-- بطاقة 4: استشارة الصيدلي المباشرة -->
-        <a href="https://wa.me/201011500166?text=السلام%20عليكم%20دكتور%20صيدلية%20بحبح،%20عندي%20استفسار%20دوائي%20وطبي" target="_blank" rel="noopener" style="background:#F8FAFC;border:1.5px solid #CBD5E1;border-radius:18px;padding:16px;cursor:pointer;text-decoration:none;display:block;">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-            <span style="font-size:28px">💬</span>
-            <div>
-              <b style="font-size:15px;color:#0F172A;display:block">استشارة صيدلي بحبح</b>
-              <span style="font-size:11px;background:#E2E8F0;color:#334155;padding:2px 8px;border-radius:99px;font-weight:700">مجاناً طوال اليوم</span>
-            </div>
-          </div>
-          <p style="margin:0;font-size:12px;color:#475569;line-height:1.4">
-            تحدث مباشرة مع الدكتور الصيدلي عبر واتساب للإجابة عن أي استفسار حول الجرعات والبدائل.
-          </p>
-          <div style="margin-top:10px;font-size:12px;font-weight:800;color:#059669;">تحدث مع الصيدلي ⬅️</div>
-        </a>
-      </div>
-
-      <div style="text-align:center;">
-        <button type="button" class="btn soft" style="padding:10px 24px;border-radius:12px;font-size:13px;" onclick="$('dlg').classList.remove('wide-dialog');$('dlg').close()">
-          إغلاق النافذة
-        </button>
-      </div>
-    </div>
-  `;
-  if (!$('dlg').open) $('dlg').showModal();
-}
 
 function openInteractionChecker() {
   vib(12);
@@ -6869,7 +6457,7 @@ function checkInteractions(list) {
   // الفئات الدوائية الشاملة
   const nsaids = filterGroup(/كتافلام|بروفين|فولتارين|ديكلوفيناك|انتيفلام|باي الكوفان|كتوفان|كيتوفان|نابروكسين|نابروزول|فيلدين|سيلبركس|diclofenac|ibuprofen|ketoprofen|meloxicam|celebrex|naproxen/);
   const bloodThinners = filterGroup(/اسبرين|اسبيرين|بلافيكس|كلوبيدوجريل|وارفارين|ماريفان|زاريلتو|اليكويس|كلكسان|aspirin|plavix|clopidogrel|warfarin|xarelto|eliquis|clexane/);
-  const betaBlockers = filterGroup(/كونكور|بيسوبرولول|اتينولول|انديرال|بروبرانولول|كار Always|concor|bisoprolol|atenolol|inderal/);
+  const betaBlockers = filterGroup(/كونكور|بيسوبرولول|اتينولول|انديرال|بروبرانولول|كارفيديلول|carvedilol|concor|bisoprolol|atenolol|inderal/);
   const salbutamols = filterGroup(/فينتو|سالبوتامول|برونكوفنت|اولفنت|ventolin|salbutamol/);
   const paracetamols = filterGroup(/باراسيتامول|بانادول|بنادول|كولد فري|كونجستال|سيتال|أدول|كومتركس|123|ترايمد فلو|فلورست|نوفالدول|سيفامول|paracetamol|panadol|cetal/);
   const ppis = filterGroup(/اوميبرازول|كونترولوك|بانتوزول|اوميز|نيكسيوم|بانتوبرازول|زوركال|omeprazole|pantoprazole|esomeprazole|controloc/);
@@ -7922,6 +7510,7 @@ function sendWA() {
   BBS('bahbah_last', { ...cart });
   BBS('bahbah_last_at', Date.now());
   BBS('bahbah_n', BBJ('bahbah_n', 0) + 1);
+  bbPost('/api/event', { t: 'wa', s: 'cart' });
   vib([20, 50, 20]);
 
   // فتح محادثة واتساب
@@ -8131,151 +7720,6 @@ function toggleCareMedsDetails() {
   renderMonthlyModalContent();
 }
 
-function getVipCardHTML(code, client) {
-  // جلب فرد العائلة النشط
-  const familyList = client.family && client.family.length ? client.family : [
-    {
-      id: 'self',
-      name: client.name,
-      chronic: client.chronic || 'أدوية دورية',
-      cycle: client.cycle || 30,
-      lastRefill: client.lastRefill || Date.now(),
-      statusStep: 1,
-      meds: client.meds || []
-    }
-  ];
-
-  let currentMem = familyList.find(f => f.id === activeFamilyMember) || familyList[0];
-  const cycleDays = currentMem.cycle || 30;
-  const lastAt = currentMem.lastRefill || Date.now();
-  const daysPassed = Math.floor((Date.now() - lastAt) / 864e5);
-  const daysLeft = Math.max(0, cycleDays - daysPassed);
-
-  // حالة الخطوات الهادئة
-  const step = currentMem.statusStep || 1;
-  const step1Cls = step >= 1 ? (step > 1 ? 'done' : 'active') : '';
-  const step2Cls = step >= 2 ? (step > 2 ? 'done' : 'active') : '';
-  const step3Cls = step >= 3 ? (step > 3 ? 'done' : 'active') : '';
-  const step4Cls = step >= 4 ? 'done' : '';
-
-  // QR Code ديناميكي نظيف
-  const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=' + encodeURIComponent('BAHBAH-CLIENT:' + code);
-
-  return `
-    <div class="care-container">
-      <!-- 1. كارت العميل الراقي المصغر -->
-      <div class="care-pass-card">
-        <div class="care-pass-header">
-          <div>
-            <div class="care-badge-label">
-              <span>🌿 منظومة «رعاية بحبح»</span>
-              <span class="since">عميلنا منذ ${esc(client.since || '2024')}</span>
-            </div>
-            <h4 class="care-client-name">${esc(client.name)}</h4>
-            <div class="care-client-phone">
-              <span>📞 ${esc(client.phone)}</span>
-              <span>·</span>
-              <span>📍 ${esc(client.area || 'ديروط')}</span>
-            </div>
-          </div>
-
-          <div class="care-code-qr-box">
-            <div class="care-code-pill">${esc(code)}</div>
-            <div class="care-qr-thumb">
-              <img src="${qrUrl}" alt="كود QR" loading="lazy">
-            </div>
-          </div>
-        </div>
-
-        <!-- أفراد العائلة إن وجدوا -->
-        ${familyList.length > 1 ? `
-          <div style="font-size:11.5px;color:#BAE6FD;margin-bottom:6px;font-weight:700;">👨‍👩‍👧‍👦 ملفات الرعاية المربوطة بحسابك:</div>
-          <div class="care-family-tabs">
-            ${familyList.map(f => `
-              <button type="button" class="care-family-chip ${f.id === currentMem.id ? 'active' : ''}" onclick="selectCareFamilyMember('${f.id}')">
-                ${esc(f.name)}
-              </button>
-            `).join('')}
-          </div>
-        ` : ''}
-      </div>
-
-      <!-- 2. الشاشة الرئيسية الهادئة: 3 عناصر فقط -->
-      <div class="care-status-hero">
-        <div style="font-size:12px;color:#64748B;font-weight:700;margin-bottom:6px;">
-          🗓️ موعد الصرف القادم لـ (${esc(currentMem.name)}):
-        </div>
-
-        <div class="care-countdown-val">
-          ${daysLeft === 0 ? '⚠️ حان موعد التجهيز اليوم' : `متبقي ${daysLeft} ${daysLeft === 1 ? 'يوم' : daysLeft === 2 ? 'يومان' : 'أيام'}`}
-        </div>
-
-        <div class="care-countdown-sub">
-          ${daysLeft <= 4 ? '📦 دوائك جاهز ومحجوز باسمك في الصيدلية لتفادي أي نقص.' : 'نظام الرعاية يتابع مخزونك وسيتواصل معك الصيدلي قبل انتهاء الجرعة.'}
-        </div>
-
-        <!-- الزر الرئيسي الواضح الهادئ -->
-        <button type="button" class="care-refill-btn-primary" onclick="orderCareRefill('${esc(code)}', '${currentMem.id}')">
-          <span>📦 جهّزوا طلبي الشهري الآن</span>
-          <span style="font-size:13px;opacity:0.85;">(تأكيد بنقرة عبر واتساب)</span>
-        </button>
-
-        <!-- تتبع التوصيل الهادئ الشفاف -->
-        <div class="care-track-stepper">
-          <div class="care-step-node ${step1Cls}">
-            <div class="care-step-dot">1</div>
-            <span>جاهز للتأكيد</span>
-          </div>
-          <div class="care-step-node ${step2Cls}">
-            <div class="care-step-dot">2</div>
-            <span>مراجعة وتجهيز</span>
-          </div>
-          <div class="care-step-node ${step3Cls}">
-            <div class="care-step-dot">3</div>
-            <span>مع المندوب</span>
-          </div>
-          <div class="care-step-node ${step4Cls}">
-            <div class="care-step-dot">4</div>
-            <span>تم الاستلام</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. قائمة الأدوية القابلة للطي لحفظ الخصوصية -->
-      <div class="care-meds-summary">
-        <button type="button" class="care-meds-toggle-btn" onclick="toggleCareMedsDetails()">
-          <span style="display:flex;align-items:center;gap:6px;">
-            <span>📋</span> الأدوية والجرعات المسجلة (${(currentMem.meds || []).length} أصناف)
-          </span>
-          <span style="font-size:12px;color:#1B4F8E;">${careMedsExpanded ? 'إخفاء ▲' : 'عرض والتأكد ▼'}</span>
-        </button>
-
-        ${careMedsExpanded ? `
-          <div style="margin-top:10px;border-top:1px solid #E2E8F0;padding-top:8px;">
-            ${(currentMem.meds || []).map(m => `
-              <div class="care-med-row">
-                <div>
-                  <b style="color:#0F294A">${esc(m.name)}</b>
-                  <span style="font-size:12px;color:#64748B;"> (${m.count} علبة)</span>
-                </div>
-                <span class="care-dosage-badge">${esc(m.timing || 'جرعة يومية')}</span>
-              </div>
-            `).join('')}
-            <div style="font-size:11px;color:#64748B;margin-top:8px;background:#F8FAFC;padding:8px;border-radius:8px;">
-              💡 <b>ملاحظة صيدلانية:</b> هل تحتاج تعديل في الجرعة أو استشارة الطبيب؟ يمكنك إخبار الصيدلي فوراً عند تأكيد الطلب.
-            </div>
-          </div>
-        ` : ''}
-      </div>
-
-      <div style="display:flex;gap:8px;justify-content:center;">
-        <button type="button" class="btn soft" style="font-size:12px;padding:6px 14px;color:#64748B;" onclick="localStorage.removeItem('bahbah_my_vip_code');renderMonthlyModalContent();">
-          تبديل الكود / تسجيل خروج
-        </button>
-      </div>
-    </div>
-  `;
-}
 
 function orderCareRefill(code, memberId) {
   const client = getVipClient(code);
@@ -8521,6 +7965,40 @@ function orderVipRefill(code) {
   open('https://wa.me/' + CFG.WA + '?text=' + encodeURIComponent(waMsg), '_blank');
 }
 
+
+/* كود العميل: عشوائي آمن (8 خانات بدون حروف متشابهة). السيرفر هو اللي يضمن إنه غير مكرر. */
+function bbNewVipCode() {
+  const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', b = new Uint8Array(8);
+  crypto.getRandomValues(b);
+  return 'BB-' + Array.from(b, x => A[x % A.length]).join('');
+}
+
+/* طابور إعادة المحاولة: لو السيرفر مش متاح، الطلب بيتحفظ ويتبعت تاني بعدين بدل ما يضيع */
+function bbQueuePost(url, body) {
+  const q = BBJ('bahbah_post_queue', []);
+  q.push({ url, body, at: Date.now() });
+  BBS('bahbah_post_queue', q.slice(-20));
+}
+async function bbPost(url, body) {
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok && r.status >= 500) throw new Error('server ' + r.status);
+    return r;
+  } catch (e) { bbQueuePost(url, body); return null; }
+}
+async function bbFlushQueue() {
+  const q = BBJ('bahbah_post_queue', []);
+  if (!q.length) return;
+  const keep = [];
+  for (const it of q) {
+    try { const r = await fetch(it.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(it.body) }); if (!r.ok && r.status >= 500) keep.push(it); }
+    catch (e) { keep.push(it); }
+  }
+  BBS('bahbah_post_queue', keep);
+}
+addEventListener('online', bbFlushQueue);
+setTimeout(bbFlushQueue, 4000);
+
 async function submitMonthlyRx() {
   const name = ($('mo-name')?.value || '').trim();
   const phone = ($('mo-phone')?.value || '').trim();
@@ -8545,8 +8023,7 @@ async function submitMonthlyRx() {
   }
 
   // توليد كود عميل فوري جديد
-  const randNum = Math.floor(100 + Math.random() * 900);
-  const newVipCode = 'BB-' + randNum;
+  const newVipCode = bbNewVipCode();
 
   // حفظ العميل محلياً بكوده المميز
   const clientData = {
@@ -8565,13 +8042,7 @@ async function submitMonthlyRx() {
   BBS('bahbah_cust', { ...bbCust(), n: name, p: phone, a: area });
 
   // حفظ فوري في السيرفر إن وجد
-  try {
-    fetch('/api/monthly/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ vip_code: newVipCode, name, phone, area, cycle_days: cycle, notes: (clientData.chronic + ' | ' + notes) })
-    });
-  } catch (err) {}
+  bbPost('/api/monthly/register', { vip_code: newVipCode, name, phone, area, cycle_days: cycle, notes: (clientData.chronic + ' | ' + notes) });
 
   // صياغة رسالة واتساب
   let waMsg = `السلام عليكم صيدلية بحبح 🌿\nأود تسجيل وتفعيل كارت «العلاج الشهري»:\n`;
@@ -8676,6 +8147,7 @@ async function submitFastRx() {
   if (note) waMsg += `📝 ملاحظات: ${note}\n`;
   waMsg += `\nبرجاء إبلاغي بالتوفر والسعر ووقت التوصيل. شكراً!`;
 
+  bbPost('/api/event', { t: 'wa', s: 'rx' });
   vib(25);
   $('dlg').close();
 
@@ -8855,16 +8327,10 @@ async function saveWatch(id) {
     toast('اكتب رقم موبايل صحيح مكون من 11 رقم');
     return;
   }
-  try {
-    await fetch(CFG.WATCH, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, phone: ph })
-    });
-  } catch (e) {}
+  const r = await bbPost(CFG.WATCH, { id, product_id: id, phone: ph, consent: true });
   vib(20);
   $('dlg').close();
-  toast('تم التسجيل ✓ هنبلّغك أول ما يتوفر');
+  toast(r && !r.ok ? 'حصلت مشكلة في التسجيل، جرّب تاني' : 'تم التسجيل ✓ هنبلّغك أول ما يتوفر');
 }
 
 function bbFavN() {

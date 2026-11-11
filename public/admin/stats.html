@@ -42,7 +42,7 @@ async function load(){
   M.append(card('سجّل طلب مكتمل',h('div',{className:'r'},ph,tot,src),h('div',{className:'r'},h('button',{className:'f',onclick:async()=>{const x=await api('/api/admin/orders',{phone:ph.value,total:tot.value,src:src.value});out.textContent=x.ok?'تم التسجيل':x.j.error;if(x.ok)load();}},'حفظ'),out)));
   const sev=h('select',{},h('option',{value:''},'الخطورة'),h('option',{value:'low'},'بسيطة'),h('option',{value:'medium'},'متوسطة'),h('option',{value:'high'},'خطيرة (دواء أو تركيز غلط)')),note=h('input',{placeholder:'وصف مختصر بدون أسماء مرضى',maxLength:300}),out2=h('div',{role:'status'});
   M.append(card('سجّل خطأ أو شكوى',h('div',{className:'r'},sev,note),h('div',{className:'r'},h('button',{className:'f',onclick:async()=>{const x=await api('/api/admin/incidents',{severity:sev.value,note:note.value});out2.textContent=x.ok?'تم التسجيل':x.j.error;if(x.ok)load();}},'حفظ'),out2)),
-    ...s.incidents.slice(0,5).map(i=>h('div',{className:'m'},`${i.at.slice(0,10)} · ${i.severity} · ${i.note||''}`))));
+    ...s.incidents.slice(0,5).map(i=>h('div',{className:'m'},`${i.at.slice(0,10)} · ${i.severity} · ${i.note||''}`)));
 }
 document.getElementById('days').onchange=load; load();
 </script></body></html>

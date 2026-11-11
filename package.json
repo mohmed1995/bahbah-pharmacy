@@ -1,13 +1,18 @@
 {
   "name": "bahbah",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "audit": "node audit.js"
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check": "node scripts/check.mjs",
+    "test": "node scripts/check.mjs && node scripts/test.mjs",
+    "seed": "node scripts/seed.mjs",
+    "db:init": "wrangler d1 execute bahbah --remote --file=worker/schema.sql",
+    "db:seed": "npm run seed && wrangler d1 execute bahbah --remote --file=worker/seed.sql"
   },
-  "dependencies": {
-    "express": "^4.19.2",
-    "node-cron": "^3.0.3"
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }

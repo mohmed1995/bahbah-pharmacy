@@ -1,0 +1,19 @@
+# نشر على Cloudflare: الموقع (public/) + Worker للـ API + قاعدة D1
+name = "bahbah-pharmacy"
+main = "worker/src/index.js"
+compatibility_date = "2026-01-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]   # الـ Worker بيخدم /api/* بس، الباقي ملفات ثابتة
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bahbah"
+database_id = "REPLACE_WITH_ID"  # من: npx wrangler d1 create bahbah
+
+[triggers]
+crons = ["0 1 * * *"]  # يومياً: حذف بيانات انتهت مدتها (watch بعد 30 يوم، أحداث بعد 90)
+
+# الأسرار (مش بتتكتب هنا): npx wrangler secret put ADMIN_PASSWORD  و  SESSION_SECRET

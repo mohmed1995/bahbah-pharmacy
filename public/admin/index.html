@@ -728,11 +728,8 @@ main.container {
 
       <div style="background:#F8FAFC;border:1.5px solid #E2E8F0;border-radius:16px;padding:20px;text-align:center">
         <div style="font-size:36px;margin-bottom:8px">🔐</div>
-        <h4 style="margin:0 0 6px;color:var(--pri)">تغيير كلمة مرور الإدارة</h4>
-        <p style="font-size:13px;color:var(--mute);margin-bottom:16px">تحديث وتغيير كلمة السر التي تحمي لوحة التحكم لضمان الأمان التام.</p>
-        <button class="btn soft" style="width:100%;justify-content:center" onclick="changeOwnerPassword()">
-          تغيير الباسورد الآن 🔑
-        </button>
+        <h4 style="margin:0 0 6px;color:var(--pri)">كلمة مرور الإدارة</h4>
+        <p style="font-size:13px;color:var(--mute);margin:0">بتتغير من إعدادات Cloudflare (السر ADMIN_PASSWORD)، مش من المتصفح. التفاصيل في CLAUDE.md.</p>
       </div>
     </div>
   </section>
@@ -753,14 +750,6 @@ let currentFilter = 'all';
 let posCart = [];
 let posSalesTotal = 0;
 
-// بيانات مرضى العلاج الشهري
-let monthlyPatients = [
-  { id: 1, name: 'الحاج مصطفى محمد', phone: '01011500166', condition: 'ضغط وسكر', drugs: 'كونكور 5 مجم، جلوكوفاج 1000', day: 1, note: 'توصيل للبيت بالشارع الجديد' },
-  { id: 2, name: 'أم أحمد عبد الرحيم', phone: '01011500166', condition: 'سكر وقلب', drugs: 'جانوميت، بلافيكس 75', day: 5, note: 'اتصال قبل الخروج بساعة' },
-  { id: 3, name: 'أستاذ محمود فتحي', phone: '01011500166', condition: 'ضغط مرتفع', drugs: 'نورفاسك 5، كابوتن', day: 10, note: 'الدفع فودافون كاش' },
-  { id: 4, name: 'أم كريم', phone: '01011500166', condition: 'ألبان ومكملات أطفال', drugs: 'نان 1 حليب بودرة، فيتامين د', day: 15, note: 'علبتين كل أسبوعين' },
-  { id: 5, name: 'عم فاروق النجار', phone: '01011500166', condition: 'سكر', drugs: 'أنسولين لانتوس، لانسيت وشكامات', day: 20, note: 'يحتاج ثلج مع الأنسولين' }
-];
 
 async function initDashboard() {
   try {
@@ -844,16 +833,6 @@ function downloadCatalogJSON() {
   a.href = URL.createObjectURL(blob);
   a.download = `bahbah_backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
-}
-
-function changeOwnerPassword() {
-  const newPass = prompt('اكتب كلمة المرور الجديدة لصاحب الصيدلية:');
-  if (newPass && newPass.length >= 6) {
-    localStorage.setItem('bahbah_custom_owner_pass', newPass);
-    alert('تم تغيير كلمة مرور الإدارة بنجاح وحفظها على هذا الجهاز!');
-  } else if (newPass) {
-    alert('كلمة المرور يجب أن تكون 6 أحرف أو أرقام على الأقل');
-  }
 }
 
 function setFilter(f) {
@@ -1415,42 +1394,37 @@ function openProductModal() {
   alert('تمت إضافة المنتج بنجاح إلى الكتالوج!');
 }
 
-/* ===== أمان لوحة القيادة وحفظ الجلسة ===== */
-function checkOwnerSession() {
-  const isAuth = sessionStorage.getItem('bahbah_owner_auth');
+/* ===== أمان لوحة القيادة: الدخول بيتم على السيرفر (Cloudflare Worker) والجلسة كوكي HttpOnly ===== */
+async function checkOwnerSession() {
   const lock = document.getElementById('owner-lock-screen');
-  if (isAuth === 'true') {
-    if (lock) lock.style.display = 'none';
-  } else {
-    if (lock) lock.style.display = 'flex';
-  }
+  let ok = false;
+  try { ok = (await fetch('/api/admin/me', { credentials: 'same-origin' })).ok; } catch (e) {}
+  if (lock) lock.style.display = ok ? 'none' : 'flex';
+  return ok;
 }
-
-async function hashString(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// الهاش المشفر لكلمة المرور لحمايتها من الـ Inspect والكشف
-const OWNER_AUTH_HASH = 'f13abd85cfa844b7d92af1fe8e117ddaf8a5b7715778784da5ca93c9dc66d760';
 
 async function verifyOwnerPass() {
   const inp = document.getElementById('owner-pass-inp').value;
   const err = document.getElementById('lock-err');
-  const inpHashed = await hashString(inp);
-  const customPass = localStorage.getItem('bahbah_custom_owner_pass');
-  const customHashed = customPass ? await hashString(customPass) : null;
-
-  if (inpHashed === OWNER_AUTH_HASH || inpHashed === '2cc8397a5542b2ab87dc74075b31f78fbb8e792e3a5a73e6e8e8113ce0f968c9' || (customHashed && inpHashed === customHashed)) {
-    sessionStorage.setItem('bahbah_owner_auth', 'true');
+  let r = null;
+  try {
+    r = await fetch('/api/admin/login', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: inp })
+    });
+  } catch (e) {}
+  if (r && r.ok) {
+    err.style.display = 'none';
     document.getElementById('owner-lock-screen').style.display = 'none';
   } else {
+    err.textContent = r && r.status === 429 ? 'محاولات كتير، استنى شوية وجرّب تاني' : (r ? 'كلمة المرور غير صحيحة' : 'تعذر الاتصال بالسيرفر');
     err.style.display = 'block';
   }
 }
 
-function ownerLogout() {
-  sessionStorage.removeItem('bahbah_owner_auth');
+async function ownerLogout() {
+  try { await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
   location.reload();
 }
 
