@@ -6064,6 +6064,138 @@ body.adm .site-footer > small { display: block; }
   max-width: 100% !important;
 }
 
+
+/* =========================================================================
+   تطوير واستقرار الواجهة الشامل للموبايل (Mobile Perfection & Anti-Occlusion)
+   ========================================================================= */
+@media (max-width: 899px) {
+  .ban {
+    display: block !important;
+    width: calc(100% - 20px) !important;
+    max-width: 100% !important;
+    margin: 10px auto !important;
+    min-height: auto !important;
+    height: auto !important;
+    clear: both !important;
+  }
+  .ban .bt {
+    display: flex !important;
+    width: 100% !important;
+  }
+  .ban .bs {
+    flex: 0 0 100% !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    min-height: 145px !important;
+    padding: 16px 18px 36px !important;
+    box-sizing: border-box !important;
+  }
+  .ban .bs-title {
+    font-size: 16px !important;
+    line-height: 1.4 !important;
+  }
+  .ban .bs-desc {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    max-width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+  .ban .bs-visual {
+    flex: 0 0 65px !important;
+    height: 65px !important;
+  }
+  .ban .bs-hero-img {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .ban-nav-arrow {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 13px !important;
+    z-index: 12 !important;
+  }
+  .ban-nav-prev { right: 6px !important; }
+  .ban-nav-next { left: 6px !important; }
+  #quick {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 6px 12px 10px !important;
+    gap: 8px !important;
+    box-sizing: border-box !important;
+    scrollbar-width: none !important;
+  }
+  #quick::-webkit-scrollbar { display: none !important; }
+  .qa {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    min-height: 40px !important;
+  }
+  .action-strip-refined {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    padding: 0 10px !important;
+  }
+  .action-strip-refined > div:last-child {
+    grid-column: span 2 !important;
+  }
+  .ac-btn-lux {
+    padding: 8px 10px !important;
+    min-height: 52px !important;
+  }
+}
+body {
+  padding-bottom: calc(150px + env(safe-area-inset-bottom)) !important;
+}
+#cartbar {
+  position: fixed !important;
+  inset-inline: 12px !important;
+  bottom: calc(68px + env(safe-area-inset-bottom)) !important;
+  z-index: 90 !important;
+  max-width: 480px !important;
+  margin: 0 auto !important;
+  box-shadow: 0 8px 24px rgba(14, 47, 90, 0.4) !important;
+}
+div:has(> #cu-cp) {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+#cu-cp {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  font-size: 13.5px !important;
+  padding: 10px 12px !important;
+  box-sizing: border-box !important;
+}
+.adm-pro-container {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+.adm-pro-header {
+  position: sticky !important;
+  top: 0 !important;
+  background: #FFFFFF !important;
+  z-index: 20 !important;
+  padding: 14px 18px 10px !important;
+  margin: 0 !important;
+  border-bottom: 2px solid #E2E8F0 !important;
+}
+#admTabContent {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  padding: 12px 16px 24px !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
 </style>
 <style>
 
@@ -9714,7 +9846,7 @@ function cartSheet() {
         </div>
         <div class="cart-qty-ctrl" data-id="${safeId}">
           <button type="button" class="cart-minus ${count === 1 ? 'del' : ''}" aria-label="تقليل" onclick="chg('${safeId}', -1)">
-            ${count === 1 ? '✕' : '−'}
+            −
           </button>
           <input
             type="number"
