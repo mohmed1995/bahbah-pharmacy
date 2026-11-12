@@ -6043,6 +6043,27 @@ body.adm .site-footer > small { display: block; }
   outline: none;
 }
 
+
+/* إصلاح محاذاة البنر ومنع تعليقه على الجانب */
+.ban {
+  direction: rtl !important;
+  margin: 14px auto 8px !important;
+  box-sizing: border-box !important;
+  clear: both !important;
+}
+.ban .bt {
+  direction: rtl !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.55s cubic-bezier(0.25, 1, 0.5, 1) !important;
+}
+.ban .bs {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 </style>
 <style>
 
@@ -12520,35 +12541,54 @@ function renderBannerSlides() {
     <div class="bdots">${activePromos.map(() => '<button type="button" aria-label="شريحة"></button>').join('')}</div>
   `;
 
-  // ربط الحركة التلقائية السلسة واللمس
-  let idx = 0, x0;
+  // ربط الحركة التلقائية السلسة المتوافقة 100% مع الاتجاه العربي RTL
+  let idx = 0, x0 = 0, y0 = 0;
   const bt = banSection.querySelector('.bt');
   const dots = [...banSection.querySelectorAll('.bdots button')];
   const n = activePromos.length;
 
+  // في نظام RTL: الانتقال للشريحة التالية يعني التحرك جهة اليمين الموجب (+idx * 100%)
   const goSlide = k => {
-    if (!n) return;
+    if (!n || !bt) return;
     idx = (k + n) % n;
-    bt.style.transform = `translateX(${idx * 100}%)`;
+    // التأكد من تطبيق التحريك العربي بدقة دون تعلق
+    bt.style.transform = `translate3d(${idx * 100}%, 0, 0)`;
     dots.forEach((d, j) => d.classList.toggle('on', j === idx));
   };
+
   window.banGoSlide = dir => {
+    // الزر التالي يتحرك للأمام، والسابق للخلف
     goSlide(idx + dir);
     runSlide();
   };
 
   const runSlide = () => {
     clearInterval(bannerSliderInterval);
-    bannerSliderInterval = setInterval(() => {
-      if (!document.hidden) goSlide(idx + 1);
-    }, 4500);
+    if (n > 1) {
+      bannerSliderInterval = setInterval(() => {
+        if (!document.hidden) goSlide(idx + 1);
+      }, 5000);
+    }
   };
 
   dots.forEach((d, j) => d.onclick = () => { goSlide(j); runSlide(); });
-  bt.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; clearInterval(bannerSliderInterval); }, { passive: true });
+  
+  // دعم السحب باللمس (Swipe) بحساسية ناعمة ومنع التعليق
+  bt.addEventListener('touchstart', e => {
+    x0 = e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+    clearInterval(bannerSliderInterval);
+  }, { passive: true });
+
   bt.addEventListener('touchend', e => {
-    const d = e.changedTouches[0].clientX - x0;
-    if (Math.abs(d) > 35) { goSlide(idx + (d < 0 ? 1 : -1)); vib(6); }
+    const dx = e.changedTouches[0].clientX - x0;
+    const dy = e.changedTouches[0].clientY - y0;
+    // تأكد أن السحب أفقي وليس تمرير رأسي للصفحة
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 30) {
+      // في RTL: السحب لليسار (dx < 0) يعني الانتقال للشريحة التالية
+      goSlide(idx + (dx < 0 ? 1 : -1));
+      if (typeof vib === 'function') vib(6);
+    }
     runSlide();
   });
 
@@ -12589,38 +12629,7 @@ function renderBannerSlides() {
   `);
   renderBannerSlides();
 
-  /* تحريك البانر التلقائي واللمسي */
-  let idx = 0, tmr, x0;
-  const bt = document.querySelector('.bt');
-  const dots = [...document.querySelectorAll('.bdots button')];
-  const n = BB_PROMO.length;
-  const RM = matchMedia('(prefers-reduced-motion:reduce)').matches;
-  const goSlide = k => {
-    idx = (k + n) % n;
-    bt.style.transform = `translateX(${idx * 100}%)`;
-    dots.forEach((d, j) => d.classList.toggle('on', j === idx));
-  };
-  const runSlide = () => {
-    clearInterval(tmr);
-    if (!RM) tmr = setInterval(() => { if (!document.hidden) goSlide(idx + 1); }, 4800);
-  };
-  dots.forEach((d, j) => d.onclick = () => { goSlide(j); runSlide(); });
-  bt.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; clearInterval(tmr); }, { passive: true });
-  bt.addEventListener('touchend', e => {
-    const d = e.changedTouches[0].clientX - x0;
-    if (Math.abs(d) > 40) { goSlide(idx + (d < 0 ? 1 : -1)); vib(6); }
-    runSlide();
-  });
-  bt.addEventListener('click', e => {
-    const a = e.target.closest('.bs')?.dataset.a;
-    if (a === 'rx') openFastRxModal();
-    else if (a === 'monthly') openMonthlyModal();
-    else if (a === 'ask') open(waConsult, '_blank');
-    else if (a) setCat(a);
-  });
-  bt.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.target.click(); } });
-  goSlide(0);
-  runSlide();
+// Duplicate banner runner removed for smooth animation
 
   /* الاقتراحات الفورية وسجل البحث */
   const q = $('q');
