@@ -1,4 +1,4 @@
-const V = 'bahbah-v36';
+const V = 'bahbah-v37';
 const SHELL = [
   './',
   './manifest.webmanifest',

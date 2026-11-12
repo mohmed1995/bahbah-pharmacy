@@ -9468,7 +9468,28 @@ function sendWA() {
     return;
   }
   
-  // حفظ آخر طلب وإحصاء الولاء
+  // حفظ آخر طلب وقيد سجل الطلبات الكامل في لوحة التحكم
+  const currentOrderItems = Object.entries(cart).map(([id, count]) => {
+    const prod = M[id] || {};
+    return { id, name: prod.name || ('صنف #' + id), price: bbPrice(prod), count, total: bbPrice(prod) * count };
+  });
+  const orderRecord = {
+    id: 'ORD-' + Date.now().toString().slice(-6),
+    date: Date.now(),
+    customer: { name: c.n || 'عميل بحبح', phone: c.p || phone, area: c.a || (c.m === 'pickup' ? 'استلام من الصيدلية' : 'ديروط') },
+    items: currentOrderItems,
+    itemsCount: Object.values(cart).reduce((a, b) => a + b, 0),
+    total: tot() + dvFee(),
+    payMethod: c.payMethod || 'cod',
+    deliveryMethod: c.m || 'deliver',
+    coupon: c.cp || null,
+    status: 'جديد'
+  };
+  if (!bbStore.orders) bbStore.orders = [];
+  bbStore.orders.unshift(orderRecord);
+  if (bbStore.orders.length > 100) bbStore.orders = bbStore.orders.slice(0, 100);
+  bbPersist();
+
   BBS('bahbah_last', { ...cart });
   BBS('bahbah_last_at', Date.now());
   BBS('bahbah_n', BBJ('bahbah_n', 0) + 1);
@@ -10508,26 +10529,36 @@ async function adminPanel(tab = admCurrentTab) {
         <button type="button" class="adm-pro-close" onclick="$('dlg').close()" title="إغلاق">✕</button>
       </div>
 
-      <!-- إحصائيات سريعة -->
-      <div class="adm-stats-grid">
+      <!-- إحصائيات سريعة شاملة للمتجر والإدارة -->
+      <div class="adm-stats-grid" style="grid-template-columns: repeat(4, 1fr);">
         <div class="adm-stat-card">
           <span class="adm-stat-val">${admCachedProducts.length}</span>
-          <span class="adm-stat-lbl">إجمالي الأصناف</span>
-        </div>
-        <div class="adm-stat-card" style="border-color:#FDE68A;background:#FFFDF5;">
-          <span class="adm-stat-val" style="color:#B45309;">${disabledCount}</span>
-          <span class="adm-stat-lbl">أصناف موقوفة</span>
+          <span class="adm-stat-lbl">الأصناف</span>
         </div>
         <div class="adm-stat-card" style="border-color:#BBF7D0;background:#F9FEFA;">
-          <span class="adm-stat-val" style="color:#15803D;">${couponCount}</span>
-          <span class="adm-stat-lbl">كوبونات نشطة</span>
+          <span class="adm-stat-val" style="color:#15803D;">${admGetPatientsList().length}</span>
+          <span class="adm-stat-lbl">مرضى الرعاية 🌿</span>
+        </div>
+        <div class="adm-stat-card" style="border-color:#DDD6FE;background:#F5F3FF;">
+          <span class="adm-stat-val" style="color:#6D28D9;">${(bbStore.orders || []).length}</span>
+          <span class="adm-stat-lbl">سجل الطلبات 📋</span>
+        </div>
+        <div class="adm-stat-card" style="border-color:#FDE68A;background:#FFFDF5;">
+          <span class="adm-stat-val" style="color:#B45309;">${(bbStore.deals || []).length}</span>
+          <span class="adm-stat-lbl">عروض نشطة 🔥</span>
         </div>
       </div>
 
-      <!-- التبويبات الرئيسية -->
+      <!-- التبويبات الرئيسية الشاملة 2026 -->
       <div class="adm-tabs">
         <button type="button" class="adm-tab-btn ${admCurrentTab === 'products' ? 'active' : ''}" onclick="adminPanel('products')">
           📦 الأصناف والمخزون
+        </button>
+        <button type="button" class="adm-tab-btn ${admCurrentTab === 'patients' ? 'active' : ''}" onclick="adminPanel('patients')">
+          🌿 مرضى العلاج الشهري
+        </button>
+        <button type="button" class="adm-tab-btn ${admCurrentTab === 'orders' ? 'active' : ''}" onclick="adminPanel('orders')">
+          📋 سجل الطلبات الواردة
         </button>
         <button type="button" class="adm-tab-btn ${admCurrentTab === 'offers' ? 'active' : ''}" onclick="adminPanel('offers')">
           🔥 العروض والإعلانات
@@ -10536,13 +10567,20 @@ async function adminPanel(tab = admCurrentTab) {
           🎟️ الكوبونات
         </button>
         <button type="button" class="adm-tab-btn ${admCurrentTab === 'settings' ? 'active' : ''}" onclick="adminPanel('settings')">
-          ⚙️ إعدادات
+          ⚙️ إعدادات الصيدلية
         </button>
       </div>
 
       <!-- محتوى التبويب النشط -->
       <div id="admTabContent">
-        ${admCurrentTab === 'products' ? admRenderProductsTab() : admCurrentTab === 'offers' ? admRenderOffersTab() : admCurrentTab === 'coupons' ? admRenderCouponsTab() : admRenderSettingsTab()}
+        ${
+  admCurrentTab === 'products' ? admRenderProductsTab() :
+  admCurrentTab === 'patients' ? admRenderPatientsTab() :
+  admCurrentTab === 'orders' ? admRenderOrdersTab() :
+  admCurrentTab === 'offers' ? admRenderOffersTab() :
+  admCurrentTab === 'coupons' ? admRenderCouponsTab() :
+  admRenderSettingsTab()
+}
       </div>
     </div>
   `;
@@ -10705,6 +10743,291 @@ function admQuickUpdateStock(id, newStock) {
 }
 
 /* تبويب إدارة العروض، الخصومات الموقوتة، وإعلانات البانر */
+
+/* ===== منظومة إدارة مرضى العلاج الشهري وسجل الطلبات في لوحة التحكم ===== */
+
+function admGetPatientsList() {
+  const localVips = BBJ('bahbah_local_vips', {});
+  const baseRegistry = typeof VIP_CLIENTS_REGISTRY === 'object' ? VIP_CLIENTS_REGISTRY : {};
+  const allMap = { ...baseRegistry, ...localVips };
+  return Object.entries(allMap).map(([code, data]) => ({ code, ...data }));
+}
+
+/* تبويب مرضى العلاج الشهري «رعاية بحبح» */
+function admRenderPatientsTab() {
+  const patients = admGetPatientsList();
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#F0FDF4;border:1.5px solid #BBF7D0;padding:12px 14px;border-radius:14px;font-size:12px;color:#166534;line-height:1.7;">
+        🌿 <b>إدارة مرضى العلاج الشهري ورعاية كبار السن:</b>
+        يمكنك تسجيل مريض جديد، متابعة موعد صرف أدويته الدورية، وتعديل قائمة الأدوية الخاصة به والتواصل معه بنقرة واحدة عبر واتساب أو الهاتف.
+      </div>
+
+      <!-- نموذج تسجيل أو تعديل مريض جديد -->
+      <details style="background:#F8FAFC;border:1.5px solid #E2E8F0;padding:14px;border-radius:14px;font-size:13px;">
+        <summary style="font-weight:800;color:#1E40AF;cursor:pointer;display:flex;align-items:center;gap:6px;">
+          ➕ تسجيل مريض شهري جديد / كارت رعاية VIP
+        </summary>
+        <form class="adm-form-wrap" onsubmit="event.preventDefault();admSavePatient();" style="margin-top:12px;">
+          <div class="adm-form-grid">
+            <div class="adm-input-group">
+              <label>كود المريض (مثال: BB-104) *</label>
+              <input id="pt-code" required placeholder="BB-104" style="text-transform:uppercase;font-weight:800;">
+            </div>
+            <div class="adm-input-group">
+              <label>اسم المريض أو العائل *</label>
+              <input id="pt-name" required placeholder="مثال: الحاج إبراهيم">
+            </div>
+          </div>
+
+          <div class="adm-form-grid">
+            <div class="adm-input-group">
+              <label>رقم هاتف الواتساب / الاتصال *</label>
+              <input id="pt-phone" required placeholder="010XXXXXXXX">
+            </div>
+            <div class="adm-input-group">
+              <label>العنوان / القرية بديروط *</label>
+              <input id="pt-area" required placeholder="مثال: ديروط المحطة / قرية صنبو">
+            </div>
+          </div>
+
+          <div class="adm-form-grid">
+            <div class="adm-input-group">
+              <label>الحالة / التخصص الطبي</label>
+              <input id="pt-chronic" placeholder="مثال: علاج السكر وتنظيم الضغط">
+            </div>
+            <div class="adm-input-group">
+              <label>دورة الصرف</label>
+              <select id="pt-cycle">
+                <option value="30">كل 30 يوماً (شهرياً)</option>
+                <option value="15">كل 15 يوماً (نصف شهري)</option>
+                <option value="60">كل شهرين</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="adm-input-group">
+            <label>قائمة الأدوية الشهرية (دواء في كل سطر مع الجرعة والعدد):</label>
+            <textarea id="pt-meds" rows="3" placeholder="جلوكوفاج 1000 ملجم | 2 علبة | قرص وسط الغداء
+كونكور 5 ملجم | 1 علبة | قرص صباحاً"></textarea>
+          </div>
+
+          <button type="submit" class="btn" style="padding:10px 18px;font-size:13px;align-self:flex-start;">
+            💾 حفظ واعتماد ملف المريض
+          </button>
+        </form>
+      </details>
+
+      <!-- قائمة المرضى المسجلين -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+        <b style="font-size:13px;color:#0F172A;">المرضى المسجلون بالمنظومة (${patients.length}):</b>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${patients.map(p => {
+          const mainMem = (p.family && p.family[0]) || {};
+          const lastRefill = mainMem.lastRefill || Date.now();
+          const cycle = mainMem.cycle || 30;
+          const daysPassed = Math.floor((Date.now() - lastRefill) / 864e5);
+          const daysLeft = cycle - daysPassed;
+          const isDue = daysLeft <= 3;
+          const medsList = mainMem.meds || [];
+
+          return `
+            <div class="adm-item-card" style="flex-direction:column;align-items:stretch;gap:10px;border-color:${isDue ? '#FCA5A5' : '#E2E8F0'};background:${isDue ? '#FFFDFD' : '#FFFFFF'};">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:24px;">${isDue ? '⏰' : '👤'}</span>
+                  <div>
+                    <b style="font-size:13.5px;color:#0F172A;">${esc(p.name)}</b>
+                    <span class="adm-coupon-code" style="font-size:11px;padding:1px 6px;margin-right:6px;">${esc(p.code)}</span>
+                    <div style="font-size:11.5px;color:#64748B;margin-top:2px;">
+                      📞 ${esc(p.phone)} • 📍 ${esc(p.area || 'ديروط')} • ${esc(mainMem.chronic || 'علاج شهري')}
+                    </div>
+                  </div>
+                </div>
+
+                <div style="text-align:left;">
+                  <span style="font-size:11px;font-weight:800;padding:3px 8px;border-radius:6px;background:${isDue ? '#FEE2E2' : '#DCFCE7'};color:${isDue ? '#991B1B' : '#166534'};">
+                    ${isDue ? '⚠️ مستحق الصرف الآن (' + daysLeft + ' يوم)' : 'متبقي ' + daysLeft + ' يوم'}
+                  </span>
+                </div>
+              </div>
+
+              <!-- أدوية المريض -->
+              ${medsList.length ? `
+                <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:8px 10px;font-size:11.5px;color:#334155;line-height:1.6;">
+                  <b>💊 الأصناف المقررة:</b> ${medsList.map(m => m.name + (m.count ? ' (×' + m.count + ')' : '')).join(' • ')}
+                </div>
+              ` : ''}
+
+              <!-- إجراءات الصيدلي السريعة -->
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #F1F5F9;padding-top:8px;">
+                <a href="https://wa.me/2${(p.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('السلام عليكم ' + p.name + ' 🌿 تحياتنا من صيدلية بحبح. بنفكرك بموعد صرف علاجك الشهري، تحب نجهزهولك ويوصلك النهاردة؟')}" target="_blank" rel="noopener" class="adm-btn-action" style="background:#DCFCE7;color:#166534;border-color:#BBF7D0;text-decoration:none;">
+                  💬 تذكير واتساب
+                </a>
+                <a href="tel:${esc(p.phone)}" class="adm-btn-action" style="background:#EFF6FF;color:#1D4ED8;border-color:#BFDBFE;text-decoration:none;">
+                  📞 اتصال بالمريض
+                </a>
+                <button type="button" class="adm-btn-action adm-btn-edit" onclick="admLogPatientRefill('${esc(p.code)}')">
+                  ✅ تم الصرف وتجديد الموعد
+                </button>
+                <button type="button" class="adm-btn-action adm-btn-del" onclick="admDeletePatient('${esc(p.code)}')">
+                  حذف 🗑️
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function admSavePatient() {
+  const code = ($('pt-code')?.value || '').trim().toUpperCase();
+  const name = ($('pt-name')?.value || '').trim();
+  const phone = ($('pt-phone')?.value || '').trim();
+  const area = ($('pt-area')?.value || '').trim();
+  const chronic = ($('pt-chronic')?.value || '').trim();
+  const cycle = Number($('pt-cycle')?.value) || 30;
+  const rawMeds = ($('pt-meds')?.value || '').trim();
+
+  if (!code || !name || !phone) { toast('يرجى ملء الكود والاسم ورقم الهاتف'); return; }
+
+  const meds = rawMeds.split('\n').filter(Boolean).map(line => {
+    const parts = line.split('|').map(s => s.trim());
+    return { name: parts[0] || line, count: parts[1] || '1', timing: parts[2] || 'حسب الإرشاد' };
+  });
+
+  const clientData = {
+    name, phone, area, since: new Date().getFullYear().toString(),
+    family: [{
+      id: 'self', name, chronic, cycle, lastRefill: Date.now(), statusStep: 1, meds
+    }]
+  };
+
+  saveLocalVip(code, clientData);
+  toast('تم حفظ ملف المريض ' + name + ' بنجاح ✓');
+  adminPanel('patients');
+}
+
+function admLogPatientRefill(code) {
+  const client = getVipClient(code);
+  if (!client) return;
+  if (client.family && client.family[0]) {
+    client.family[0].lastRefill = Date.now();
+  }
+  saveLocalVip(code, client);
+  toast('تم تسجيل صرف العلاج وتحديث عداد الشهر القادم بنجاح ✓');
+  adminPanel('patients');
+}
+
+function admDeletePatient(code) {
+  if (!confirm('هل تريد حذف هذا المريض من المنظومة؟')) return;
+  const localVips = BBJ('bahbah_local_vips', {});
+  delete localVips[code];
+  BBS('bahbah_local_vips', localVips);
+  toast('تم حذف ملف المريض');
+  adminPanel('patients');
+}
+
+/* تبويب سجل الطلبات الواردة من العملاء */
+function admRenderOrdersTab() {
+  const orders = bbStore.orders || [];
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#F5F3FF;border:1.5px solid #DDD6FE;padding:12px 14px;border-radius:14px;font-size:12px;color:#5B21B6;line-height:1.7;">
+        📋 <b>سجل الطلبات الواردة والفواتير:</b>
+        يتم تسجيل كل طلب يتم إرساله من العملاء تلقائياً هنا مع تفاصيل الأصناف، الإجمالي، العنوان، وحالة التوصيل.
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b style="font-size:13px;color:#0F172A;">الطلبات المسجلة (${orders.length}):</b>
+        ${orders.length ? `
+          <button type="button" class="adm-btn-action adm-btn-del" onclick="admClearOrders()">
+            تفريغ السجل 🗑️
+          </button>
+        ` : ''}
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${!orders.length ? '<div class="empty" style="padding:24px;text-align:center;color:#64748B;">لا توجد طلبات مسجلة بعد. عند إتمام أي عميل لطلب من السلة سيظهر هنا فوراً.</div>' : ''}
+        ${orders.map(o => {
+          const dateStr = new Date(o.date).toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+          const isDelivered = o.status === 'تم التوصيل';
+
+          return `
+            <div class="adm-item-card" style="flex-direction:column;align-items:stretch;gap:10px;border-color:${isDelivered ? '#E2E8F0' : '#C7D2FE'};">
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:20px;">🛒</span>
+                  <div>
+                    <b style="font-size:13.5px;color:#0F172A;">طلب رقم ${esc(o.id)}</b>
+                    <span style="font-size:11px;color:#64748B;margin-right:6px;">🕒 ${dateStr}</span>
+                  </div>
+                </div>
+                <div style="text-align:left;">
+                  <b style="font-size:14px;color:#1D4ED8;">${fmtPrice(o.total)} ج.م</b>
+                </div>
+              </div>
+
+              <!-- بيانات العميل والتوصيل -->
+              <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:8px 10px;font-size:11.5px;color:#334155;line-height:1.7;">
+                <div>👤 <b>العميل:</b> ${esc(o.customer?.name || 'عميل')} • 📞 <b>الهاتف:</b> ${esc(o.customer?.phone || '')}</div>
+                <div>📍 <b>العنوان:</b> ${esc(o.customer?.area || 'ديروط')} • <b>الدفع:</b> ${o.payMethod === 'instapay' ? 'إنستاباي 📲' : 'كاش عند الاستلام 💵'}</div>
+                ${o.items && o.items.length ? `
+                  <div style="margin-top:4px;border-top:1px dashed #CBD5E1;padding-top:4px;">
+                    <b>الأصناف (${o.itemsCount} قطعة):</b> ${o.items.map(it => it.name + ' × ' + it.count).join(' • ')}
+                  </div>
+                ` : ''}
+              </div>
+
+              <!-- حالة الطلب والإجراءات -->
+              <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #F1F5F9;padding-top:8px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-size:11.5px;color:#475569;">الحالة:</span>
+                  <select onchange="admUpdateOrderStatus('${esc(o.id)}', this.value)" style="padding:4px 8px;font-size:11.5px;border-radius:6px;border:1px solid #CBD5E1;background:#fff;font-weight:700;">
+                    <option value="جديد" ${o.status === 'جديد' ? 'selected' : ''}>جديد 🟡</option>
+                    <option value="جاري التجهيز" ${o.status === 'جاري التجهيز' ? 'selected' : ''}>جاري التجهيز ⏳</option>
+                    <option value="خرج للتوصيل" ${o.status === 'خرج للتوصيل' ? 'selected' : ''}>خرج للتوصيل 🛵</option>
+                    <option value="تم التوصيل" ${o.status === 'تم التوصيل' ? 'selected' : ''}>تم التوصيل بنجاح ✅</option>
+                    <option value="ملغي" ${o.status === 'ملغي' ? 'selected' : ''}>ملغي ❌</option>
+                  </select>
+                </div>
+
+                <a href="https://wa.me/2${(o.customer?.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent('السلام عليكم ' + (o.customer?.name || '') + '، بخصوص طلبك رقم ' + o.id + ' من صيدلية بحبح: ') }" target="_blank" rel="noopener" class="adm-btn-action" style="background:#DCFCE7;color:#166534;border-color:#BBF7D0;text-decoration:none;">
+                  💬 مراسلة واتساب
+                </a>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function admUpdateOrderStatus(orderId, newStatus) {
+  if (!bbStore.orders) return;
+  const ord = bbStore.orders.find(o => String(o.id) === String(orderId));
+  if (ord) {
+    ord.status = newStatus;
+    bbPersist();
+    toast('تم تحديث حالة الطلب إلى «' + newStatus + '» ✓');
+  }
+}
+
+function admClearOrders() {
+  if (!confirm('هل تريد مسح سجل الطلبات القديمة؟')) return;
+  bbStore.orders = [];
+  bbPersist();
+  toast('تم مسح سجل الطلبات');
+  adminPanel('orders');
+}
+
 function admRenderOffersTab() {
   const deals = (bbStore.deals || []).map(d => {
     const prod = M[d.id] || admCachedProducts.find(x => String(x.id) === String(d.id));
