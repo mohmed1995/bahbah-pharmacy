@@ -1,4 +1,4 @@
-const V = 'bahbah-v37';
+const V = 'bahbah-v40';
 const SHELL = [
   './',
   './manifest.webmanifest',
@@ -13,7 +13,7 @@ const SHELL = [
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(V).then(c => c.addAll(SHELL)).catch(() => {})
+    caches.open(V).then(c => Promise.allSettled(SHELL.map(u => c.add(u))))
   );
 });
 
@@ -32,7 +32,7 @@ self.addEventListener('fetch', e => {
   if (u.origin !== location.origin && !/fonts\.(googleapis|gstatic)\.com/.test(u.host)) return;
 
   // Always Network First for HTML and dynamic API to ensure latest fixes load instantly
-  if (r.mode === 'navigate' || u.pathname.endsWith('.html') || u.pathname === '/') {
+  if (r.mode === 'navigate' || u.pathname.endsWith('.html') || u.pathname === '/' || u.pathname.endsWith('/store-config.json')) {
     e.respondWith(
       fetch(r)
         .then(res => {
