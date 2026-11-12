@@ -5212,6 +5212,389 @@ body {
   }
 }
 
+
+/* ===== لوحة التحكم الاحترافية الشاملة 2026 (Admin Panel Pro) ===== */
+#adminOpen, .site-footer > small { display: none; }
+body.adm #adminOpen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #93C5FD;
+  border-radius: 99px;
+  background: #EFF6FF;
+  color: #1E40AF;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(30,64,175,0.08);
+  transition: all 0.2s ease;
+}
+body.adm #adminOpen:hover {
+  background: #DBEAFE;
+  transform: translateY(-1px);
+}
+body.adm .site-footer > small { display: block; }
+
+.adm-pro-container {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: right;
+  font-family: inherit;
+  color: #0F172A;
+}
+
+.adm-pro-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #E2E8F0;
+  padding-bottom: 12px;
+  position: relative;
+}
+
+.adm-pro-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1E40AF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-pro-close {
+  background: #F1F5F9;
+  border: none;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  transition: all 0.2s;
+}
+.adm-pro-close:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.adm-tabs {
+  display: flex;
+  gap: 6px;
+  background: #F1F5F9;
+  padding: 5px;
+  border-radius: 14px;
+  overflow-x: auto;
+}
+
+.adm-tab-btn {
+  flex: 1;
+  min-width: 90px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #64748B;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.adm-tab-btn.active {
+  background: #FFFFFF;
+  color: #1E40AF;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.adm-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.adm-stat-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.adm-stat-val {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  color: #1E40AF;
+}
+
+.adm-stat-lbl {
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.adm-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 12px;
+  padding: 7px 12px;
+  transition: border-color 0.2s;
+}
+.adm-search-bar:focus-within {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+.adm-search-bar input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-family: inherit;
+  background: transparent;
+}
+
+.adm-filter-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.adm-chip {
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.adm-chip.active {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.adm-inventory-scroll {
+  max-height: 48vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+.adm-item-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  transition: all 0.2s;
+}
+.adm-item-card.is-disabled {
+  opacity: 0.55;
+  background: #F8FAFC;
+  border-style: dashed;
+}
+
+.adm-item-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #F1F5F9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  border: 1px solid #E2E8F0;
+}
+
+.adm-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-item-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.adm-item-sub {
+  font-size: 11px;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.adm-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.adm-btn-action {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.adm-btn-edit {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+}
+.adm-btn-toggle {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+  color: #475569;
+}
+.adm-btn-toggle.disabled-now {
+  background: #FEF3C7;
+  border-color: #FDE68A;
+  color: #92400E;
+}
+.adm-btn-del {
+  background: #FFF1F2;
+  border-color: #FECDD3;
+  color: #BE123C;
+}
+
+/* Form Styles */
+.adm-form-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: right;
+}
+
+.adm-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.adm-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.adm-input-group label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.adm-input-group input, 
+.adm-input-group select, 
+.adm-input-group textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  box-sizing: border-box;
+  background: #FFFFFF;
+}
+
+.adm-input-group input:focus, 
+.adm-input-group select:focus, 
+.adm-input-group textarea:focus {
+  border-color: #2563EB;
+  outline: none;
+}
+
+/* Image Upload Preview */
+.adm-img-uploader {
+  border: 2px dashed #93C5FD;
+  background: #F0F7FF;
+  border-radius: 14px;
+  padding: 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+.adm-img-uploader:hover {
+  background: #E0E7FF;
+  border-color: #6366F1;
+}
+
+.adm-img-preview {
+  width: 90px;
+  height: 90px;
+  border-radius: 12px;
+  object-fit: contain;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+}
+
+/* Coupon Table / Cards */
+.adm-coupon-card {
+  background: #FFFFFF;
+  border: 1.5px dashed #93C5FD;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.adm-coupon-code {
+  font-family: monospace;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1D4ED8;
+  background: #EFF6FF;
+  padding: 3px 10px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
 </style>
 <style>
 
@@ -6278,6 +6661,13 @@ body {
 
   <!-- شريط الخدمات والأدوات السريعة المطور 2026 -->
   <div class="action-strip-refined">
+    <div class="ac-btn-lux" style="background:#F0F7FF;border-color:#93C5FD;cursor:pointer;" onclick="adminPanel()">
+      <div class="ac-ico-wrap" style="background:#DBEAFE;color:#1E40AF">⚙️</div>
+      <div class="ac-txt">
+        <b style="color:#1E40AF;font-size:13.5px">لوحة التحكم</b>
+        <small style="color:#1D4ED8">إدارة الأصناف والكوبونات</small>
+      </div>
+    </div>
     <div class="ac-btn-lux" style="background:#FFFDF7;border-color:#FCD34D" onclick="openFastRxModal()">
       <div class="ac-ico-wrap" style="background:#FEF3C7;color:#B45309">📷</div>
       <div class="ac-txt">
@@ -6350,6 +6740,11 @@ body {
   </button>
 </div>
 
+<div style="text-align:center;margin:16px auto 8px;">
+  <button type="button" id="adminTriggerBtn" class="adm-tab-btn active" style="margin:auto;display:inline-flex;padding:9px 18px;border:1px solid #BFDBFE;background:#EFF6FF;color:#1E40AF;border-radius:99px;font-size:13px;" onclick="adminPanel()">
+    ⚙️ لوحة التحكم والإدارة (بحبح)
+  </button>
+</div>
 <footer class="site-footer">
   <div>
     <strong>صيدلية بحبح — ديروط</strong>
@@ -6451,10 +6846,29 @@ const DAYDEAL = [ /* 0=الأحد ... 6=السبت */
   { cat: 'beauty', pct: 12, t: 'جمعة الجمال' },
   { cat: 'hair',   pct: 12, t: 'سبت الشعر' }
 ];
-const COUPONS = {
+const DEFAULT_COUPONS = {
   BAHBAH10: { pct: 10, t: 'كوبون BAHBAH10 (١٠٪ عناية وتجميل)' },
   DEROUT:   { free: 1, t: 'كوبون DEROUT (توصيل مجاني)' }
 };
+const getCoupons = () => (bbStore && bbStore.coupons) ? { ...DEFAULT_COUPONS, ...bbStore.coupons } : DEFAULT_COUPONS;
+const COUPONS = new Proxy(DEFAULT_COUPONS, {
+  get(target, prop) {
+    if (typeof prop === 'symbol') return target[prop];
+    const all = getCoupons();
+    return all[prop];
+  },
+  has(target, prop) {
+    return prop in getCoupons();
+  },
+  ownKeys() {
+    return Object.keys(getCoupons());
+  },
+  getOwnPropertyDescriptor(target, prop) {
+    const all = getCoupons();
+    if (prop in all) return { enumerable: true, configurable: true, value: all[prop] };
+    return undefined;
+  }
+});
 const BUNDLE = { min: 3, pct: 5 };      /* ٣ قطع عناية أو أكتر = ٥٪ إضافية */
 const LOYAL  = 5;                        /* كل طلب رقم ٥ توصيله مجاني */
 const BB_SVC = [
@@ -6576,10 +6990,12 @@ function bbReadStore() {
     return {
       overrides: Array.isArray(x.overrides) ? x.overrides : [],
       created: Array.isArray(x.created) ? x.created : [],
-      deleted: Array.isArray(x.deleted) ? x.deleted : []
+      deleted: Array.isArray(x.deleted) ? x.deleted : [],
+      disabled: Array.isArray(x.disabled) ? x.disabled : [],
+      coupons: (x.coupons && typeof x.coupons === 'object') ? x.coupons : null
     };
   } catch (e) {
-    return { overrides: [], created: [], deleted: [] };
+    return { overrides: [], created: [], deleted: [], disabled: [], coupons: null };
   }
 }
 
@@ -6670,17 +7086,18 @@ function bbMatches(p, q) {
 }
 
 function bbMerge(base, q) {
-  const deleted = new Set(bbStore.deleted.map(String));
+  const deleted = new Set((bbStore.deleted || []).map(String));
+  const disabled = new Set((bbStore.disabled || []).map(String));
   const map = new Map();
   for (const p of base || []) {
-    if (p && p.id != null && !deleted.has(String(p.id))) map.set(String(p.id), p);
+    if (p && p.id != null && !deleted.has(String(p.id)) && !disabled.has(String(p.id))) map.set(String(p.id), p);
   }
-  for (const p of bbStore.overrides) {
-    if (!p || p.id == null || deleted.has(String(p.id))) continue;
+  for (const p of bbStore.overrides || []) {
+    if (!p || p.id == null || deleted.has(String(p.id)) || disabled.has(String(p.id))) continue;
     if (map.has(String(p.id)) || bbMatches(p, q)) map.set(String(p.id), p);
   }
-  for (const p of bbStore.created) {
-    if (!p || p.id == null || deleted.has(String(p.id))) continue;
+  for (const p of bbStore.created || []) {
+    if (!p || p.id == null || deleted.has(String(p.id)) || disabled.has(String(p.id))) continue;
     if (bbMatches(p, q)) map.set(String(p.id), p);
   }
   return [...map.values()].filter(p => {
@@ -9813,56 +10230,508 @@ function reorderLast() {
   cartSheet();
 }
 
-/* ===== 7. إدارة المنتجات المحلية (Admin Panel) ===== */
-function bbProductList(products) {
-  if (!products.length) return '<div class="empty" style="padding:16px">لا توجد منتجات في القائمة.</div>';
-  return `<div class="inventory-list">${products.map(p => `
-    <div class="inventory-item">
-      <div class="inv-name">${esc(p.name)}<span class="inv-meta">${fmtPrice(p.price)} ج.م · المخزون: ${Number(p.stock) || 0}</span></div>
-      <button type="button" data-action="edit" data-id="${esc(p.id)}">تعديل</button>
-      <button type="button" data-action="delete" data-id="${esc(p.id)}">حذف</button>
-    </div>`).join('')}</div>`;
-}
+/* ===== 7. لوحة الإدارة المتكاملة والشاملة 2026 (Admin Panel Pro) ===== */
+let admCurrentTab = 'products';
+let admSearchQuery = '';
+let admCatFilter = 'all';
+let admCachedProducts = [];
 
-async function adminPanel() {
-  const previous = cat;
-  cat = 'all';
-  let products = [];
-  try { products = await load(''); } catch (e) { products = DEMO; }
-  cat = previous;
-  products.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar'));
-  products.forEach(p => M[p.id] = p);
+async function adminPanel(tab = admCurrentTab) {
+  admCurrentTab = tab;
+  $('dlg').classList.add('wide-dialog');
+  
+  // تحميل قائمة المنتجات المدمجة
+  let allProds = Object.values(M || {});
+  if (!allProds.length) {
+    try { allProds = await load(''); } catch(e) { allProds = DEMO; }
+  }
+  // دمج المضافين والمعدلين
+  const deletedSet = new Set((bbStore.deleted || []).map(String));
+  const mergedMap = new Map();
+  allProds.forEach(p => { if (p && p.id != null && !deletedSet.has(String(p.id))) mergedMap.set(String(p.id), p); });
+  (bbStore.overrides || []).forEach(p => { if (p && p.id != null && !deletedSet.has(String(p.id))) mergedMap.set(String(p.id), p); });
+  (bbStore.created || []).forEach(p => { if (p && p.id != null && !deletedSet.has(String(p.id))) mergedMap.set(String(p.id), p); });
+  admCachedProducts = Array.from(mergedMap.values()).sort((a,b) => String(a.name || '').localeCompare(String(b.name || ''), 'ar'));
+  
+  // بناء الهيكل العام للوحة
+  const disabledCount = (bbStore.disabled || []).length;
+  const couponCount = Object.keys(getCoupons()).length;
+
   $('dlgBody').innerHTML = `
-    <h3>⚙ إدارة المنتجات</h3>
-    <div class="admin-note">تنبيه: هذه اللوحة تحفظ التعديلات محلياً على هذا المتصفح فقط.</div>
-    <button type="button" class="btn" onclick="productForm()">＋ إضافة منتج جديد</button>
-    <div id="inventoryList">${bbProductList(products)}</div>`;
+    <div class="adm-pro-container">
+      <div class="adm-pro-header">
+        <h3><span>⚙️</span> لوحة تحكم صيدلية بحبح</h3>
+        <button type="button" class="adm-pro-close" onclick="$('dlg').close()" title="إغلاق">✕</button>
+      </div>
+
+      <!-- إحصائيات سريعة -->
+      <div class="adm-stats-grid">
+        <div class="adm-stat-card">
+          <span class="adm-stat-val">${admCachedProducts.length}</span>
+          <span class="adm-stat-lbl">إجمالي الأصناف</span>
+        </div>
+        <div class="adm-stat-card" style="border-color:#FDE68A;background:#FFFDF5;">
+          <span class="adm-stat-val" style="color:#B45309;">${disabledCount}</span>
+          <span class="adm-stat-lbl">أصناف موقوفة</span>
+        </div>
+        <div class="adm-stat-card" style="border-color:#BBF7D0;background:#F9FEFA;">
+          <span class="adm-stat-val" style="color:#15803D;">${couponCount}</span>
+          <span class="adm-stat-lbl">كوبونات نشطة</span>
+        </div>
+      </div>
+
+      <!-- التبويبات الرئيسية -->
+      <div class="adm-tabs">
+        <button type="button" class="adm-tab-btn ${admCurrentTab === 'products' ? 'active' : ''}" onclick="adminPanel('products')">
+          📦 الأصناف والمنتجات
+        </button>
+        <button type="button" class="adm-tab-btn ${admCurrentTab === 'coupons' ? 'active' : ''}" onclick="adminPanel('coupons')">
+          🎟️ إدارة الكوبونات
+        </button>
+        <button type="button" class="adm-tab-btn ${admCurrentTab === 'settings' ? 'active' : ''}" onclick="adminPanel('settings')">
+          🛠️ إعدادات وبيانات
+        </button>
+      </div>
+
+      <!-- محتوى التبويب النشط -->
+      <div id="admTabContent">
+        ${admCurrentTab === 'products' ? admRenderProductsTab() : admCurrentTab === 'coupons' ? admRenderCouponsTab() : admRenderSettingsTab()}
+      </div>
+    </div>
+  `;
+
   if (!$('dlg').open) $('dlg').showModal();
 }
 
-function productForm(id) {
-  const p = id == null ? null : M[id];
+/* تبويب الأصناف والمنتجات */
+function admRenderProductsTab() {
+  const normQ = bbNorm(admSearchQuery);
+  const filtered = admCachedProducts.filter(p => {
+    if (admCatFilter !== 'all' && p.cat !== admCatFilter) return false;
+    if (!normQ) return true;
+    const txt = bbNorm((p.name || '') + ' ' + (p.generic || '') + ' ' + (p.id || ''));
+    return txt.includes(normQ);
+  });
+
   const cats = CATS.filter(c => c[0] !== 'all');
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button type="button" class="btn" style="flex:1;padding:9px;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="productForm()">
+          ➕ إضافة منتج جديد للصيدلية
+        </button>
+      </div>
+
+      <!-- بحث وفلترة سريعة -->
+      <div class="adm-search-bar">
+        <span>🔍</span>
+        <input type="text" placeholder="ابحث باسم الدواء، المادة الفعالة، أو الكود..." value="${esc(admSearchQuery)}" oninput="admSearchQuery = this.value; admFilterProductsList();">
+        ${admSearchQuery ? `<button type="button" style="border:none;background:none;cursor:pointer;color:#94A3B8;" onclick="admSearchQuery='';adminPanel('products');">✕</button>` : ''}
+      </div>
+
+      <!-- فلتر الأقسام -->
+      <div class="adm-filter-chips">
+        <button type="button" class="adm-chip ${admCatFilter === 'all' ? 'active' : ''}" onclick="admCatFilter='all';adminPanel('products')">كل الأقسام (${admCachedProducts.length})</button>
+        ${cats.map(c => `<button type="button" class="adm-chip ${admCatFilter === c[0] ? 'active' : ''}" onclick="admCatFilter='${c[0]}';adminPanel('products')">${c[2]}</button>`).join('')}
+      </div>
+
+      <div style="font-size:11.5px;color:#64748B;display:flex;justify-content:space-between;align-items:center;padding:0 4px;">
+        <span>النتائج المعروضة: <b>${filtered.length}</b> صنف</span>
+        <span>💡 اضغط "إيقاف/تفعيل" لإخفاء الصنف دون حذفه نهائياً</span>
+      </div>
+
+      <!-- قائمة المنتجات القابلة للتمرير -->
+      <div class="adm-inventory-scroll" id="admProdsList">
+        ${admRenderProductsListItems(filtered)}
+      </div>
+    </div>
+  `;
+}
+
+function admRenderProductsListItems(items) {
+  if (!items.length) {
+    return '<div class="empty" style="padding:24px;text-align:center;color:#64748B;">لا توجد أصناف مطابقة للبحث أو الفلتر المحدد.</div>';
+  }
+
+  const disabledSet = new Set((bbStore.disabled || []).map(String));
+
+  return items.slice(0, 80).map(p => {
+    const isDis = disabledSet.has(String(p.id));
+    const catObj = CATS.find(c => c[0] === p.cat);
+    const catName = catObj ? catObj[2] : (p.cat || 'عام');
+    const pImg = p.img ? `<img src="${esc(p.img)}" class="adm-item-img" alt="${esc(p.name)}">` : `<div class="adm-item-img">💊</div>`;
+
+    return `
+      <div class="adm-item-card ${isDis ? 'is-disabled' : ''}">
+        ${pImg}
+        <div class="adm-item-info">
+          <div class="adm-item-title">
+            <span>${esc(p.name)}</span>
+            ${isDis ? '<span style="font-size:10px;background:#FEE2E2;color:#991B1B;padding:2px 6px;border-radius:6px;">موقوف ⛔</span>' : ''}
+          </div>
+          <div class="adm-item-sub">
+            <b style="color:#1D4ED8">${fmtPrice(p.price)} ج.م</b>
+            <span>•</span>
+            <span>القسم: ${catName}</span>
+            <span>•</span>
+            <span>المخزون: ${Number(p.stock) || 0}</span>
+          </div>
+        </div>
+        <div class="adm-item-actions">
+          <button type="button" class="adm-btn-action adm-btn-edit" onclick="productForm('${esc(p.id)}')">
+            ✏️ تعديل
+          </button>
+          <button type="button" class="adm-btn-action adm-btn-toggle ${isDis ? 'disabled-now' : ''}" onclick="admToggleProductStatus('${esc(p.id)}')">
+            ${isDis ? '✅ تفعيل' : '⛔ إيقاف'}
+          </button>
+          <button type="button" class="adm-btn-action adm-btn-del" onclick="bbDeleteProduct('${esc(p.id)}')">
+            🗑️
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('') + (items.length > 80 ? `<div style="text-align:center;padding:8px;font-size:12px;color:#64748B;">يتم عرض أول 80 نتيجة، استخدم البحث لتحديد الصنف المطلوب بدقة.</div>` : '');
+}
+
+function admFilterProductsList() {
+  const container = $('admProdsList');
+  if (!container) return;
+  const normQ = bbNorm(admSearchQuery);
+  const filtered = admCachedProducts.filter(p => {
+    if (admCatFilter !== 'all' && p.cat !== admCatFilter) return false;
+    if (!normQ) return true;
+    const txt = bbNorm((p.name || '') + ' ' + (p.generic || '') + ' ' + (p.id || ''));
+    return txt.includes(normQ);
+  });
+  container.innerHTML = admRenderProductsListItems(filtered);
+}
+
+/* إيقاف / تفعيل الصنف فورياً */
+function admToggleProductStatus(id) {
+  if (!bbStore.disabled) bbStore.disabled = [];
+  const sId = String(id);
+  const idx = bbStore.disabled.indexOf(sId);
+  if (idx >= 0) {
+    bbStore.disabled.splice(idx, 1);
+    toast('تم تفعيل الصنف وإتاحته للمرضى والعملاء ✓');
+  } else {
+    bbStore.disabled.push(sId);
+    toast('تم إيقاف عرض الصنف من واجهة المتجر ⛔');
+  }
+  bbPersist();
+  bbCache.clear();
+  search();
+  adminPanel('products');
+}
+
+/* تبويب إدارة الكوبونات */
+function admRenderCouponsTab() {
+  const currentCoupons = getCoupons();
+  const entries = Object.entries(currentCoupons);
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:12px;border-radius:14px;font-size:12px;color:#1E40AF;line-height:1.7;">
+        🎟️ <b>نظام كوبونات الخصم الذكية:</b>
+        يمكنك إنشاء كوبونات بنسبة مئوية (مثل 10%) أو كوبون توصيل مجاني، وسيتم تفعيلها فوراً لجميع العملاء عند الطلب.
+      </div>
+
+      <!-- نموذج إضافة أو تعديل كوبون -->
+      <form class="adm-form-wrap" onsubmit="event.preventDefault();admSaveCoupon();" style="background:#F8FAFC;border:1px solid #E2E8F0;padding:12px;border-radius:14px;">
+        <b style="font-size:13px;color:#0F172A;">➕ إضافة أو تحديث كوبون جديد:</b>
+        <div class="adm-form-grid">
+          <div class="adm-input-group">
+            <label>كود الكوبون (إنجليزي بدون مسافات)</label>
+            <input id="cp-code" placeholder="مثال: BAHBAH20" required style="text-transform:uppercase;font-weight:700;">
+          </div>
+          <div class="adm-input-group">
+            <label>نوع الخصم</label>
+            <select id="cp-type" onchange="admOnCouponTypeChange()">
+              <option value="percent">خصم نسبة مئوية (%)</option>
+              <option value="free">توصيل مجاني 🚚</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="adm-form-grid" id="cp-pct-grid">
+          <div class="adm-input-group">
+            <label>نسبة الخصم (%)</label>
+            <input id="cp-pct" type="number" min="1" max="100" value="10" placeholder="10">
+          </div>
+          <div class="adm-input-group">
+            <label>وصف يظهر للعميل بالسلة</label>
+            <input id="cp-desc" placeholder="مثال: خصم 10% بمناسبة الافتتاح">
+          </div>
+        </div>
+
+        <button type="submit" class="btn" style="padding:10px;font-size:13px;align-self:flex-start;">
+          💾 حفظ الكوبون وتفعيله
+        </button>
+      </form>
+
+      <!-- قائمة الكوبونات المسجلة -->
+      <b style="font-size:13px;color:#0F172A;margin-top:6px;">الكوبونات الحالية المسجلة:</b>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${entries.map(([code, data]) => `
+          <div class="adm-coupon-card">
+            <div>
+              <span class="adm-coupon-code">${esc(code)}</span>
+              <div style="font-size:12px;color:#475569;margin-top:4px;">
+                ${data.free ? '🚚 توصيل مجاني كامل' : '🏷️ خصم ' + data.pct + '٪'} — ${esc(data.t || '')}
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="adm-btn-action adm-btn-del" onclick="admDeleteCoupon('${esc(code)}')">
+                حذف الكوبون 🗑️
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function admOnCouponTypeChange() {
+  const type = $('cp-type')?.value;
+  const grid = $('cp-pct-grid');
+  if (grid) {
+    grid.style.display = type === 'free' ? 'none' : 'grid';
+  }
+}
+
+function admSaveCoupon() {
+  const code = ($('cp-code')?.value || '').trim().toUpperCase();
+  const type = $('cp-type')?.value;
+  const pct = Number($('cp-pct')?.value) || 0;
+  const desc = ($('cp-desc')?.value || '').trim();
+
+  if (!code) {
+    toast('يرجى إدخال كود الكوبون');
+    return;
+  }
+
+  if (!bbStore.coupons) bbStore.coupons = { ...DEFAULT_COUPONS };
+
+  if (type === 'free') {
+    bbStore.coupons[code] = { free: 1, t: desc || ('كوبون ' + code + ' (توصيل مجاني)') };
+  } else {
+    if (pct <= 0 || pct > 100) { toast('يرجى تحديد نسبة خصم صحيحة بين 1 و 100'); return; }
+    bbStore.coupons[code] = { pct: pct, t: desc || ('كوبون ' + code + ' (' + pct + '٪ خصم)') };
+  }
+
+  bbPersist();
+  toast('تم حفظ الكوبون ' + code + ' بنجاح 🎉');
+  adminPanel('coupons');
+}
+
+function admDeleteCoupon(code) {
+  if (!confirm('هل تريد حذف الكوبون ' + code + '؟')) return;
+  if (!bbStore.coupons) bbStore.coupons = { ...DEFAULT_COUPONS };
+  delete bbStore.coupons[code];
+  bbPersist();
+  toast('تم حذف الكوبون');
+  adminPanel('coupons');
+}
+
+/* تبويب الإعدادات والنسخ الاحتياطي */
+function admRenderSettingsTab() {
+  return `
+    <div style="display:flex;flex-direction:column;gap:14px;font-size:13px;">
+      <div style="background:#F8FAFC;border:1px solid #E2E8F0;padding:14px;border-radius:14px;display:flex;flex-direction:column;gap:10px;">
+        <b style="color:#0F172A;font-size:14px;">📦 استيراد وتصدير بيانات الصيدلية:</b>
+        <p style="color:#64748B;font-size:12px;margin:0;line-height:1.6;">
+          يمكنك أخذ نسخة احتياطية من جميع المنتجات المضافة، الكوبونات، والتعديلات وتنزيلها كملف، أو استيرادها على أي هاتف أو جهاز آخر.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;">
+          <button type="button" class="btn soft" onclick="admExportData()">
+            📥 تصدير نسخة احتياطية (JSON)
+          </button>
+          <label class="btn soft" style="cursor:pointer;margin:0;">
+            📤 استيراد نسخة احتياطية
+            <input type="file" accept=".json" hidden onchange="admImportData(this.files[0])">
+          </label>
+        </div>
+      </div>
+
+      <div style="background:#FFF1F2;border:1px solid #FECDD3;padding:14px;border-radius:14px;display:flex;flex-direction:column;gap:8px;">
+        <b style="color:#BE123C;font-size:14px;">⚠️ تصفير التعديلات المحلية:</b>
+        <p style="color:#9F1239;font-size:12px;margin:0;">
+          إذا أردت استعادة قاعدة بيانات المنتجات الأصلية وإلغاء كل المنتجات والتعديلات المحلية المحفوظة على هذا الجهاز.
+        </p>
+        <button type="button" class="adm-btn-action adm-btn-del" style="align-self:flex-start;padding:8px 14px;font-size:12px;" onclick="admResetStore()">
+          تصفير واستعادة المنتجات الافتراضية
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function admExportData() {
+  const data = JSON.stringify(bbStore, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bahbah-pharmacy-store-backup.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('تم تنزيل النسخة الاحتياطية بنجاح ✓');
+}
+
+function admImportData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (typeof parsed === 'object') {
+        bbStore = {
+          overrides: Array.isArray(parsed.overrides) ? parsed.overrides : [],
+          created: Array.isArray(parsed.created) ? parsed.created : [],
+          deleted: Array.isArray(parsed.deleted) ? parsed.deleted : [],
+          disabled: Array.isArray(parsed.disabled) ? parsed.disabled : [],
+          coupons: parsed.coupons || null
+        };
+        bbPersist();
+        bbCache.clear();
+        search();
+        adminPanel('products');
+        toast('تم استيراد البيانات بنجاح 🎉');
+      }
+    } catch(err) {
+      toast('ملف غير صالح أو تالف');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function admResetStore() {
+  if (!confirm('هل أنت متأكد من تصفير كافة التعديلات المحلية واستعادة الوضع الافتراضي؟')) return;
+  bbStore = { overrides: [], created: [], deleted: [], disabled: [], coupons: null };
+  bbPersist();
+  bbCache.clear();
+  search();
+  adminPanel('products');
+  toast('تمت الاستعادة بنجاح');
+}
+
+/* نموذج إضافة وتعديل المنتج مع ميزة رفع الصورة من الجهاز مباشرة */
+function productForm(id) {
+  const p = id == null ? null : (M[id] || admCachedProducts.find(x => String(x.id) === String(id)));
+  const cats = CATS.filter(c => c[0] !== 'all');
+  
   $('dlgBody').innerHTML = `
-    <h3>${p ? 'تعديل المنتج' : 'إضافة منتج جديد'}</h3>
-    <form class="admin-form" onsubmit="event.preventDefault();saveProduct()">
-      <input type="hidden" id="pf-id" value="${p ? esc(p.id) : ''}">
-      <label>اسم المنتج<input id="pf-name" required maxlength="100" value="${esc(p?.name || '')}"></label>
-      <label>المادة الفعالة أو الوصف<input id="pf-generic" maxlength="160" value="${esc(p?.generic || '')}"></label>
-      <div class="form-grid">
-        <label>القسم<select id="pf-cat">${cats.map(c => `<option value="${c[0]}" ${p?.cat === c[0] ? 'selected' : ''}>${c[2]}</option>`).join('')}</select></label>
-        <label>السعر (ج.م)<input id="pf-price" type="number" min="0" step="0.01" required value="${Number(p?.price) || 0}"></label>
+    <div class="adm-pro-container">
+      <div class="adm-pro-header">
+        <h3><span>${p ? '✏️' : '➕'}</span> ${p ? 'تعديل بيانات المنتج' : 'إضافة منتج جديد'}</h3>
+        <button type="button" class="adm-pro-close" onclick="adminPanel('products')" title="رجوع">✕</button>
       </div>
-      <div class="form-grid">
-        <label>الكمية المتوفرة<input id="pf-stock" type="number" min="0" step="1" required value="${Number(p?.stock) || 0}"></label>
-        <label>رابط الصورة (اختياري)<input id="pf-img" type="url" placeholder="https://…" value="${esc(p?.img || '')}"></label>
-      </div>
-      <label class="checkline"><input id="pf-restricted" type="checkbox" ${p?.restricted ? 'checked' : ''}> يُصرف بإشراف الصيدلي بتذكرة طبية</label>
-      <div class="form-grid">
-        <button class="btn" type="submit">حفظ المنتج</button>
-        <button class="btn soft" type="button" onclick="adminPanel()">رجوع للقائمة</button>
-      </div>
-    </form>`;
+
+      <form class="adm-form-wrap" onsubmit="event.preventDefault();saveProduct()">
+        <input type="hidden" id="pf-id" value="${p ? esc(p.id) : ''}">
+        
+        <!-- رفع ومعاينة صورة المنتج -->
+        <div class="adm-img-uploader" onclick="$('pf-file').click()">
+          <img id="pf-img-preview" class="adm-img-preview" src="${esc(p?.img || './icon.svg')}" alt="معاينة الصورة" onerror="this.src='./icon.svg'">
+          <div style="font-size:12.5px;font-weight:700;color:#1E40AF;">
+            📷 اضغط لرفع صورة من جهازك أو كاميرا الهاتف
+          </div>
+          <span style="font-size:11px;color:#64748B;">يتم ضغط الصورة وتجهيزها تلقائياً للمتجر</span>
+          <input type="file" id="pf-file" accept="image/*" hidden onchange="admHandleLocalImage(this.files[0])">
+        </div>
+
+        <div class="adm-input-group">
+          <label>أو ضع رابط صورة مباشر (URL):</label>
+          <input id="pf-img" type="text" placeholder="https://..." value="${esc(p?.img || '')}" oninput="$('pf-img-preview').src = this.value || './icon.svg'">
+        </div>
+
+        <div class="adm-input-group">
+          <label>اسم المنتج الدوائي أو المستحضر *</label>
+          <input id="pf-name" required maxlength="120" placeholder="مثال: بنادول إكسترا 500 ملجم" value="${esc(p?.name || '')}">
+        </div>
+
+        <div class="adm-input-group">
+          <label>المادة الفعالة أو الوصف المختصر</label>
+          <input id="pf-generic" maxlength="180" placeholder="مثال: Paracetamol + Caffeine مسكن وخافض للحرارة" value="${esc(p?.generic || '')}">
+        </div>
+
+        <div class="adm-form-grid">
+          <div class="adm-input-group">
+            <label>القسم الرئيسي *</label>
+            <select id="pf-cat">
+              ${cats.map(c => `<option value="${c[0]}" ${p?.cat === c[0] ? 'selected' : ''}>${c[2]}</option>`).join('')}
+            </select>
+          </div>
+          <div class="adm-input-group">
+            <label>السعر (ج.م) *</label>
+            <input id="pf-price" type="number" min="0" step="0.25" required placeholder="0.00" value="${Number(p?.price) || ''}">
+          </div>
+        </div>
+
+        <div class="adm-form-grid">
+          <div class="adm-input-group">
+            <label>الكمية المتوفرة بالمخزون *</label>
+            <input id="pf-stock" type="number" min="0" step="1" required placeholder="مثال: 50" value="${p ? (Number(p.stock) || 0) : 20}">
+          </div>
+          <div class="adm-input-group">
+            <label>الماركة / البراند (اختياري)</label>
+            <input id="pf-brand" placeholder="مثال: La Roche-Posay أو GSK" value="${esc(p?.brand || '')}">
+          </div>
+        </div>
+
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-top:4px;">
+          <input id="pf-restricted" type="checkbox" ${p?.restricted ? 'checked' : ''} style="width:18px;height:18px;">
+          <span>⚠️ يُصرف بروشتة أو تحت إشراف الصيدلي فقط</span>
+        </label>
+
+        <div style="display:flex;gap:10px;margin-top:10px;">
+          <button class="btn" type="submit" style="flex:1;padding:11px;font-size:13.5px;">
+            💾 حفظ ونشر الصنف
+          </button>
+          <button class="btn soft" type="button" onclick="adminPanel('products')" style="padding:11px 18px;font-size:13px;">
+            إلغاء
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+}
+
+/* معالجة وضغط الصورة المرفوعة من الجهاز إلى Base64 خفيف */
+function admHandleLocalImage(file) {
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    toast('يرجى اختيار ملف صورة صالح');
+    return;
+  }
+  
+  toast('جاري معالجة وضغط الصورة...');
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 500;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * (maxDim / w)); w = maxDim; }
+        else { w = Math.round(w * (maxDim / h)); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      
+      $('pf-img').value = compressedDataUrl;
+      $('pf-img-preview').src = compressedDataUrl;
+      toast('تمت معالجة الصورة وجاهزة للحفظ ✓');
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 function saveProduct() {
@@ -9874,40 +10743,50 @@ function saveProduct() {
     toast('يرجى مراجعة الاسم والسعر والكمية');
     return;
   }
-  const id = idRaw ? (isNaN(idRaw) ? idRaw : Number(idRaw)) : Date.now();
-  const old = M[id] || {};
+  const id = idRaw ? (isNaN(idRaw) ? idRaw : Number(idRaw)) : ('bb_' + Date.now());
+  const old = M[id] || admCachedProducts.find(x => String(x.id) === String(id)) || {};
   const p = {
     ...old, id, name,
     generic: $('pf-generic').value.trim(),
     cat: $('pf-cat').value,
+    brand: $('pf-brand')?.value?.trim() || '',
     price, stock,
     img: $('pf-img').value.trim(),
     restricted: $('pf-restricted').checked
   };
+  
+  if (!bbStore.deleted) bbStore.deleted = [];
   bbStore.deleted = bbStore.deleted.filter(x => String(x) !== String(id));
+  
   if (idRaw) {
-    const ci = bbStore.created.findIndex(x => String(x.id) === String(id));
-    if (ci >= 0) bbStore.created[ci] = p;
-    else {
-      bbStore.overrides = bbStore.overrides.filter(x => String(x.id) !== String(id));
+    const ci = (bbStore.created || []).findIndex(x => String(x.id) === String(id));
+    if (ci >= 0) {
+      bbStore.created[ci] = p;
+    } else {
+      bbStore.overrides = (bbStore.overrides || []).filter(x => String(x.id) !== String(id));
       bbStore.overrides.push(p);
     }
   } else {
-    bbStore.created.push(p);
+    if (!bbStore.created) bbStore.created = [];
+    bbStore.created.unshift(p);
   }
+  
   bbPersist();
   M[id] = p;
   bbCache.clear();
-  toast('تم حفظ المنتج بنجاح');
+  toast('تم حفظ المنتج بنجاح 🎉');
   search();
-  adminPanel();
+  adminPanel('products');
 }
 
 async function bbDeleteProduct(id) {
-  if (!confirm('حذف هذا المنتج من العرض على هذا الجهاز؟')) return;
+  if (!confirm('هل تريد حذف هذا المنتج نهائياً من الصيدلية على هذا الجهاز؟')) return;
+  if (!bbStore.deleted) bbStore.deleted = [];
   bbStore.deleted.push(String(id));
-  bbStore.overrides = bbStore.overrides.filter(p => String(p.id) !== String(id));
-  bbStore.created = bbStore.created.filter(p => String(p.id) !== String(id));
+  bbStore.overrides = (bbStore.overrides || []).filter(p => String(p.id) !== String(id));
+  bbStore.created = (bbStore.created || []).filter(p => String(p.id) !== String(id));
+  if (bbStore.disabled) bbStore.disabled = bbStore.disabled.filter(x => String(x) !== String(id));
+  
   delete cart[id];
   delete M[id];
   save();
@@ -9915,8 +10794,8 @@ async function bbDeleteProduct(id) {
   bbCache.clear();
   drawCart();
   await search();
-  await adminPanel();
-  toast('تم حذف المنتج محلياً');
+  await adminPanel('products');
+  toast('تم حذف المنتج بنجاح');
 }
 
 /* ===== 8. التفاعلات الحية، الميكروفون، والـ GPS ===== */
