@@ -5595,6 +5595,233 @@ body.adm .site-footer > small { display: block; }
   display: inline-block;
 }
 
+
+/* ===== بنر العروض والإعلانات العصري المتطور 2026 (Ultra Carousel) ===== */
+.ban {
+  position: relative;
+  width: calc(100% - 24px) !important;
+  max-width: calc(var(--container) - 24px) !important;
+  margin: 12px auto 6px !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+  box-shadow: 0 12px 32px -8px rgba(18, 59, 115, 0.22) !important;
+  background: #0B2548;
+}
+
+.ban .bt {
+  display: flex !important;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  will-change: transform;
+}
+
+.ban .bs {
+  flex: 0 0 100% !important;
+  min-height: 160px !important;
+  padding: 22px 26px 40px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  overflow: hidden;
+}
+
+/* خلفيات متدرجة فخمة وجذابة للشرائح */
+.bs.g-offer-1 { background: linear-gradient(135deg, #09203F 0%, #1E3C72 60%, #2A5298 100%) !important; }
+.bs.g-offer-2 { background: linear-gradient(135deg, #4A0E4E 0%, #831843 55%, #BE185D 100%) !important; }
+.bs.g-offer-3 { background: linear-gradient(135deg, #064E3B 0%, #065F46 50%, #047857 100%) !important; }
+.bs.g-offer-4 { background: linear-gradient(135deg, #78350F 0%, #B45309 50%, #D97706 100%) !important; }
+.bs.g-flash-deal { background: linear-gradient(135deg, #881337 0%, #BE123C 45%, #E11D48 100%) !important; }
+.bs.g-custom-promo { background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%) !important; }
+
+.bs-content {
+  flex: 1 1 auto !important;
+  z-index: 2 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+.bs-badge-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.ban .bs-badge {
+  background: rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: #FFFFFF !important;
+  padding: 4px 12px !important;
+  border-radius: 99px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+.bs-timer-badge {
+  background: #FEF08A !important;
+  color: #854D0E !important;
+  padding: 3px 10px !important;
+  border-radius: 99px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  animation: pulseTimer 2s infinite ease-in-out;
+}
+
+@keyframes pulseTimer {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+.ban .bs-title {
+  margin: 0 0 6px !important;
+  font-size: clamp(17px, 4.2vw, 22px) !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+  color: #FFFFFF !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.25) !important;
+}
+
+.ban .bs-desc {
+  margin: 0 0 12px !important;
+  font-size: 12.5px !important;
+  line-height: 1.6 !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  max-width: 480px !important;
+}
+
+.ban .bs-action-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: #FFFFFF !important;
+  color: #0E2F5A !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  padding: 7px 16px !important;
+  border-radius: 99px !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+  transition: all 0.2s ease !important;
+}
+
+.ban:hover .bs-action-btn {
+  transform: translateY(-2px);
+  background: #FFFBEB !important;
+  color: #B45309 !important;
+}
+
+.ban .bs-visual {
+  flex: 0 0 85px !important;
+  height: 85px !important;
+  border-radius: 20px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.18) !important;
+  overflow: hidden;
+}
+
+.ban .bs-hero-img {
+  width: 58px !important;
+  height: 58px !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,0.25)) !important;
+}
+
+/* أسهم التنقل الاحترافية في البانر */
+.ban-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  color: #FFFFFF;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.2s;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+.ban-nav-arrow:hover {
+  background: #FFFFFF;
+  color: #1E3A8A;
+  transform: translateY(-50%) scale(1.1);
+}
+.ban-nav-prev { right: 10px; }
+.ban-nav-next { left: 10px; }
+
+/* نقاط المؤشر الأنيقة */
+.ban .bdots {
+  position: absolute !important;
+  bottom: 10px !important;
+  inset-inline: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  z-index: 5 !important;
+}
+
+.ban .bdots button {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 99px !important;
+  background: rgba(255, 255, 255, 0.45) !important;
+  border: none !important;
+  padding: 0 !important;
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.ban .bdots button.on {
+  width: 26px !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 0 8px rgba(255,255,255,0.8);
+}
+
+/* تحسين زر تعديل المخزون السريع في لوحة التحكم */
+.adm-quick-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 2px 6px;
+}
+.adm-quick-stock input {
+  width: 44px;
+  text-align: center;
+  border: none;
+  background: transparent;
+  font-weight: 800;
+  font-size: 12px;
+  color: #1E40AF;
+  outline: none;
+}
+
 </style>
 <style>
 
@@ -6919,7 +7146,22 @@ function bbLux() {
 }
 
 const bbDay = () => DAYDEAL[new Date().getDay()];
-const bbPct = p => { const d = bbDay(); return p && p.cat !== 'drug' && !bbPremium(p) && p.cat === d.cat ? d.pct : 0; };
+function getActiveProductDeal(id) {
+  if (!id || !bbStore || !Array.isArray(bbStore.deals)) return null;
+  const now = Date.now();
+  return bbStore.deals.find(deal => String(deal.id) === String(id) && (!deal.until || deal.until > now));
+}
+
+const bbPct = p => {
+  if (!p) return 0;
+  // 1. فحص إذا كان للمنتج عرض خصم محدد وموقوت بالاسم
+  const deal = getActiveProductDeal(p.id);
+  if (deal && Number(deal.pct) > 0) return Number(deal.pct);
+
+  // 2. عرض اليوم التلقائي على الأقسام
+  const d = bbDay();
+  return (p.cat !== 'drug' && !bbPremium(p) && p.cat === d.cat) ? d.pct : 0;
+};
 const bbPrice = p => +((Number(p && p.price) || 0) * (1 - bbPct(p) / 100)).toFixed(2);
 const bbFree = () => (BBJ('bahbah_n', 0) + 1) % LOYAL === 0;
 function bbDisc() {
@@ -6992,10 +7234,12 @@ function bbReadStore() {
       created: Array.isArray(x.created) ? x.created : [],
       deleted: Array.isArray(x.deleted) ? x.deleted : [],
       disabled: Array.isArray(x.disabled) ? x.disabled : [],
-      coupons: (x.coupons && typeof x.coupons === 'object') ? x.coupons : null
+      coupons: (x.coupons && typeof x.coupons === 'object') ? x.coupons : null,
+      deals: Array.isArray(x.deals) ? x.deals : [],
+      customPromos: Array.isArray(x.customPromos) ? x.customPromos : []
     };
   } catch (e) {
-    return { overrides: [], created: [], deleted: [], disabled: [], coupons: null };
+    return { overrides: [], created: [], deleted: [], disabled: [], coupons: null, deals: [], customPromos: [] };
   }
 }
 
@@ -10283,19 +10527,22 @@ async function adminPanel(tab = admCurrentTab) {
       <!-- التبويبات الرئيسية -->
       <div class="adm-tabs">
         <button type="button" class="adm-tab-btn ${admCurrentTab === 'products' ? 'active' : ''}" onclick="adminPanel('products')">
-          📦 الأصناف والمنتجات
+          📦 الأصناف والمخزون
+        </button>
+        <button type="button" class="adm-tab-btn ${admCurrentTab === 'offers' ? 'active' : ''}" onclick="adminPanel('offers')">
+          🔥 العروض والإعلانات
         </button>
         <button type="button" class="adm-tab-btn ${admCurrentTab === 'coupons' ? 'active' : ''}" onclick="adminPanel('coupons')">
-          🎟️ إدارة الكوبونات
+          🎟️ الكوبونات
         </button>
         <button type="button" class="adm-tab-btn ${admCurrentTab === 'settings' ? 'active' : ''}" onclick="adminPanel('settings')">
-          🛠️ إعدادات وبيانات
+          ⚙️ إعدادات
         </button>
       </div>
 
       <!-- محتوى التبويب النشط -->
       <div id="admTabContent">
-        ${admCurrentTab === 'products' ? admRenderProductsTab() : admCurrentTab === 'coupons' ? admRenderCouponsTab() : admRenderSettingsTab()}
+        ${admCurrentTab === 'products' ? admRenderProductsTab() : admCurrentTab === 'offers' ? admRenderOffersTab() : admCurrentTab === 'coupons' ? admRenderCouponsTab() : admRenderSettingsTab()}
       </div>
     </div>
   `;
@@ -10373,9 +10620,16 @@ function admRenderProductsListItems(items) {
           <div class="adm-item-sub">
             <b style="color:#1D4ED8">${fmtPrice(p.price)} ج.م</b>
             <span>•</span>
-            <span>القسم: ${catName}</span>
+            <span>${catName}</span>
             <span>•</span>
-            <span>المخزون: ${Number(p.stock) || 0}</span>
+            <span style="display:inline-flex;align-items:center;gap:3px;">
+              المخزون: 
+              <span class="adm-quick-stock">
+                <input type="number" min="0" value="${Number(p.stock) || 0}" title="عدّل المخزون فوراً" onchange="admQuickUpdateStock('${esc(p.id)}', this.value)">
+                📦
+              </span>
+            </span>
+            ${getActiveProductDeal(p.id) ? '<span style="background:#FEF08A;color:#854D0E;padding:1px 6px;border-radius:4px;font-weight:800;font-size:10px;">خصم ' + getActiveProductDeal(p.id).pct + '٪ 🔥</span>' : ''}
           </div>
         </div>
         <div class="adm-item-actions">
@@ -10426,6 +10680,208 @@ function admToggleProductStatus(id) {
 }
 
 /* تبويب إدارة الكوبونات */
+
+/* تعديل فوري وسريع للمخزون دون الحاجة لفتح شاشة التعديل */
+function admQuickUpdateStock(id, newStock) {
+  const stockNum = Math.max(0, parseInt(newStock) || 0);
+  const p = M[id] || admCachedProducts.find(x => String(x.id) === String(id));
+  if (!p) return;
+  p.stock = stockNum;
+  
+  if (!bbStore.overrides) bbStore.overrides = [];
+  const oi = bbStore.overrides.findIndex(x => String(x.id) === String(id));
+  if (oi >= 0) {
+    bbStore.overrides[oi].stock = stockNum;
+  } else {
+    const ci = (bbStore.created || []).findIndex(x => String(x.id) === String(id));
+    if (ci >= 0) bbStore.created[ci].stock = stockNum;
+    else bbStore.overrides.push({ ...p, stock: stockNum });
+  }
+  
+  bbPersist();
+  bbCache.clear();
+  search();
+  toast('تم تحديث مخزون «' + p.name + '» إلى ' + stockNum + ' قطعة ✓');
+}
+
+/* تبويب إدارة العروض، الخصومات الموقوتة، وإعلانات البانر */
+function admRenderOffersTab() {
+  const deals = (bbStore.deals || []).map(d => {
+    const prod = M[d.id] || admCachedProducts.find(x => String(x.id) === String(d.id));
+    return { ...d, prod };
+  });
+
+  const now = Date.now();
+
+  return `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#EFF6FF;border:1px solid #BFDBFE;padding:12px;border-radius:14px;font-size:12px;color:#1E40AF;line-height:1.7;">
+        🎯 <b>مركز العروض والتخفيضات الذكية:</b>
+        اختر أي دواء أو مستحضر، وحدد نسبة الخصم ومدة العرض (مثال: يوم أو أسبوع أو شهر).
+        سيظهر المنتج فوراً في <b>شاشة العروض والبانر الرئيسي المتحرك</b> مع عدّاد زمني وبادج الخصم في كل المتجر والسلة!
+      </div>
+
+      <!-- نموذج إنشاء خصم موقوت على صنف محدد -->
+      <form class="adm-form-wrap" onsubmit="event.preventDefault();admSaveProductDeal();" style="background:#F8FAFC;border:1.5px solid #E2E8F0;padding:14px;border-radius:14px;">
+        <b style="font-size:13.5px;color:#0F172A;">⚡ إضافة خصم مؤقت على منتج محدد:</b>
+        
+        <div class="adm-input-group">
+          <label>اختر المنتج من القائمة:</label>
+          <select id="deal-prod-id" required style="font-size:13px;padding:9px;">
+            <option value="">-- اضغط لاختيار الصنف (${admCachedProducts.length} صنف متاح) --</option>
+            ${admCachedProducts.slice(0, 300).map(p => `
+              <option value="${esc(p.id)}">${esc(p.name)} (${fmtPrice(p.price)} ج.م)</option>
+            `).join('')}
+          </select>
+        </div>
+
+        <div class="adm-form-grid">
+          <div class="adm-input-group">
+            <label>نسبة الخصم (%)</label>
+            <input id="deal-pct" type="number" min="1" max="95" value="15" required placeholder="مثال: 15">
+          </div>
+          <div class="adm-input-group">
+            <label>مدة سريان العرض</label>
+            <select id="deal-duration">
+              <option value="24">24 ساعة (يوم واحد)</option>
+              <option value="48">48 ساعة (يومين)</option>
+              <option value="72">3 أيام</option>
+              <option value="168" selected>أسبوع كامل (7 أيام)</option>
+              <option value="720">شهر كامل (30 يوماً)</option>
+              <option value="0">مستمر حتى الإلغاء يدوياً</option>
+            </select>
+          </div>
+        </div>
+
+        <button type="submit" class="btn" style="padding:10px;font-size:13px;align-self:flex-start;">
+          🔥 نشر العرض على البانر والمتجر
+        </button>
+      </form>
+
+      <!-- نموذج إضافة إعلان بانر عام إضافي -->
+      <details style="background:#FFFFFF;border:1px solid #E2E8F0;padding:12px;border-radius:14px;font-size:13px;">
+        <summary style="font-weight:700;color:#1E40AF;cursor:pointer;">➕ تصميم إعلان بانر مخصص بالكامل (نصوص وصورة)</summary>
+        <form class="adm-form-wrap" onsubmit="event.preventDefault();admSaveCustomPromo();" style="margin-top:12px;">
+          <div class="adm-input-group">
+            <label>عنوان الإعلان الرئيسي</label>
+            <input id="cprom-title" required placeholder="مثال: خصومات حصرية على حفاضات الأطفال">
+          </div>
+          <div class="adm-input-group">
+            <label>وصف الإعلان</label>
+            <textarea id="cprom-desc" rows="2" placeholder="تفاصيل العرض أو الهدية للعملاء..."></textarea>
+          </div>
+          <div class="adm-form-grid">
+            <div class="adm-input-group">
+              <label>بادج العرض (شريط صغير)</label>
+              <input id="cprom-badge" placeholder="مثال: عرض الأسبوع">
+            </div>
+            <div class="adm-input-group">
+              <label>عند الضغط يفتح قسم:</label>
+              <select id="cprom-act">
+                <option value="all">كل الأقسام</option>
+                <option value="drug">الأدوية</option>
+                <option value="skin">العناية بالبشرة</option>
+                <option value="hair">العناية بالشعر</option>
+                <option value="kids">منتجات الأطفال</option>
+                <option value="supply">مستلزمات طبية</option>
+                <option value="rx">صوّر الروشتة</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn soft" style="align-self:flex-start;padding:8px 14px;">
+            حفظ وإضافة الشريحة للبانر
+          </button>
+        </form>
+      </details>
+
+      <!-- قائمة العروض الحالية النشطة -->
+      <b style="font-size:13px;color:#0F172A;margin-top:6px;">عروض الخصم الموقوتة النشطة حالياً:</b>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${!deals.length ? '<div style="color:#64748B;font-size:12px;padding:8px;">لا توجد عروض منتجات مخصصة حالياً. أضف أول عرض من النموذج بالأعلى!</div>' : ''}
+        ${deals.map(d => {
+          const isExpired = d.until && d.until <= now;
+          const origPrice = Number(d.prod?.price) || 0;
+          const newPrice = origPrice * (1 - (Number(d.pct) || 0) / 100);
+          
+          let timeLeft = 'مستمر';
+          if (d.until) {
+            const hLeft = Math.round((d.until - now) / 3600000);
+            timeLeft = isExpired ? 'منتهي الصلاحية ⚠️' : (hLeft > 24 ? Math.round(hLeft/24) + ' يوم' : hLeft + ' ساعة');
+          }
+
+          return `
+            <div class="adm-coupon-card" style="border-style:solid;border-color:${isExpired ? '#CBD5E1' : '#FCA5A5'};background:${isExpired ? '#F8FAFC' : '#FFFDFD'};">
+              <div>
+                <b style="font-size:13px;color:#0F172A;">${esc(d.prod?.name || 'منتج #' + d.id)}</b>
+                <div style="font-size:12px;color:#BE123C;margin-top:3px;font-weight:700;">
+                  خصم ${d.pct}٪ — السعر بعد الخصم: ${fmtPrice(newPrice)} ج.م (بدلاً من ${fmtPrice(origPrice)} ج.م)
+                </div>
+                <div style="font-size:11px;color:#64748B;margin-top:2px;">
+                  ⏳ مدة العرض: <b>${timeLeft}</b>
+                </div>
+              </div>
+              <button type="button" class="adm-btn-action adm-btn-del" onclick="admDeleteProductDeal('${esc(d.id)}')">
+                إلغاء العرض 🗑️
+              </button>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function admSaveProductDeal() {
+  const prodId = $('deal-prod-id')?.value;
+  const pct = Number($('deal-pct')?.value) || 0;
+  const durationHrs = Number($('deal-duration')?.value) || 0;
+
+  if (!prodId) { toast('يرجى اختيار المنتج المراد تطبيق الخصم عليه'); return; }
+  if (pct <= 0 || pct > 95) { toast('يرجى تحديد نسبة خصم صحيحة بين 1 و 95٪'); return; }
+
+  if (!bbStore.deals) bbStore.deals = [];
+  bbStore.deals = bbStore.deals.filter(d => String(d.id) !== String(prodId));
+
+  const until = durationHrs > 0 ? (Date.now() + durationHrs * 3600000) : null;
+  bbStore.deals.unshift({ id: prodId, pct, until });
+
+  bbPersist();
+  bbCache.clear();
+  search();
+  if (typeof renderBannerSlides === 'function') renderBannerSlides();
+  toast('تم تفعيل ونشر العرض على المنتج بنجاح 🎉');
+  adminPanel('offers');
+}
+
+function admDeleteProductDeal(id) {
+  if (!confirm('هل تريد إلغاء هذا العرض؟')) return;
+  if (!bbStore.deals) bbStore.deals = [];
+  bbStore.deals = bbStore.deals.filter(d => String(d.id) !== String(id));
+  bbPersist();
+  bbCache.clear();
+  search();
+  if (typeof renderBannerSlides === 'function') renderBannerSlides();
+  toast('تم إلغاء العرض وإعادة السعر الأصلي');
+  adminPanel('offers');
+}
+
+function admSaveCustomPromo() {
+  const title = ($('cprom-title')?.value || '').trim();
+  const desc = ($('cprom-desc')?.value || '').trim();
+  const badge = ($('cprom-badge')?.value || '').trim() || 'عرض خاص';
+  const action = $('cprom-act')?.value || 'all';
+
+  if (!title) { toast('يرجى كتابة عنوان الإعلان'); return; }
+
+  if (!bbStore.customPromos) bbStore.customPromos = [];
+  bbStore.customPromos.unshift({ title, desc, badge, action, gradient: 'g-custom-promo' });
+
+  bbPersist();
+  if (typeof renderBannerSlides === 'function') renderBannerSlides();
+  toast('تم إضافة الإعلان لشاشة العروض والبانر بنجاح ✓');
+  adminPanel('offers');
+}
+
 function admRenderCouponsTab() {
   const currentCoupons = getCoupons();
   const entries = Object.entries(currentCoupons);
@@ -10813,13 +11269,135 @@ function bbInstall() {
   $('qa-inst').hidden = true;
 }
 
+function getActivePromoList() {
+  const promos = [];
+  const now = Date.now();
+
+  // 1. إضافة عروض الخصومات الموقوتة النشطة كشرائح إعلانية بارزة أولاً
+  (bbStore.deals || []).forEach(deal => {
+    if (deal.until && deal.until <= now) return; // منتهي الصلاحية
+    const p = M[deal.id] || (Array.isArray(DEMO) ? DEMO.find(x => String(x.id) === String(deal.id)) : null);
+    if (!p) return;
+    
+    let timeText = 'عرض ساري';
+    if (deal.until) {
+      const diffHrs = Math.max(1, Math.round((deal.until - now) / 3600000));
+      timeText = diffHrs > 24 ? ('متبقي ' + Math.round(diffHrs / 24) + ' يوم') : ('متبقي ' + diffHrs + ' ساعة ⏳');
+    }
+
+    promos.push({
+      c: 'g-flash-deal',
+      badge: '🔥 عرض خاص لفترة محدودة (' + deal.pct + '٪ خصم)',
+      timer: timeText,
+      t: p.name,
+      d: 'وفر ' + deal.pct + '٪ الآن! السعر: ' + fmtPrice(bbPrice(p)) + ' ج.م بدلاً من ' + fmtPrice(p.price) + ' ج.م. اضغط لإضافة الدواء فوراً.',
+      btn: '🛒 اطلب العرض الآن',
+      icon: p.img || './icon.svg',
+      a: 'drug:' + p.id
+    });
+  });
+
+  // 2. إضافة الإعلانات المخصصة المضافة من شاشة التحكم
+  (bbStore.customPromos || []).forEach(cp => {
+    promos.push({
+      c: cp.gradient || 'g-custom-promo',
+      badge: cp.badge || '✨ إعلان مميز',
+      t: cp.title,
+      d: cp.desc,
+      btn: cp.btnText || 'تفاصيل العرض ⬅️',
+      icon: cp.icon || './icon.svg',
+      a: cp.action || 'all'
+    });
+  });
+
+  // 3. العروض الأساسية للمتجر
+  return promos.concat(BB_PROMO);
+}
+
+let bannerSliderInterval;
+
+function renderBannerSlides() {
+  const banSection = $('ban');
+  if (!banSection) return;
+  const activePromos = getActivePromoList();
+
+  banSection.innerHTML = `
+    <button type="button" class="ban-nav-arrow ban-nav-prev" onclick="window.banGoSlide(-1);event.stopPropagation();" aria-label="السابق">❯</button>
+    <button type="button" class="ban-nav-arrow ban-nav-next" onclick="window.banGoSlide(1);event.stopPropagation();" aria-label="التالي">❮</button>
+    <div class="bt">${activePromos.map(s => `
+      <div class="bs ${s.c}" role="button" tabindex="0" data-a="${s.a || ''}">
+        <div class="bs-content">
+          <div class="bs-badge-wrap">
+            <span class="bs-badge">${s.badge || 'عرض خاص'}</span>
+            ${s.timer ? `<span class="bs-timer-badge">⏳ ${s.timer}</span>` : ''}
+          </div>
+          <h3 class="bs-title">${s.t}</h3>
+          <p class="bs-desc">${s.d}</p>
+          <span class="bs-action-btn">${s.btn || 'تصفح العرض'}</span>
+        </div>
+        <div class="bs-visual">
+          <img src="${s.icon || './icon.svg'}" alt="${esc(s.t)}" class="bs-hero-img" width="64" height="64" loading="lazy" onerror="this.src='./icon.svg'">
+        </div>
+      </div>
+    `).join('')}</div>
+    <div class="bdots">${activePromos.map(() => '<button type="button" aria-label="شريحة"></button>').join('')}</div>
+  `;
+
+  // ربط الحركة التلقائية السلسة واللمس
+  let idx = 0, x0;
+  const bt = banSection.querySelector('.bt');
+  const dots = [...banSection.querySelectorAll('.bdots button')];
+  const n = activePromos.length;
+
+  const goSlide = k => {
+    if (!n) return;
+    idx = (k + n) % n;
+    bt.style.transform = `translateX(${idx * 100}%)`;
+    dots.forEach((d, j) => d.classList.toggle('on', j === idx));
+  };
+  window.banGoSlide = dir => {
+    goSlide(idx + dir);
+    runSlide();
+  };
+
+  const runSlide = () => {
+    clearInterval(bannerSliderInterval);
+    bannerSliderInterval = setInterval(() => {
+      if (!document.hidden) goSlide(idx + 1);
+    }, 4500);
+  };
+
+  dots.forEach((d, j) => d.onclick = () => { goSlide(j); runSlide(); });
+  bt.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; clearInterval(bannerSliderInterval); }, { passive: true });
+  bt.addEventListener('touchend', e => {
+    const d = e.changedTouches[0].clientX - x0;
+    if (Math.abs(d) > 35) { goSlide(idx + (d < 0 ? 1 : -1)); vib(6); }
+    runSlide();
+  });
+
+  bt.addEventListener('click', e => {
+    const bs = e.target.closest('.bs');
+    if (!bs) return;
+    const a = bs.dataset.a || '';
+    if (a.startsWith('drug:')) {
+      const drugId = a.split(':')[1];
+      if (drugId) drug(drugId);
+    } else if (a === 'rx') openFastRxModal();
+    else if (a === 'monthly') openMonthlyModal();
+    else if (a === 'ask') open('https://wa.me/' + CFG.WA, '_blank');
+    else if (a) setCat(a);
+  });
+
+  goSlide(0);
+  runSlide();
+}
+
 (function initUI() {
   /* التحية الزمنية */
   const h = new Date().getHours();
   const g = $('greet');
   if (g) g.textContent = h < 5 ? 'تحية طيبة،' : h < 12 ? 'صباح الخير والعافية،' : h < 17 ? 'نهارك سعيد،' : h < 21 ? 'مساء الخير،' : 'مساء النور،';
 
-  /* شريط الأزرار السريعة والبانر */
   const waConsult = 'https://wa.me/' + CFG.WA + '?text=' + encodeURIComponent('السلام عليكم دكتور، محتاج استشارة صيدلانية بخصوص دواء:');
   $('chips').insertAdjacentHTML('afterend', `
     <div id="quick">
@@ -10829,22 +11407,9 @@ function bbInstall() {
       <button type="button" class="qa" onclick="showFavs()"><i><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></i>المفضلة<b id="favN" hidden>0</b></button>
       <button type="button" class="qa" id="qa-inst" hidden onclick="bbInstall()"><i><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/></svg></i>ثبّت التطبيق</button>
     </div>
-    <section class="ban ban-lux" id="ban" aria-label="عروض وتخفيضات صيدلية بحبح">
-      <div class="bt">${BB_PROMO.map(s => `
-        <div class="bs ${s.c}" role="button" tabindex="0" data-a="${s.a || ''}">
-          <div class="bs-content">
-            <span class="bs-badge">${s.badge || 'عرض خاص'}</span>
-            <h3 class="bs-title">${s.t}</h3>
-            <p class="bs-desc">${s.d}</p>
-            <span class="bs-action-btn">${s.btn || 'تصفح العرض'}</span>
-          </div>
-          <div class="bs-visual">
-            <img src="${s.icon || '/images/cats/drug.svg'}" alt="${s.t}" class="bs-hero-img" width="64" height="64" loading="lazy">
-          </div>
-        </div>
-      `).join('')}</div>
-      <div class="bdots">${BB_PROMO.map(() => '<button type="button" aria-label="شريحة"></button>').join('')}</div>
-    </section>`);
+    <section class="ban ban-lux" id="ban" aria-label="عروض وتخفيضات صيدلية بحبح"></section>
+  `);
+  renderBannerSlides();
 
   /* تحريك البانر التلقائي واللمسي */
   let idx = 0, tmr, x0;
