@@ -6052,6 +6052,185 @@ body {
 }
 
 </style>
+<style>
+
+.cart-item-card {
+  position: relative;
+}
+.btn-cart-remove-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1.5px solid #FCA5A5;
+  color: #DC2626;
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.btn-cart-remove-item:hover {
+  background: #FEF2F2;
+  border-color: #DC2626;
+}
+.btn-cart-remove-item:active {
+  background: #FEE2E2;
+  transform: scale(.95);
+}
+
+/* شريط التحكم العلوي بالسلة */
+.cart-quick-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%);
+  border: 1px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cart-quick-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #FEF2F2;
+  border: 1.5px solid #FECACA;
+  color: #DC2626;
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .15s;
+}
+.cart-quick-toolbar-btn:hover {
+  background: #FEE2E2;
+  border-color: #DC2626;
+}
+
+/* كروت الأصناف المحسّنة */
+.cart-item-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1.5px solid #E0E7FF;
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  transition: box-shadow .15s;
+}
+.cart-item-card:hover {
+  box-shadow: 0 3px 10px rgba(0,0,0,.1);
+  border-color: #93C5FD;
+}
+.cart-item-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+.cart-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.cart-item-title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #1E3A5F;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+.cart-item-generic {
+  font-size: 11px;
+  color: #64748B;
+  margin-bottom: 4px;
+}
+.cart-item-price {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0369A1;
+  background: #EFF6FF;
+  padding: 1px 7px;
+  border-radius: 99px;
+}
+.cart-item-total {
+  font-size: 11.5px;
+  color: #059669;
+  font-weight: 700;
+}
+
+/* تحكم الكمية المحسّن */
+.cart-qty-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #F8FAFC;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.cart-qty-ctrl button {
+  width: 32px;
+  height: 36px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 900;
+  color: #374151;
+  transition: background .12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cart-qty-ctrl button:hover {
+  background: #E2E8F0;
+}
+.cart-qty-ctrl button.del {
+  color: #DC2626;
+}
+.cart-qty-ctrl button.del:hover {
+  background: #FEE2E2;
+}
+.cart-qty-input {
+  width: 42px;
+  height: 36px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #1E3A5F;
+  background: #fff;
+  border: none;
+  border-inline: 1.5px solid #CBD5E1;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.cart-qty-input::-webkit-inner-spin-button,
+.cart-qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.cart-qty-input:focus {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+</style>
 </head>
 <body>
 
@@ -8340,37 +8519,70 @@ function cartSheet() {
   const c = bbCust();
   const pk = c.m === 'pickup';
 
-  // 1. توليد كروت الأصناف المشتراة بتصميم فخم ومعلومات واضحة
+  // دالة تحديث الكمية من input مباشرة
+  window._cartSetQty = function(id, val) {
+    const n = parseInt(val, 10);
+    if (isNaN(n) || n < 1) return;
+    cart[id] = n;
+    save();
+    drawCart();
+    // تحديث إجمالي الصنف فقط دون إعادة رسم كاملة
+    const totalEl = document.querySelector('[data-item-total="' + id + '"]');
+    const p = M[id] || {};
+    const up = bbPrice(p);
+    if (totalEl) totalEl.textContent = n > 1 ? '(الإجمالي: ' + fmtPrice(up * n) + ' ج.م)' : '';
+    // تحديث الفاتورة فقط
+    const dvEl = $('dv');
+    if (dvEl) dvEl.innerHTML = dvHTML();
+    // تحديث العداد
+    const hdr = document.querySelector('[data-cart-count-badge]');
+    if (hdr) hdr.textContent = keys.length + ' صنف (' + Object.values(cart).reduce((a,b)=>a+b,0) + ' عبوة)';
+  };
+
+  // 1. توليد كروت الأصناف
   const rows = keys.map(id => {
     const p = M[id] || {};
     const count = cart[id];
     const unitPrice = bbPrice(p);
     const itemTot = unitPrice * count;
     const formVisual = typeof getFormVisual === 'function' ? getFormVisual(p) : { icon: '💊', bg: '#EFF6FF' };
-    
+    const safeId = esc(id);
+
     return `
       <div class="cart-item-card">
         <div class="cart-item-icon" style="background:${formVisual.bg}">${formVisual.icon}</div>
         <div class="cart-item-info">
           <div class="cart-item-title" title="${esc(p.name)}">${esc(p.name || 'صنف دوائي')}</div>
           ${p.generic ? `<div class="cart-item-generic">${esc(p.generic)}</div>` : ''}
-          <div style="display:flex;align-items:center;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px;">
             <span class="cart-item-price">${fmtPrice(unitPrice)} ج.م</span>
-            ${count > 1 ? `<span class="cart-item-total">(الإجمالي: ${fmtPrice(itemTot)} ج.م)</span>` : ''}
+            <span class="cart-item-total" data-item-total="${safeId}">${count > 1 ? '(الإجمالي: ' + fmtPrice(itemTot) + ' ج.م)' : ''}</span>
+            <button type="button" class="btn-cart-remove-item" onclick="chg('${safeId}', -cart['${safeId}'])" title="حذف من السلة">
+              🗑️ حذف
+            </button>
           </div>
         </div>
         <div class="cart-qty-ctrl">
-          <button type="button" class="${count === 1 ? 'del' : ''}" aria-label="تقليل الكمية" onclick="chg('${esc(id)}', -1)">
+          <button type="button" class="${count === 1 ? 'del' : ''}" aria-label="تقليل" onclick="chg('${safeId}', -1)">
             ${count === 1 ? '✕' : '−'}
           </button>
-          <b>${count}</b>
-          <button type="button" aria-label="زيادة الكمية" onclick="chg('${esc(id)}', 1)">+</button>
+          <input
+            type="number"
+            class="cart-qty-input"
+            value="${count}"
+            min="1"
+            max="99"
+            aria-label="الكمية"
+            onchange="_cartSetQty('${safeId}', this.value)"
+            oninput="if(+this.value>0){_cartSetQty('${safeId}', this.value)}"
+          >
+          <button type="button" aria-label="زيادة" onclick="chg('${safeId}', 1)">+</button>
         </div>
       </div>
     `;
   }).join('');
 
-  // 2. الفحص التلقائي لتعارضات الأدوية الموجودة بالسلة
+  // 2. تنبيهات الأمان الدوائي
   const safetyWarnings = getCartSafetyCheck();
   let safetyBanner = '';
   if (safetyWarnings.length > 0) {
@@ -8393,31 +8605,43 @@ function cartSheet() {
     `;
   }
 
-  // 3. بناء واجهة السلة والشراء الشاملة
+  const totalQty = Object.values(cart).reduce((a,b)=>a+b,0);
+
+  // 3. بناء واجهة السلة
   $('dlgBody').innerHTML = `
     <div class="cart-header-pro">
       <h3><span>🛒</span> سلة المشتريات والطلب</h3>
-      <span style="font-size:12.5px;background:#EFF6FF;color:var(--t);padding:4px 10px;border-radius:99px;font-weight:700;">
-        ${keys.length} صنف (${Object.values(cart).reduce((a,b)=>a+b, 0)} عبوة)
+      <span data-cart-count-badge style="font-size:12.5px;background:#EFF6FF;color:var(--t);padding:4px 10px;border-radius:99px;font-weight:700;">
+        ${keys.length} صنف (${totalQty} عبوة)
       </span>
     </div>
 
     ${safetyBanner}
 
-    <!-- قائمة المنتجات -->
-    <div style="max-height:230px;overflow-y:auto;padding-inline-end:4px;margin-bottom:8px;">
+    <!-- شريط التحكم -->
+    <div class="cart-quick-toolbar">
+      <span style="font-weight:700;color:var(--t)">📋 الأصناف في سلتك (${keys.length})</span>
+      <button type="button" class="cart-quick-toolbar-btn" onclick="clearCart()">
+        <span>🗑️</span> تفريغ السلة بالكامل
+      </button>
+    </div>
+
+    <!-- قائمة الأصناف -->
+    <div style="max-height:260px;overflow-y:auto;padding-inline-end:4px;margin-bottom:8px;">
       ${rows}
     </div>
 
-    <!-- طريقة الاستلام (توصيل ديروط أو استلام صيدلية) -->
+    <!-- طريقة الاستلام -->
     <div class="checkout-method-tabs">
       <div class="checkout-method-btn ${!pk ? 'active' : ''}" onclick="setDeliveryMethod('deliver')">
-        <span>🚚</span>
-        <span>توصيل سريع للمنزل</span>
+        <span>🚴</span>
+        <span>توصيل لباب بيتك</span>
+        <small>داخل ديروط ومركزها</small>
       </div>
       <div class="checkout-method-btn ${pk ? 'active' : ''}" onclick="setDeliveryMethod('pickup')">
         <span>🏪</span>
         <span>استلام من الصيدلية</span>
+        <small>استلام فوري بدون رسوم</small>
       </div>
     </div>
 
