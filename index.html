@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>صيدلية بحبح</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0E5A57">
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F4F7F6;--ink:#10201F;--mute:#5B6E6C;--teal:#0E5A57;--line:#D8E2E0;--card:#fff;--save:#F2A900;--save-ink:#4A3300;--ok:#1B7F4B;--warn:#B25E00}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 'Readex Pro',Tahoma,sans-serif;padding-bottom:96px}
+header{background:var(--teal);color:#fff;padding:18px 16px 22px}
+header h1{margin:0 0 4px;font-size:22px} header p{margin:0 0 14px;opacity:.85;font-size:14px}
+.search{display:flex;gap:8px}
+.search input{flex:1;font:inherit;padding:14px;border:0;border-radius:12px;min-width:0}
+.search button{border:0;border-radius:12px;background:#fff;color:var(--teal);width:52px;font-size:22px}
+.search button:focus-visible,.search input:focus-visible,.chip:focus-visible,.btn:focus-visible,.fab:focus-visible{outline:3px solid var(--save);outline-offset:2px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 16px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:8px 16px;font:inherit;white-space:nowrap;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--teal);color:#fff;border-color:var(--teal)}
+main{padding:0 16px;display:grid;gap:12px;max-width:720px;margin:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:72px 1fr;gap:12px}
+.card img{width:72px;height:72px;object-fit:contain;border-radius:8px;background:#EEF3F2}
+.card h3{margin:0;font-size:16px}
+.meta{color:var(--mute);font-size:13px}
+.price{font-weight:700;font-size:18px}
+.badge{display:inline-block;font-size:13px;padding:2px 10px;border-radius:999px}
+.in_stock{background:#E3F4EA;color:var(--ok)} .out{background:#FBE7E7;color:#A12727} .unknown{background:#FFF1DC;color:var(--warn)}
+.eq{grid-column:1/-1;border-top:1px dashed var(--line);padding-top:10px}
+.eq b{display:block;margin-bottom:2px}
+.save{background:var(--save);color:var(--save-ink);font-weight:700;border-radius:8px;padding:2px 10px;font-size:14px;display:inline-block}
+.note{font-size:12px;color:var(--mute);margin-top:4px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.btn{border:1px solid var(--teal);background:#fff;color:var(--teal);border-radius:10px;padding:8px 14px;font:inherit;cursor:pointer}
+.btn.fill{background:var(--teal);color:#fff}
+.fab{position:fixed;inset-inline:16px;bottom:16px;max-width:688px;margin:auto;background:#1B7F4B;color:#fff;border:0;border-radius:16px;padding:16px;font:700 17px 'Readex Pro',sans-serif;box-shadow:0 8px 24px #0003;cursor:pointer}
+.empty{text-align:center;color:var(--mute);padding:32px 0}
+@media (prefers-reduced-motion:no-preference){.fab{transition:transform .15s}.fab:active{transform:scale(.98)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>صيدلية بحبح</h1>
+  <p>ديروط والقرى · اعرف المتوفر والأوفر قبل ما تتحرك</p>
+  <form class="search" id="f" role="search">
+    <input id="q" type="search" placeholder="اكتب اسم الدواء أو اتكلم" autocomplete="off" aria-label="بحث عن دواء">
+    <button type="button" id="mic" aria-label="بحث صوتي">🎤</button>
+  </form>
+</header>
+<div class="chips" id="chips" role="group" aria-label="التصنيفات"></div>
+<main id="out"></main>
+<button class="fab" id="wa">📷 ابعت الروشتة أو صورة العلبة على واتساب</button>
+
+<script>
+const $=s=>document.querySelector(s);
+const FILTERS=[['','الكل'],['مزمن','الأدوية المزمنة'],['تجميل','العناية والتجميل'],['اطفال','مستلزمات الأطفال']]; // عدّل الكلمات حسب أسماء التصنيفات في الداتا
+let cat='', cart=JSON.parse(localStorage.getItem('cart')||'[]'), t;
+const STATUS={in_stock:'متوفر',out:'غير متوفر حاليًا',unknown:'اسأل عن التوفر'};
+
+$('#chips').innerHTML=FILTERS.map(([v,l],i)=>`<button class="chip" aria-pressed="${i==0}" data-v="${v}">${l}</button>`).join('');
+$('#chips').onclick=e=>{const b=e.target.closest('.chip'); if(!b)return; cat=b.dataset.v;
+  document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b)); search();};
+
+async function search(){
+  const r=await fetch(`/api/search?q=${encodeURIComponent($('#q').value)}&cat=${encodeURIComponent(cat)}`);
+  const list=await r.json();
+  $('#out').innerHTML=list.length?list.map(drug).join(''):'<p class="empty">ملقيناش الدواء ده. ابعت صورته على واتساب وهنساعدك.</p>';
+}
+function drug(p){
+  const b=p.best;
+  return `<article class="card">
+    <img src="${p.image||''}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
+    <div>
+      <h3>${p.name}</h3>
+      <div class="meta">${[p.ingredient,p.strength,p.form].filter(Boolean).join(' · ')}</div>
+      <div class="row"><span class="price">${p.price} ج</span><span class="badge ${p.availability}">${STATUS[p.availability]}</span></div>
+      <div class="row"><button class="btn fill" onclick="add(${p.id})">أضف للطلب</button></div>
+    </div>
+    ${b?`<div class="eq"><b>مثيل بنفس المادة الفعالة والتركيز والشكل</b>
+      ${b.name} — ${b.price} ج <span class="save">وفّرت ${b.saving} ج</span>
+      <div class="row"><button class="btn" onclick="add(${b.id})">اطلب المثيل</button></div>
+      <div class="note">الصيدلاني يؤكد المثيل معاك قبل التسليم.</div></div>`:''}
+  </article>`;
+}
+function add(id){const i=cart.find(x=>x.id===id); i?i.qty++:cart.push({id,qty:1});
+  localStorage.setItem('cart',JSON.stringify(cart)); $('#wa').textContent=`📲 أرسل الطلب على واتساب (${cart.reduce((a,x)=>a+x.qty,0)} صنف)`;}
+$('#wa').onclick=async()=>{
+  const r=await fetch('/api/wa-link',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({mode:cart.length?'items':'rx',items:cart})});
+  location.href=(await r.json()).url;};
+$('#f').onsubmit=e=>{e.preventDefault();search();};
+$('#q').oninput=()=>{clearTimeout(t);t=setTimeout(search,250);};
+
+// بحث صوتي (يعمل على Chrome للأندرويد، ويحتاج إنترنت)
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR) $('#mic').hidden=true; else $('#mic').onclick=()=>{
+  const s=new SR(); s.lang='ar-EG'; s.onresult=e=>{$('#q').value=e.results[0][0].transcript; search();}; s.start();};
+
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+search();
+</script>
+</body>
+</html>
