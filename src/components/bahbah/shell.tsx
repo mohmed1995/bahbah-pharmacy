@@ -48,6 +48,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { uploadRxPrescriptionImage } from "@/lib/supabase";
 import {
   products,
   getProduct,
@@ -90,6 +91,7 @@ export function Header() {
   const favs = useBahbah((s) => s.favorites);
   const user = useBahbah((s) => s.user);
   const view = useBahbah((s) => s.view);
+  const siteEdits = useBahbah((s) => s.siteEdits);
   const { go, openCatalog, setCartOpen, setSearchOpen, toggleLang, openAccount, setConsultOpen } = useBahbah();
   const count = cartCount(cart);
 
@@ -112,12 +114,12 @@ export function Header() {
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#10B981] opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-[#10B981]" />
               </span>
-              {lang === "ar" ? "خدمة واصلي: توصيل سريع في ديروط" : "Wasly: Fast Express Delivery in Dairut"}
+              {siteEdits?.shippingPromiseAr || (lang === "ar" ? "شحن سريع لجميع المحافظات" : "Fast Shipping Across Egypt")}
             </span>
             <span className="hidden text-white/30 md:inline">|</span>
             <span className="hidden items-center gap-1.5 text-white/80 md:flex">
               <IconShieldCheck className="size-3.5 text-[#10B981]" />
-              {lang === "ar" ? "أدوية ومستحضرات أصلية 100% بإشراف صيدلي" : "100% Genuine medical products under pharmacist supervision"}
+              {siteEdits?.deliveryPromiseAr || (lang === "ar" ? "توصيل 24 ساعة بإشراف صيدلي معتمد" : "24/7 Delivery Under Pharmacist Care")}
             </span>
           </div>
           <div className="flex items-center gap-4 text-[11px] font-bold">
@@ -702,6 +704,8 @@ export function RxDialog() {
   const open = useBahbah((s) => s.rxOpen);
   const setRxOpen = useBahbah((s) => s.setRxOpen);
   const [file, setFile] = useState<string | null>(null);
+  const [fileObj, setFileObj] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const refCode = useMemo(
@@ -727,9 +731,15 @@ export function RxDialog() {
             <span className="text-sm font-bold text-[#1E4E8F]">{t("rx.choose")}</span>
             <input
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0]?.name ?? null)}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setFile(f.name);
+                  setFileObj(f);
+                }
+              }}
             />
             {file && (
               <span className="flex items-center gap-1 text-xs font-bold text-[#2E9E6B]">
@@ -753,26 +763,39 @@ export function RxDialog() {
           />
           <Button
             className="h-12 w-full rounded-full text-base font-bold"
-            onClick={() => {
+            disabled={uploading}
+            onClick={async () => {
               if (!file || !phone.trim()) {
                 toast.error(t("rx.required"));
                 return;
               }
-              /* push into the pharmacist review queue (visible in the dashboard) */
+              setUploading(true);
+              let publicUrl: string | null = null;
+              if (fileObj) {
+                try {
+                  publicUrl = await uploadRxPrescriptionImage(fileObj);
+                } catch (e) {
+                  console.warn("Prescription upload error:", e);
+                }
+              }
+
+              /* push into the pharmacist review queue (visible in the dashboard & Supabase) */
               useBahbah.getState().submitRx({
-                fileName: file,
+                fileName: publicUrl || file,
                 phone,
                 noteAr: notes,
                 noteEn: notes,
               });
+              setUploading(false);
               setRxOpen(false);
               setFile(null);
+              setFileObj(null);
               setPhone("");
               setNotes("");
               toast.success(t("rx.queued"));
             }}
           >
-            {t("rx.submit")}
+            {uploading ? "جاري الرفع..." : t("rx.submit")}
           </Button>
 
           {/* WhatsApp express lane — camera/gallery photo straight to the pharmacist */}

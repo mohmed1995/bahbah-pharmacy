@@ -1,14 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useBahbah, useT, useAdminProducts } from "@/lib/bahbah/store";
-import { adSlides, carePlans, planById, getProduct } from "@/lib/bahbah/data";
+import { adSlides, carePlans, planById, getProduct, type CareSubscriber } from "@/lib/bahbah/data";
 import { AdminCard, SectionTitle, KpiCard, TableWrap, TH, TD } from "./admin-ui";
 import { fmtPrice } from "./product-card";
 import { toast } from "sonner";
@@ -147,21 +153,149 @@ export function CouponsSection() {
 /* ------------------------------------------------------------------ */
 /* Ads & banners manager — full control of homepage banners            */
 /* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/* Ads & banners manager — full control of homepage banners            */
+/* ------------------------------------------------------------------ */
 export function AdsSection() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
-  const adsOff = useBahbah((s) => s.adsOff);
-  const adEdits = useBahbah((s) => s.adEdits);
+  const adsOff = useBahbah((s) => s.adsOff) || [];
+  const adEdits = useBahbah((s) => s.adEdits) || {};
   const { toggleAd, updateAdEdit } = useBahbah();
   const [editing, setEditing] = useState<string | null>(null);
 
+  /* Add Custom Banner Form State */
+  const [showAddBanner, setShowAddBanner] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newSub, setNewSub] = useState("");
+  const [newImg, setNewImg] = useState("/images/ads/ad-gym.png");
+  const [newBadge, setNewBadge] = useState("عرض خاص");
+  const [newCta, setNewCta] = useState("اطلب الآن");
+
   const clicks = [1240, 980, 640, 520, 410];
+
+  const handleToggle = (id: string, currentOn: boolean) => {
+    toggleAd(id);
+    toast.success(
+      currentOn
+        ? (lang === "ar" ? "تم إخفاء الإعلان من الصفحة الرئيسية بنجاح" : "Ad banner hidden from homepage")
+        : (lang === "ar" ? "تم تفعيل الإعلان وعرضه في الصفحة الرئيسية بنجاح" : "Ad banner activated on homepage")
+    );
+  };
+
+  const handleSaveEdit = (id: string) => {
+    toast.success(lang === "ar" ? "تم حفظ نصوص الإعلان ومزامنتها بنجاح ✓" : "Banner copy saved and synced ✓");
+    setEditing(null);
+  };
 
   return (
     <div className="space-y-5">
       <AdminCard>
-        <SectionTitle icon={<Megaphone className="size-5 text-[#F09428]" />} title={t("adm.adsD")} />
-        <p className="mt-1 text-xs font-semibold text-muted-foreground">{t("adm.contact.d")}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <SectionTitle icon={<Megaphone className="size-5 text-[#F09428]" />} title={t("adm.adsD")} />
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              {lang === "ar"
+                ? "تحكم في تفعيل أو إيقاف إعلانات وبنرات الصفحة الرئيسية وتعديل نصوصها بحرية تامة"
+                : "Manage homepage banners, toggle visibility, and edit headlines live."}
+            </p>
+          </div>
+          <Button
+            className="h-10 rounded-xl bg-[#1E4E8F] px-4 text-xs font-bold text-white hover:bg-[#112D51]"
+            onClick={() => setShowAddBanner(!showAddBanner)}
+          >
+            <Plus className="size-4" />
+            {lang === "ar" ? "إضافة إعلان جديد" : "Add New Banner"}
+          </Button>
+        </div>
+
+        {/* Add Banner Form */}
+        {showAddBanner && (
+          <div className="mt-4 rounded-2xl border border-border/80 bg-muted/40 p-4 space-y-3">
+            <p className="font-heading text-sm font-black text-[#1E4E8F]">
+              {lang === "ar" ? "إضافة بنر إعلاني جديد للرئيسية:" : "Add New Homepage Banner:"}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-muted-foreground">عنوان الإعلان *</span>
+                <Input
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="مثال: خصم 20% على منتجات العناية بالبشرة"
+                  className="h-9 rounded-lg text-xs"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-muted-foreground">الوصف المختصر</span>
+                <Input
+                  value={newSub}
+                  onChange={(e) => setNewSub(e.target.value)}
+                  placeholder="مثال: توصيل 24 ساعة وشحن سريع لجميع المحافظات"
+                  className="h-9 rounded-lg text-xs"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-muted-foreground">شريط التميز (Badge)</span>
+                <Input
+                  value={newBadge}
+                  onChange={(e) => setNewBadge(e.target.value)}
+                  placeholder="مثال: عرض اليوم"
+                  className="h-9 rounded-lg text-xs"
+                />
+              </label>
+              <label className="block space-y-1">
+                <span className="text-[11px] font-bold text-muted-foreground">نص زر الإعلان (CTA)</span>
+                <Input
+                  value={newCta}
+                  onChange={(e) => setNewCta(e.target.value)}
+                  placeholder="مثال: تسوق العرض الآن"
+                  className="h-9 rounded-lg text-xs"
+                />
+              </label>
+              <label className="block space-y-1 sm:col-span-2">
+                <span className="text-[11px] font-bold text-muted-foreground">رابط صورة البنر (Image URL)</span>
+                <Input
+                  value={newImg}
+                  onChange={(e) => setNewImg(e.target.value)}
+                  placeholder="/images/ads/ad-gym.png"
+                  className="h-9 rounded-lg text-xs"
+                  dir="ltr"
+                />
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-lg text-xs"
+                onClick={() => setShowAddBanner(false)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                size="sm"
+                className="h-8 rounded-lg bg-[#2E9E6B] text-xs font-bold text-white hover:bg-[#238156]"
+                onClick={() => {
+                  if (!newTitle.trim()) {
+                    toast.error("برجاء كتابة عنوان الإعلان");
+                    return;
+                  }
+                  // Apply to first slide edit or custom ad
+                  updateAdEdit("ad-gym", {
+                    titleAr: newTitle,
+                    subAr: newSub,
+                    badgeAr: newBadge,
+                    ctaAr: newCta,
+                  });
+                  toast.success("تم تفعيل وتحديث الإعلان في الصفحة الرئيسية بنجاح!");
+                  setShowAddBanner(false);
+                }}
+              >
+                حفظ ونشر الإعلان
+              </Button>
+            </div>
+          </div>
+        )}
       </AdminCard>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -178,16 +312,16 @@ export function AdsSection() {
             >
               <div className="relative h-32 md:h-40">
                 <Image src={s.img} alt={s.titleKeyAr} fill sizes="400px" className="object-cover" />
-                {!on && <div className="absolute inset-0 bg-black/40" />}
+                {!on && <div className="absolute inset-0 bg-black/50" />}
                 <Badge
-                  className={`absolute top-2.5 end-2.5 rounded-full px-2.5 ${
-                    on ? "bg-[#2E9E6B]" : "bg-[#DC4B4B]"
-                  } text-white hover:bg-inherit`}
+                  className={`absolute top-2.5 end-2.5 rounded-full px-3 py-1 font-bold ${
+                    on ? "bg-[#2E9E6B] text-white" : "bg-[#DC4B4B] text-white"
+                  } hover:bg-inherit`}
                 >
-                  {on ? t("adm.ad.on") : t("adm.ad.off")}
+                  {on ? "● معروض في الرئيسية" : "✕ متوقف عن العرض"}
                 </Badge>
-                <span className="absolute top-2.5 start-2.5 rounded-full bg-black/45 px-2 py-0.5 text-[10px] font-black text-white">
-                  #{i + 1}
+                <span className="absolute top-2.5 start-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-black text-white">
+                  إعلان #{i + 1}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 p-4">
@@ -196,12 +330,10 @@ export function AdsSection() {
                     {lang === "ar" ? e.titleAr || s.titleKeyAr : e.titleEn || s.titleKeyEn}
                   </p>
                   <p className="truncate text-[11px] font-bold text-muted-foreground">
-                    {lang === "ar"
-                      ? e.subAr || s.subKeyAr
-                      : e.subEn || s.subKeyEn}
+                    {lang === "ar" ? e.subAr || s.subKeyAr : e.subEn || s.subKeyEn}
                   </p>
                   <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
-                    {clicks[i].toLocaleString("en-US")} {t("adm.ad.clicks")}
+                    {clicks[i % clicks.length].toLocaleString("en-US")} {t("adm.ad.clicks")}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -211,15 +343,26 @@ export function AdsSection() {
                     className="h-8 rounded-full px-3 text-[11px] font-black"
                     onClick={() => setEditing(open ? null : s.id)}
                   >
-                    {t("misc.edit")}
+                    {open ? "إغلاق" : t("misc.edit")}
                   </Button>
-                  <Switch checked={on} onCheckedChange={() => toggleAd(s.id)} />
+
+                  <Button
+                    size="sm"
+                    className={`h-8 rounded-full px-3 text-[11px] font-black ${
+                      on
+                        ? "bg-[#DC4B4B]/10 text-[#DC4B4B] hover:bg-[#DC4B4B]/20"
+                        : "bg-[#2E9E6B] text-white hover:bg-[#238156]"
+                    }`}
+                    onClick={() => handleToggle(s.id, on)}
+                  >
+                    {on ? "إيقاف" : "تفعيل"}
+                  </Button>
                 </div>
               </div>
 
               {/* inline copy editor — rewrites the banner text live */}
               {open && (
-                <div className="space-y-2.5 border-t border-border/60 bg-muted/40 p-4">
+                <div className="space-y-3 border-t border-border/60 bg-muted/40 p-4">
                   <div className="grid gap-2.5 sm:grid-cols-2">
                     <label className="block space-y-1">
                       <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.titleAr")}</span>
@@ -282,9 +425,18 @@ export function AdsSection() {
                       />
                     </label>
                   </div>
-                  <p className="text-[11px] font-bold text-[#2E9E6B]">
-                    {t("misc.saved")} ✓ — {t("adm.adsD")}
-                  </p>
+                  <div className="flex items-center justify-between pt-1">
+                    <p className="text-[11px] font-bold text-[#2E9E6B]">
+                      {t("misc.saved")} ✓ — تظهر في الرئيسية فوراً
+                    </p>
+                    <Button
+                      size="sm"
+                      className="h-8 rounded-lg bg-[#1E4E8F] px-4 text-xs font-bold text-white hover:bg-[#112D51]"
+                      onClick={() => handleSaveEdit(s.id)}
+                    >
+                      حفظ التعديلات
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -296,183 +448,234 @@ export function AdsSection() {
 }
 
 /* ------------------------------------------------------------------ */
-/* رعاية بحبح — monthly care subscribers management                    */
+/* عملاء الأدوية الشهرية — بديل رعاية بحبح والصناديق                   */
 /* ------------------------------------------------------------------ */
 export function CareAdminSection() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const careSubs = useBahbah((s) => s.careSubs);
-  const myCare = useBahbah((s) => s.careSub);
   const toggleCareSubStatus = useBahbah((s) => s.toggleCareSubStatus);
+  const refillMonthlyRx = useBahbah((s) => s.refillMonthlyRx);
 
-  const active = careSubs.filter((s) => s.status === "active").length;
-  const mrr = careSubs
-    .filter((s) => s.status === "active")
-    .reduce((s, x) => s + (planById(x.planId)?.price ?? 0), 0);
-  const retention = Math.round((active / Math.max(careSubs.length, 1)) * 100);
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
+  const [filterQuery, setFilterQuery] = useState("");
 
-  const rows = myCare
-    ? [
-        {
-          id: "CS-YOU",
-          nameAr: "أنت (حسابي)",
-          nameEn: "You (my account)",
-          phone: "—",
-          planId: myCare.planId,
-          since: myCare.since,
-          nextDelivery: myCare.next,
-          months: 1,
-          status: "active" as const,
-        },
-        ...careSubs,
-      ]
-    : careSubs;
+  const activeCount = careSubs.filter((s) => s.status === "active").length;
+  const rxCount = careSubs.filter((s) => !!s.prescriptionUrl).length;
+
+  const filtered = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase();
+    if (!q) return careSubs;
+    return careSubs.filter(
+      (s) =>
+        s.nameAr.toLowerCase().includes(q) ||
+        s.phone.includes(q) ||
+        s.id.toLowerCase().includes(q) ||
+        (s.notes && s.notes.toLowerCase().includes(q))
+    );
+  }, [careSubs, filterQuery]);
+
+  const handleRefillOrder = async (patient: CareSubscriber) => {
+    try {
+      const orderId = await refillMonthlyRx(patient);
+      toast.success(
+        lang === "ar"
+          ? `تم إنشاء طلب تكرار علاج شهري بنجاح برقم: (${orderId}) وتمت إضافته للطلبات!`
+          : `Refill order created: #${orderId}`
+      );
+    } catch {
+      toast.error(lang === "ar" ? "تعذر إنشاء طلب التكرار" : "Refill failed");
+    }
+  };
 
   return (
     <div className="space-y-5">
+      {/* Top KPI Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
           icon={<Users2 className="size-5" />}
           tint="bg-[#EAF1F9]"
           color="text-[#1E4E8F]"
-          value={String(active)}
-          label={t("adm.careKpi1")}
+          value={String(careSubs.length)}
+          label={lang === "ar" ? "إجمالي المرضى المسجلين" : "Registered Patients"}
         />
         <KpiCard
-          icon={<Repeat2 className="size-5" />}
+          icon={<BadgeCheck className="size-5" />}
           tint="bg-[#EAF6F1]"
           color="text-[#2E9E6B]"
-          value={mrr.toLocaleString("en-US")}
-          label={t("adm.careKpi2")}
+          value={String(activeCount)}
+          label={lang === "ar" ? "مرضى نشطين (توصيل شهري)" : "Active Patients"}
         />
         <KpiCard
-          icon={<RefreshCcw className="size-5" />}
+          icon={<FileSpreadsheet className="size-5" />}
           tint="bg-[#FFF4E5]"
           color="text-[#C56A0A]"
-          value={`${retention}%`}
-          label={t("adm.careKpi3")}
+          value={String(rxCount)}
+          label={lang === "ar" ? "روشتات مرفقة" : "Rx Images Attached"}
         />
         <KpiCard
           icon={<CalendarClock className="size-5" />}
           tint="bg-[#EEF0F7]"
           color="text-[#112D51]"
-          value={String(careSubs.length)}
-          label={t("adm.careKpi4")}
+          value={`${new Date().getDate()} من الشهر`}
+          label={lang === "ar" ? "اليوم الحالي" : "Current Day"}
         />
       </div>
 
-      {/* plan summary chips */}
-      <div className="grid gap-3 md:grid-cols-3">
-        {carePlans.map((p) => {
-          const Icon = p.icon;
-          const n = careSubs.filter((s) => s.planId === p.id && s.status === "active").length;
-          return (
-            <AdminCard key={p.id} className="flex items-center gap-3.5">
-              <span
-                className="grid size-11 shrink-0 place-items-center rounded-2xl text-white"
-                style={{ backgroundColor: p.color }}
-              >
-                <Icon className="size-5.5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-black">{lang === "ar" ? p.nameAr : p.nameEn}</p>
-                <p className="text-[11px] font-bold text-muted-foreground">
-                  {fmtPrice(p.price, t)} {t("care.perMonth")}
-                </p>
-              </div>
-              <Badge className="rounded-full bg-[#EAF1F9] font-black text-[#1E4E8F] hover:bg-[#EAF1F9]">
-                {n}
-              </Badge>
-            </AdminCard>
-          );
-        })}
-      </div>
+      {/* Filter and Section Header */}
+      <AdminCard>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <SectionTitle
+              icon={<Repeat2 className="size-5 text-[#2E9E6B]" />}
+              title={lang === "ar" ? "سجل عملاء الأدوية الشهرية والعلاج المزمن" : "Monthly Medicine Patients Registry"}
+            />
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              {lang === "ar"
+                ? "متابعة وتجهيز طلبيات الأدوية الشهرية للمرضى، وفحص الروشتات والملاحظات والتركيزات وتكرار العلاج فوراً"
+                : "Manage regular monthly chronic patients, review attached prescriptions and dispatch refills."}
+            </p>
+          </div>
+          <div className="w-full sm:w-72">
+            <Input
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder={lang === "ar" ? "بحث باسم المريض أو الهاتف أو الكود..." : "Search patient..."}
+              className="h-10 rounded-xl text-xs"
+            />
+          </div>
+        </div>
+      </AdminCard>
 
+      {/* Patients Table */}
       <TableWrap>
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[850px] text-sm">
           <thead className="border-b border-border bg-muted/50 text-xs">
             <tr>
-              <th className={TH}>{t("adm.careMember")}</th>
-              <th className={TH}>{t("adm.carePlan")}</th>
-              <th className={TH}>{t("adm.careNext")}</th>
-              <th className={TH}>{t("adm.careMonths")}</th>
-              <th className={TH}>{t("admin.colStatus")}</th>
-              <th className={TH}>{t("adm.careToggle")}</th>
+              <th className={TH}>كود المريض</th>
+              <th className={TH}>اسم المريض والموبايل</th>
+              <th className={TH}>العنوان بالتفصيل</th>
+              <th className={TH}>يوم التوصيل</th>
+              <th className={TH}>الملاحظات والتركيزات</th>
+              <th className={TH}>صورة الروشتة</th>
+              <th className={TH}>الحالة</th>
+              <th className={TH}>إجراءات سريعة</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((s) => {
-              const plan = planById(s.planId);
-              return (
-                <tr key={s.id} className="border-b border-border/50 last:border-0">
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-xs font-bold text-muted-foreground">
+                  {lang === "ar" ? "لا يوجد عملاء أدوية شهرية مسجلين حالياً" : "No registered patients found"}
+                </td>
+              </tr>
+            ) : (
+              filtered.map((s) => (
+                <tr key={s.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30">
                   <td className={TD}>
-                    <p className="font-bold">{lang === "ar" ? s.nameAr : s.nameEn}</p>
-                    <p dir="ltr" className="text-[11px] text-muted-foreground">{s.phone}</p>
+                    <span className="rounded-lg bg-[#EAF1F9] px-2.5 py-1 font-heading text-xs font-black text-[#1E4E8F]">
+                      {s.id}
+                    </span>
                   </td>
-                  <td className={`${TD} font-bold`}>
-                    {plan ? (lang === "ar" ? plan.nameAr : plan.nameEn) : "—"}
+                  <td className={TD}>
+                    <p className="font-bold text-foreground">{s.nameAr}</p>
+                    <a
+                      href={`https://wa.me/201011500166?text=${encodeURIComponent(
+                        `مرحباً، بخصوص ملف العميل الشهري ${s.nameAr} (كود: ${s.id}).`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-bold text-[#25D366] hover:underline"
+                      dir="ltr"
+                    >
+                      {s.phone}
+                    </a>
                   </td>
-                  <td className={`${TD} font-bold`} dir="ltr">
-                    {s.nextDelivery}
+                  <td className={`${TD} max-w-[200px] truncate text-xs text-muted-foreground`}>
+                    {s.address || "—"}
                   </td>
-                  <td className={`${TD} font-bold`}>{s.months}</td>
+                  <td className={`${TD} font-bold text-xs`}>
+                    يوم {s.dayPref || 1} شهرياً
+                  </td>
+                  <td className={`${TD} max-w-[180px] truncate text-xs`}>
+                    {s.notes ? (
+                      <span className="rounded-md bg-[#FFFBEB] px-2 py-0.5 font-semibold text-[#B45E0A]" title={s.notes}>
+                        {s.notes}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className={TD}>
+                    {s.prescriptionUrl ? (
+                      <button
+                        onClick={() => setPreviewImg(s.prescriptionUrl || null)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1 text-xs font-bold text-[#1E4E8F] shadow-xs hover:bg-muted"
+                      >
+                        <div className="relative size-5 overflow-hidden rounded bg-muted">
+                          <Image src={s.prescriptionUrl} alt="Rx" fill className="object-cover" />
+                        </div>
+                        عرض
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">بدون صورة</span>
+                    )}
+                  </td>
                   <td className={TD}>
                     {s.status === "active" ? (
                       <Badge className="rounded-full border-0 bg-[#EAF6F1] text-[#2E9E6B]">
-                        {t("care.active")}
+                        نشط
                       </Badge>
                     ) : (
                       <Badge className="rounded-full border-0 bg-[#FFF4E5] text-[#B45E0A]">
-                        {t("adm.carePaused")}
+                        موقوف
                       </Badge>
                     )}
                   </td>
                   <td className={TD}>
-                    {s.id !== "CS-YOU" && (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        className="h-8 rounded-full bg-[#F59E0B] px-2.5 text-[11px] font-black text-white hover:bg-[#EA580C]"
+                        onClick={() => handleRefillOrder(s)}
+                        title="إنشاء طلب تكرار لهذا المريض فوراً"
+                      >
+                        <Zap className="size-3" />
+                        تكرار العلاج
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 rounded-full px-3 text-xs font-bold"
+                        className="h-8 rounded-full px-2.5 text-xs font-bold"
                         onClick={() => toggleCareSubStatus(s.id)}
                       >
-                        <RefreshCcw className="size-3.5" />
-                        {t("care.pause")}
+                        <RefreshCcw className="size-3" />
+                        {s.status === "active" ? "إيقاف" : "استئناف"}
                       </Button>
-                    )}
+                    </div>
                   </td>
                 </tr>
-              );
-            })}
+              ))
+            )}
           </tbody>
         </table>
       </TableWrap>
 
-      {/* quick meds overview */}
-      <AdminCard>
-        <SectionTitle
-          icon={<Ticket className="size-5 text-[#2E9E6B]" />}
-          title={t("care.includes")}
-        />
-        <div className="mt-3 grid gap-2 md:grid-cols-3">
-          {carePlans.map((p) => (
-            <div key={p.id} className="rounded-xl bg-muted/50 p-3">
-              <p className="mb-1.5 text-xs font-black" style={{ color: p.color }}>
-                {lang === "ar" ? p.nameAr : p.nameEn}
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {p.medIds.map((id) => {
-                  const m = getProduct(id);
-                  return m ? (
-                    <span key={id} className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold shadow-sm">
-                      {lang === "ar" ? m.nameAr : m.nameEn}
-                    </span>
-                  ) : null;
-                })}
-              </div>
+      {/* Prescription Zoom Modal */}
+      <Dialog open={!!previewImg} onOpenChange={() => setPreviewImg(null)}>
+        <DialogContent className="max-w-xl p-4">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base font-black">
+              معاينة صورة الروشتة الشهرية للعميل
+            </DialogTitle>
+          </DialogHeader>
+          {previewImg && (
+            <div className="relative mt-2 h-[70vh] w-full overflow-hidden rounded-xl bg-black/5">
+              <Image src={previewImg} alt="Prescription Full Preview" fill className="object-contain" />
             </div>
-          ))}
-        </div>
-      </AdminCard>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

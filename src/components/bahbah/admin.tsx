@@ -61,6 +61,7 @@ import {
   IconRxClipboard,
   IconRefill,
   IconPhone,
+  IconSparkles,
 } from "./icons";
 import {
   AdminCard,
@@ -632,6 +633,55 @@ function OverviewSection() {
             })}
           </div>
         </AdminCard>
+
+        {/* Quick Shortcuts for Ads & Monthly Medicine */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="flex items-center justify-between rounded-2xl border border-[#F09428]/30 bg-[#FFF4E5] p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-xl bg-[#F09428] text-white shadow-sm">
+                <Megaphone className="size-5" />
+              </span>
+              <div>
+                <p className="font-heading text-sm font-black text-[#B45E0A]">
+                  إدارة الإعلانات والبنرات
+                </p>
+                <p className="text-xs text-[#B45E0A]/85">
+                  تفعيل وإيقاف البنرات وتعديل العروض في الرئيسية
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className="rounded-full bg-[#F09428] px-4 font-bold text-white shadow-sm hover:bg-[#D97706]"
+              onClick={() => setSection("ads")}
+            >
+              فتح الإعلانات
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between rounded-2xl border border-[#2E9E6B]/30 bg-[#EAF6F1] p-4 shadow-xs">
+            <div className="flex items-center gap-3">
+              <span className="grid size-11 place-items-center rounded-xl bg-[#2E9E6B] text-white shadow-sm">
+                <IconRefill className="size-5" />
+              </span>
+              <div>
+                <p className="font-heading text-sm font-black text-[#166534]">
+                  عملاء الأدوية الشهرية
+                </p>
+                <p className="text-xs text-[#166534]/85">
+                  متابعة الروشتات، والتركيزات، وتكرار العلاج فوراً
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              className="rounded-full bg-[#2E9E6B] px-4 font-bold text-white shadow-sm hover:bg-[#15803D]"
+              onClick={() => setSection("care")}
+            >
+              فتح العملاء
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -822,84 +872,101 @@ function SettingsSection() {
         </div>
       </AdminCard>
 
-      {/* monthly care plans editor */}
-      <AdminCard>
+      {/* شعارات ووعود المتجر ونصوص الهيرو — تحكم سهل وسريع */}
+      <AdminCard className="lg:col-span-2">
         <SectionTitle
-          icon={<IconRefill className="size-5 text-[#2E9E6B]" />}
-          title={t("adm.carePlan.title")}
+          icon={<IconSparkles className="size-5 text-[#F09428]" />}
+          title="شعارات ونصوص الواجهة والوعود التسويقية (تعديل مباشر)"
         />
-        <p className="mt-1 text-xs font-semibold text-muted-foreground">{t("adm.carePlan.d")}</p>
-        <div className="mt-4 space-y-4">
-          {carePlans.map((plan) => {
-            const e = careEdits[plan.id] ?? {};
-            return (
-              <div key={plan.id} className="rounded-2xl border border-border/60 p-3.5">
-                <p className="mb-2.5 flex items-center gap-2 font-heading text-sm font-black">
-                  <span className="size-2.5 rounded-full" style={{ backgroundColor: plan.color }} />
-                  {lang === "ar" ? plan.nameAr : plan.nameEn}
-                </p>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <label className="block space-y-1">
-                    <span className="text-[10px] font-bold text-muted-foreground">
-                      {t("adm.carePlan.nameAr")}
-                    </span>
-                    <Input
-                      value={e.nameAr ?? ""}
-                      onChange={(ev) => updateCareEdit(plan.id, { nameAr: ev.target.value })}
-                      placeholder={plan.nameAr}
-                      className="h-9 rounded-lg text-xs"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-[10px] font-bold text-muted-foreground">
-                      {t("adm.carePlan.nameEn")}
-                    </span>
-                    <Input
-                      value={e.nameEn ?? ""}
-                      onChange={(ev) => updateCareEdit(plan.id, { nameEn: ev.target.value })}
-                      placeholder={plan.nameEn}
-                      className="h-9 rounded-lg text-xs"
-                      dir="ltr"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-[10px] font-bold text-muted-foreground">
-                      {t("adm.carePlan.price")}
-                    </span>
-                    <Input
-                      type="number"
-                      value={e.price ?? ""}
-                      onChange={(ev) =>
-                        updateCareEdit(plan.id, {
-                          price: ev.target.value === "" ? undefined : Number(ev.target.value),
-                        })
-                      }
-                      placeholder={String(plan.price)}
-                      className="h-9 rounded-lg text-xs"
-                      dir="ltr"
-                    />
-                  </label>
-                  <label className="block space-y-1">
-                    <span className="text-[10px] font-bold text-muted-foreground">
-                      {t("adm.carePlan.oldPrice")}
-                    </span>
-                    <Input
-                      type="number"
-                      value={e.oldPrice ?? ""}
-                      onChange={(ev) =>
-                        updateCareEdit(plan.id, {
-                          oldPrice: ev.target.value === "" ? undefined : Number(ev.target.value),
-                        })
-                      }
-                      placeholder={String(plan.oldPrice)}
-                      className="h-9 rounded-lg text-xs"
-                      dir="ltr"
-                    />
-                  </label>
-                </div>
-              </div>
-            );
-          })}
+        <p className="mt-1 text-xs font-semibold text-muted-foreground">
+          يمكنك تعديل شعار التوصيل وشحن المحافظات وعناوين الواجهة بسهولة من هنا — التغيير يظهر فوراً ويُحفظ في السيرفر.
+        </p>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/80">
+              شعار التوصيل (بديل أصلي 100%)
+            </span>
+            <Input
+              value={siteEdits.deliveryPromiseAr ?? ""}
+              onChange={(e) => updateSiteEdits({ deliveryPromiseAr: e.target.value })}
+              placeholder="توصيل 24 ساعة"
+              className="h-11 rounded-xl"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/80">
+              شعار الشحن (بديل شحن سريع)
+            </span>
+            <Input
+              value={siteEdits.shippingPromiseAr ?? ""}
+              onChange={(e) => updateSiteEdits({ shippingPromiseAr: e.target.value })}
+              placeholder="شحن سريع لجميع المحافظات"
+              className="h-11 rounded-xl"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/80">
+              عنوان الهيرو الرئيسي (السطر الأول)
+            </span>
+            <Input
+              value={siteEdits.heroTitleAr ?? ""}
+              onChange={(e) => updateSiteEdits({ heroTitleAr: e.target.value })}
+              placeholder="صيدليتك الأولى في ديروط.."
+              className="h-11 rounded-xl"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/80">
+              النص المميز الملوّن في الهيرو
+            </span>
+            <Input
+              value={siteEdits.heroAccentAr ?? ""}
+              onChange={(e) => updateSiteEdits({ heroAccentAr: e.target.value })}
+              placeholder="توصيل 24 ساعة لجميع المحافظات"
+              className="h-11 rounded-xl"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/80">
+              شريط الهيرو العلوي (Badge)
+            </span>
+            <Input
+              value={siteEdits.heroBadgeAr ?? ""}
+              onChange={(e) => updateSiteEdits({ heroBadgeAr: e.target.value })}
+              placeholder="✨ صيدليتك المعتمدة في ديروط — خدمة طبية 24 ساعة"
+              className="h-11 rounded-xl"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/80">
+              الشريط الإعلاني أعلى الموقع (Top Micro Bar)
+            </span>
+            <Input
+              value={siteEdits.announcementAr ?? ""}
+              onChange={(e) => updateSiteEdits({ announcementAr: e.target.value })}
+              placeholder="توصيل 24 ساعة لجميع المحافظات بإشراف صيدلي معتمد"
+              className="h-11 rounded-xl"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
+          <p className="text-xs font-bold text-[#2E9E6B]">
+            ✓ التعديلات تُحفظ تلقائياً في السيرفر وتُطبق على المتجر فوراً
+          </p>
+          <Button
+            size="sm"
+            className="rounded-full bg-[#1E4E8F] px-5 font-bold text-white hover:bg-[#112D51]"
+            onClick={() => toast.success("تم تأكيد حفظ ونشر جميع النصوص والشعارات بنجاح ✓")}
+          >
+            تأكيد الحفظ
+          </Button>
         </div>
       </AdminCard>
 

@@ -8,6 +8,7 @@ import {
   Clock,
   FileImage,
   Ban,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -155,9 +156,22 @@ function RxCard({
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
             <FileImage className="size-3.5 shrink-0" />
-            <span className="truncate" dir="ltr">
-              {rx.fileName}
-            </span>
+            {rx.fileName && (rx.fileName.startsWith("http://") || rx.fileName.startsWith("https://")) ? (
+              <a
+                href={rx.fileName}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold text-[#1E4E8F] underline hover:text-[#163a6b]"
+                dir="ltr"
+              >
+                <span>عرض صورة الروشتة</span>
+                <ExternalLink className="size-3" />
+              </a>
+            ) : (
+              <span className="truncate" dir="ltr">
+                {rx.fileName || "بدون ملف"}
+              </span>
+            )}
             <span className="shrink-0 text-border">•</span>
             <span dir="ltr">{rx.date}</span>
           </p>

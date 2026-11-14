@@ -64,16 +64,20 @@ export interface CareSub {
   /** preferred day of month (1-28) for the monthly shipment */
   dayPref: number;
   memberNo: string;
+  notes?: string;
+  prescriptionUrl?: string;
 }
 
 export interface SubscribeCareInput {
-  planId: string;
-  addons: string[];
+  planId?: string;
+  addons?: string[];
   name: string;
   phone: string;
   address: string;
   zoneId?: string;
   dayPref: number;
+  notes?: string;
+  prescriptionUrl?: string;
 }
 import { makeT, type DictKey, type Lang } from "./i18n";
 import type { IconType } from "@/components/bahbah/icons";
@@ -155,13 +159,21 @@ export interface AdminSettings {
 /* ---- editable-from-admin content (CMS layers over the base data) ---- */
 export const DEFAULT_ADMIN_PASS = "2026";
 
-/** contact info the owner can change from the dashboard (footer/track/auth) */
+/** contact info & site marketing copy the owner can change from the dashboard */
 export interface SiteEdits {
   phone1?: string;
   phone2?: string;
   facebook?: string;
   addressFullAr?: string;
   addressFullEn?: string;
+  heroTitleAr?: string;
+  heroAccentAr?: string;
+  heroBadgeAr?: string;
+  deliveryPromiseAr?: string;
+  deliveryPromiseSubAr?: string;
+  shippingPromiseAr?: string;
+  shippingPromiseSubAr?: string;
+  announcementAr?: string;
 }
 
 /** ad-banner copy the owner can rewrite from the dashboard */
@@ -306,6 +318,7 @@ interface BahbahState {
   applyCoupon: (code: string) => boolean;
   clearCoupon: () => void;
   subscribeCare: (p: SubscribeCareInput) => void;
+  refillMonthlyRx: (patient: CareSubscriber) => Promise<string>;
   pauseCare: () => void;
   resumeCare: () => void;
   cancelCare: () => void;
@@ -697,10 +710,20 @@ export const useBahbah = create<BahbahState>()(
       },
       clearCoupon: () => set({ appliedCoupon: null }),
 
-      subscribeCare: ({ planId, addons, name, phone, address, zoneId, dayPref }) => {
+      subscribeCare: ({
+        planId = "monthly-rx",
+        addons = [],
+        name,
+        phone,
+        address,
+        zoneId,
+        dayPref,
+        notes = "",
+        prescriptionUrl = "",
+      }) => {
         const today = new Date().toISOString().slice(0, 10);
         const next = nextDeliveryFor(dayPref, today);
-        const memberNo = `BB-C-${1001 + get().careSubs.length}`;
+        const memberNo = `M-${Math.floor(1000 + Math.random() * 9000)}`;
         const sub: CareSub = {
           planId,
           since: today,
@@ -713,29 +736,87 @@ export const useBahbah = create<BahbahState>()(
           zoneId,
           dayPref,
           memberNo,
+          notes: notes.trim(),
+          prescriptionUrl,
         };
-        /* live sync: the dashboard care-list sees the new member instantly */
-        const n = get().careSubs.filter((s) => s.id.startsWith("CS-")).length;
         const entry: CareSubscriber = {
-          id: `CS-${104 + n}`,
-          nameAr: sub.name || "مشترك جديد",
-          nameEn: sub.name || "New member",
+          id: memberNo,
+          nameAr: sub.name || "عميل أدوية شهرية",
+          nameEn: sub.name || "Monthly client",
           phone: sub.phone,
           planId,
+          address: sub.address,
+          notes: sub.notes,
+          prescriptionUrl: sub.prescriptionUrl,
+          dayPref: sub.dayPref,
           since: sub.since,
           nextDelivery: sub.next,
           months: 1,
           status: "active",
         };
-        set({ careSub: sub, careSubs: [entry, ...get().careSubs], careWizardPlan: null });
+        set({ careSub: sub, careSubs: [entry, ...get().careSubs.filter((s) => s.id !== entry.id)], careWizardPlan: null });
         insertCareSubToSupabase({
           memberNo: entry.id,
           planId,
           name: entry.nameAr,
           phone: entry.phone,
           address: sub.address,
+          notes: sub.notes,
+          prescriptionUrl: sub.prescriptionUrl,
+          dayPref: sub.dayPref,
           status: "active",
         });
+        if (prescriptionUrl) {
+          const rx: RxRequest = {
+            id: `RX-${Math.floor(1000 + Math.random() * 9000)}`,
+            customerAr: sub.name,
+            customerEn: sub.name,
+            phone: sub.phone,
+            fileName: prescriptionUrl,
+            date: today,
+            status: "new",
+            noteAr: `[عميل شهري ${memberNo}] ${notes}`,
+            noteEn: `[Monthly client ${memberNo}] ${notes}`,
+          };
+          insertRxRequestToSupabase(rx);
+          set((s) => ({ rxQueue: [rx, ...s.rxQueue] }));
+        }
+      },
+      refillMonthlyRx: async (patient: CareSubscriber) => {
+        const orderId = `BB-${Math.floor(1000 + Math.random() * 9000)}`;
+        const order: Order = {
+          id: orderId,
+          date: new Date().toISOString().slice(0, 10),
+          customerAr: patient.nameAr,
+          customerEn: patient.nameEn || patient.nameAr,
+          phone: patient.phone,
+          address: patient.address || "العنوان مسجل في ملف الأدوية الشهرية",
+          payment: "cod",
+          status: "pending",
+          mine: true,
+          items: [
+            {
+              productId: "monthly-rx-refill",
+              nameAr: "تكرار أدوية شهرية",
+              nameEn: "Monthly Medicine Refill",
+              qty: 1,
+              price: 0,
+            },
+          ],
+          total: 0,
+          delivery: {
+            type: "delivery",
+            slotAr: "تكرار فوري لعلاج شهري",
+            slotEn: "Instant Monthly Refill",
+            fee: 0,
+          },
+        };
+        await insertOrderToSupabase(order, 0);
+        set((s) => ({
+          myOrders: [order, ...s.myOrders],
+          adminOrders: [order, ...(s.adminOrders || [])],
+        }));
+        return orderId;
       },
       pauseCare: () => {
         const sub = get().careSub;

@@ -46,6 +46,8 @@ import {
   IconCapsuleDuo,
   IconBoxes,
   IconCheck,
+  IconRefill,
+  IconScooter,
   duoOf,
 } from "./icons";
 import { toast } from "sonner";
@@ -364,6 +366,7 @@ function AdCarousel() {
 /* ------------------------------------------------------------------ */
 function Hero() {
   const t = useT();
+  const siteEdits = useBahbah((s) => s.siteEdits);
   const { openCatalog, setRxOpen } = useBahbah();
 
   return (
@@ -379,13 +382,13 @@ function Hero() {
         <div className="order-2 md:order-1">
           <Badge className="mb-5 gap-1.5 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-bold text-white/95 backdrop-blur-md shadow-xs hover:bg-white/15">
             <IconShieldCheck className="size-3.5 text-[#F59E0B]" />
-            {t("hero.badge")}
+            {siteEdits?.heroBadgeAr || t("hero.badge")}
           </Badge>
 
           <h1 className="font-heading text-4xl font-black leading-[1.18] md:text-6xl tracking-tight">
-            {t("hero.title")}
+            {siteEdits?.heroTitleAr || t("hero.title")}
             <br />
-            <span className="bb-gradient-text">{t("hero.titleAccent")}</span>
+            <span className="bb-gradient-text">{siteEdits?.heroAccentAr || t("hero.titleAccent")}</span>
           </h1>
 
           <p className="mt-5 max-w-lg text-base leading-relaxed text-white/80 md:text-lg">
@@ -414,14 +417,24 @@ function Hero() {
           </div>
 
           <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2">
-            {(["hero.chip1", "hero.chip2", "hero.chip3"] as const).map((k) => (
-              <span key={k} className="flex items-center gap-1.5 text-sm font-bold text-white/90">
-                <span className="grid size-5 place-items-center rounded-full bg-[#059669] shadow-xs">
-                  <IconShieldCheck className="size-3 text-white" />
-                </span>
-                {t(k)}
+            <span className="flex items-center gap-1.5 text-sm font-bold text-white/90">
+              <span className="grid size-5 place-items-center rounded-full bg-[#059669] shadow-xs">
+                <IconShieldCheck className="size-3 text-white" />
               </span>
-            ))}
+              {siteEdits?.deliveryPromiseAr || t("hero.chip2")}
+            </span>
+            <span className="flex items-center gap-1.5 text-sm font-bold text-white/90">
+              <span className="grid size-5 place-items-center rounded-full bg-[#059669] shadow-xs">
+                <IconShieldCheck className="size-3 text-white" />
+              </span>
+              {siteEdits?.shippingPromiseAr || t("hero.chip1")}
+            </span>
+            <span className="flex items-center gap-1.5 text-sm font-bold text-white/90">
+              <span className="grid size-5 place-items-center rounded-full bg-[#059669] shadow-xs">
+                <IconShieldCheck className="size-3 text-white" />
+              </span>
+              {t("hero.chip3")}
+            </span>
           </div>
         </div>
 
@@ -843,156 +856,98 @@ function WaslyCards() {
 }
 
 /* ------------------------------------------------------------------ */
-/* رعاية بحبح — صناديق العلاج الشهري (أهداف جيم حقيقية من المخزون)     */
+/* عميل الأدوية الشهرية — بديل الصناديق                                 */
 /* ------------------------------------------------------------------ */
 function CareSection() {
-  const t = useT();
   const lang = useBahbah((s) => s.lang);
   const go = useBahbah((s) => s.go);
-  const openCareWizard = useBahbah((s) => s.openCareWizard);
-  const stockAdj = useBahbah((s) => s.stockAdj);
 
   return (
     <section className="pt-14 md:pt-16">
       <div className="mx-auto max-w-7xl px-4 md:px-6">
         <Reveal>
-          <SectionHead title={t("care.title")} sub={t("care.sub")} />
-          <div className="mt-3 flex justify-center">
-            <Button
-              variant="outline"
-              className="rounded-full border-[#F59E0B]/40 px-6 font-black text-[#D97706] hover:bg-[#FFFBEB] hover:text-[#D97706] active:scale-95 transition-all"
-              onClick={() => go("care")}
-            >
-              <IconBoxes className="size-4.5" />
-              {t("care.viewAll")}
-              <IconChevronR className="size-4 rtl:rotate-180" />
-            </Button>
-          </div>
-        </Reveal>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {carePlans.slice(0, 3).map((plan) => {
-            const Icon = plan.icon;
-            const save = Math.round(((plan.oldPrice - plan.price) / plan.oldPrice) * 100);
-            const meds = plan.medIds
-              .map((id) => getProduct(id))
-              .filter(Boolean) as NonNullable<ReturnType<typeof getProduct>>[];
-            const stocks = plan.medIds.map((id) => effStock(id, stockAdj));
-            const outCount = stocks.filter((s) => s === 0).length;
-            const lowCount = stocks.filter((s) => s > 0 && s <= 5).length;
-            const stockChip = outCount > 0
-              ? { key: t("stock.boxOut"), cls: "bg-[#FFFBEB] text-[#D97706] ring-1 ring-[#F59E0B]/20", dot: "bg-[#F59E0B]" }
-              : lowCount > 0
-                ? { key: t("stock.boxLow"), cls: "bg-[#FEF2F2] text-[#DC2626] ring-1 ring-[#DC2626]/20", dot: "bg-[#DC2626]" }
-                : { key: t("stock.boxFull"), cls: "bg-[#ECFDF5] text-[#059669] ring-1 ring-[#10B981]/20", dot: "bg-[#10B981]" };
-            return (
-              <div
-                key={plan.id}
-                className="bb-card-hover group relative flex flex-col overflow-hidden rounded-3xl border border-border/70 bg-card p-6 shadow-xs hover:border-[#184C8A]/25"
-              >
-                <span
-                  className="absolute -end-10 -top-10 size-28 rounded-full opacity-10 transition group-hover:scale-125"
-                  style={{ backgroundColor: plan.color }}
-                />
-                <div className="flex items-center gap-3">
-                  <span
-                    className="grid size-12 shrink-0 place-items-center rounded-2xl text-white shadow-md transition duration-300 group-hover:scale-110 group-hover:rotate-3"
-                    style={{ backgroundColor: plan.color }}
-                  >
-                    <Icon className="size-6" />
+          <div className="relative overflow-hidden rounded-3xl border border-[#184C8A]/20 bg-gradient-to-br from-[#184C8A] via-[#112D51] to-[#0B1E38] p-6 text-white shadow-xl md:p-10">
+            {/* background glows */}
+            <div className="bb-glow pointer-events-none absolute -top-16 -end-16 size-60 rounded-full bg-[#F59E0B]/20 blur-3xl" />
+            <div className="bb-glow pointer-events-none absolute -bottom-20 -start-20 size-72 rounded-full bg-[#059669]/25 blur-3xl" />
+
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <Badge className="mb-4 gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-white/15">
+                <IconRefill className="size-4 text-[#F59E0B]" />
+                {lang === "ar" ? "خدمة الأدوية الشهرية والعلاج المزمن" : "Monthly Prescription & Chronic Care"}
+              </Badge>
+
+              <h2 className="font-heading text-2xl font-black md:text-4xl">
+                {lang === "ar" ? "برنامج عميل الأدوية الشهرية — صيدلية بحبح" : "Bahbah Monthly Medicine Program"}
+              </h2>
+
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-white/80 md:text-base">
+                {lang === "ar"
+                  ? "علاجك الشهري وأدويتك المزمنة بتوصلك لباب بيتك كل شهر في ميعاد ثابت دون عناء وبإشراف صيدلي معتمد. سجل روشتتك وملاحظاتك مرة واحدة، أو كرر علاجك بضغطة زر!"
+                  : "Never run out of your essential medicines. Register your prescription once, choose your preferred delivery day, and get your chronic treatments delivered regularly every month."}
+              </p>
+
+              <div className="mt-8 grid w-full max-w-4xl gap-4 text-start sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md transition hover:bg-white/15">
+                  <span className="grid size-11 place-items-center rounded-xl bg-[#F59E0B] text-white shadow-md">
+                    <IconRxClipboardDuo className="size-6" />
                   </span>
-                  <div>
-                    <h3 className="font-heading text-lg font-black">{lang === "ar" ? plan.nameAr : plan.nameEn}</h3>
-                    <Badge className="mt-0.5 rounded-full bg-[#FFFBEB] text-[11px] font-black text-[#D97706] ring-1 ring-[#F59E0B]/20 hover:bg-[#FFFBEB]">
-                      {t("care.save")} {save}%
-                    </Badge>
-                  </div>
+                  <h3 className="mt-3.5 font-heading text-base font-black">
+                    {lang === "ar" ? "1. تسجيل عميل جديد" : "1. New Patient"}
+                  </h3>
+                  <p className="mt-1 text-xs text-white/75 leading-relaxed">
+                    {lang === "ar" ? "صور روشتتك، حدد يوم التوصيل المفضل شهرياً، واكتب ملاحظاتك وتركيزاتك المطلوبة." : "Upload prescription photo, pick delivery day and write your specific instructions."}
+                  </p>
                 </div>
 
-                <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
-                  {lang === "ar" ? plan.descAr : plan.descEn}
-                </p>
-
-                {/* اللي جوه الصندوق — من المخزن */}
-                <div className="mt-4">
-                  <p className="mb-2 text-[11px] font-bold text-muted-foreground">{t("care.includes")}:</p>
-                  <div className="flex items-center gap-1.5">
-                    {meds.map((m, k) => (
-                      <span
-                        key={m.id}
-                        className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-white ring-1 ring-black/5 shadow-xs"
-                        style={{ zIndex: meds.length - k }}
-                        title={lang === "ar" ? m.nameAr : m.nameEn}
-                      >
-                        {m.img ? (
-                          <Image src={m.img} alt={m.nameEn} fill sizes="48px" className="object-contain p-0.5" />
-                        ) : (
-                          <span className="grid size-full place-items-center bg-[#EAF2FA]">
-                            <m.icon className="size-5 text-[#184C8A]" strokeWidth={1.6} />
-                          </span>
-                        )}
-                      </span>
-                    ))}
-                    <span className="ms-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-black text-foreground/70">
-                      {meds.length} {lang === "ar" ? "أصناف" : "items"}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {meds.slice(0, 3).map((m) => (
-                      <span key={m.id} className="flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-foreground/70">
-                        <IconCheck className="size-2.5 text-[#059669]" />
-                        {lang === "ar" ? m.nameAr : m.nameEn}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* حالة المخزون — مباشرة */}
-                <div className={`mt-3 flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black ${stockChip.cls}`}>
-                  <span className="relative flex size-2">
-                    <span className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${stockChip.dot}`} />
-                    <span className={`relative inline-flex size-2 rounded-full ${stockChip.dot}`} />
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md transition hover:bg-white/15">
+                  <span className="grid size-11 place-items-center rounded-xl bg-[#059669] text-white shadow-md">
+                    <IconRefill className="size-6" />
                   </span>
-                  {stockChip.key}
+                  <h3 className="mt-3.5 font-heading text-base font-black">
+                    {lang === "ar" ? "2. عميل سابق وتكرار" : "2. Instant Refill"}
+                  </h3>
+                  <p className="mt-1 text-xs text-white/75 leading-relaxed">
+                    {lang === "ar" ? "ابحث برقم موبايلك، راجع روشتتك السابقة، واطلب تكرار العلاج هذا الشهر فوراً." : "Lookup by phone or code, view previous prescription, and request instant monthly refill."}
+                  </p>
                 </div>
 
-                <div className="mt-5 flex items-end justify-between border-t border-border/60 pt-4">
-                  <div>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="font-heading text-2xl font-black" style={{ color: plan.color }}>
-                        {plan.price.toLocaleString("en-US")}
-                      </span>
-                      <span className="text-xs font-bold text-muted-foreground">{t("care.perMonth")}</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground line-through">
-                      {plan.oldPrice.toLocaleString("en-US")} {t("misc.currency")}
-                    </span>
-                  </div>
-                  <Button
-                    className="h-11 rounded-full px-6 font-black text-white shadow-md active:scale-[0.98] transition hover:brightness-105"
-                    style={{ backgroundColor: plan.color }}
-                    onClick={() => {
-                      openCareWizard(plan.id);
-                      go("care");
-                    }}
-                  >
-                    <IconBoxes className="size-4.5" />
-                    {t("care.subscribe")}
-                  </Button>
+                <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md transition hover:bg-white/15">
+                  <span className="grid size-11 place-items-center rounded-xl bg-[#2563EB] text-white shadow-md">
+                    <IconScooter className="size-6" />
+                  </span>
+                  <h3 className="mt-3.5 font-heading text-base font-black">
+                    {lang === "ar" ? "3. توصيل 24 ساعة" : "3. 24/7 Delivery"}
+                  </h3>
+                  <p className="mt-1 text-xs text-white/75 leading-relaxed">
+                    {lang === "ar" ? "شحن سريع لجميع المحافظات مع تتبع مباشر ومتابعة صيدلانية مجانية مع كل شحنة." : "Fast shipping to all governorates with live tracking and pharmacist review."}
+                  </p>
                 </div>
               </div>
-            );
-          })}
-        </div>
-        <p className="mt-4 flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-[#FFFBEB] px-4 py-3 text-center text-xs font-bold text-[#D97706] ring-1 ring-[#F59E0B]/20 md:text-sm">
-          <IconBoxes className="size-4.5 shrink-0" />
-          {t("care.monthlyNote")} · {t("stock.live")}
-          <button
-            className="underline underline-offset-4 hover:text-[#184C8A]"
-            onClick={() => go("care")}
-          >
-            {t("care.viewAll")}
-          </button>
-        </p>
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Button
+                  size="lg"
+                  className="h-12 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EA580C] px-8 text-sm font-black text-white shadow-lg shadow-[#F59E0B]/30 transition hover:brightness-105 active:scale-95"
+                  onClick={() => go("care")}
+                >
+                  <IconRxClipboardDuo className="size-4.5" />
+                  {lang === "ar" ? "تسجيل عميل أدوية شهرية جديد" : "Register New Monthly Patient"}
+                  <IconChevronR className="size-4 rtl:rotate-180" />
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 rounded-full border-white/30 bg-white/10 px-7 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20 hover:text-white"
+                  onClick={() => go("care")}
+                >
+                  <IconRefill className="size-4.5" />
+                  {lang === "ar" ? "عميل سابق / تكرار العلاج" : "Existing Patient Refill"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Reveal>
       </div>
     </section>
   );

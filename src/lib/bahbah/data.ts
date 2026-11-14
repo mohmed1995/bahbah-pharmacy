@@ -2270,54 +2270,24 @@ export const monthsBetween = (sinceIso: string, nowIso: string): number => {
   return Math.max(1, m);
 };
 
-/* Demo subscribers visible in the dashboard */
+/* Monthly medicine / chronic subscribers visible in the dashboard */
 export interface CareSubscriber {
   id: string;
   nameAr: string;
   nameEn: string;
   phone: string;
-  planId: string;
+  planId?: string;
+  address?: string;
+  notes?: string;
+  prescriptionUrl?: string;
+  dayPref?: number;
   since: string;
   nextDelivery: string;
   months: number;
   status: "active" | "paused";
 }
 
-export const demoCareSubs: CareSubscriber[] = [
-  {
-    id: "CS-101",
-    nameAr: "كريم مصطفى — جيم ديروط",
-    nameEn: "Karim Mostafa — Deirout Gym",
-    phone: "0100 555 1122",
-    planId: "box-mass",
-    since: "2026-06-02",
-    nextDelivery: "2026-11-20",
-    months: 6,
-    status: "active",
-  },
-  {
-    id: "CS-102",
-    nameAr: "محمود العايدي — أسيوط",
-    nameEn: "Mahmoud El-Aiedy — Assiut",
-    phone: "0111 884 2244",
-    planId: "box-power",
-    since: "2026-08-15",
-    nextDelivery: "2026-11-18",
-    months: 4,
-    status: "active",
-  },
-  {
-    id: "CS-103",
-    nameAr: "ندى حجازي — المشروع",
-    nameEn: "Nada Hegazy — El-Mashroo",
-    phone: "0122 447 5566",
-    planId: "box-cut",
-    since: "2026-09-10",
-    nextDelivery: "2026-12-01",
-    months: 3,
-    status: "paused",
-  },
-];
+export const demoCareSubs: CareSubscriber[] = [];
 
 /* ------------------------------------------------------------------ */
 /* Coupons engine (BAHBAH10 / BAHBAH20 ...)                            */

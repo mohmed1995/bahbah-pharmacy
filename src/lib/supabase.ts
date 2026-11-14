@@ -59,6 +59,9 @@ export interface DbCareSubscription {
   name: string | null;
   phone: string | null;
   address: string | null;
+  notes?: string | null;
+  prescription_url?: string | null;
+  day_pref?: number | null;
   status: string | null;
   created_at: string;
 }
@@ -135,11 +138,15 @@ export function mapDbRxToRx(row: DbRxRequest): RxRequest {
 
 export function mapDbCareToSubscriber(row: DbCareSubscription): CareSubscriber {
   return {
-    id: row.id,
-    nameAr: row.name || "مشترك جديد",
-    nameEn: row.name || "New member",
+    id: row.id || row.member_no || "CS-NEW",
+    nameAr: row.name || "عميل شهري",
+    nameEn: row.name || "Monthly client",
     phone: row.phone || "",
-    planId: row.plan_id || "family",
+    planId: row.plan_id || "monthly-rx",
+    address: row.address || "",
+    notes: row.notes || "",
+    prescriptionUrl: row.prescription_url || "",
+    dayPref: row.day_pref || 1,
     since: (row.created_at || new Date().toISOString()).slice(0, 10),
     nextDelivery: (row.created_at || new Date().toISOString()).slice(0, 10),
     months: 1,
@@ -294,21 +301,27 @@ export async function updateCareSubStatusInSupabase(id: string, status: string) 
 }
 export async function insertCareSubToSupabase(sub: {
   memberNo: string;
-  planId: string;
+  planId?: string;
   name: string;
   phone: string;
   address: string;
-  status: string;
+  status?: string;
+  notes?: string;
+  prescriptionUrl?: string;
+  dayPref?: number;
 }) {
   try {
     const { error } = await supabase.from("care_subscriptions").insert({
       id: sub.memberNo,
-      plan_id: sub.planId,
+      plan_id: sub.planId || "monthly-rx",
       member_no: sub.memberNo,
       name: sub.name,
       phone: sub.phone,
       address: sub.address,
-      status: sub.status,
+      notes: sub.notes || null,
+      prescription_url: sub.prescriptionUrl || null,
+      day_pref: sub.dayPref || 1,
+      status: sub.status || "active",
       created_at: new Date().toISOString(),
     });
     if (error) console.warn("Supabase insertCare error:", error.message);

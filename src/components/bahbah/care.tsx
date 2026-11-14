@@ -1,42 +1,41 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useBahbah, useT, useCarePlans, useZones, useSiteInfo, nextDeliveryFor, effStock, type CareSub } from "@/lib/bahbah/store";
-import { addonById, careAddons, carePlans, getProduct, WASLY } from "@/lib/bahbah/data";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  useBahbah,
+  useT,
+  nextDeliveryFor,
+  type CareSub,
+} from "@/lib/bahbah/store";
+import { type CareSubscriber } from "@/lib/bahbah/data";
+import {
+  uploadRxPrescriptionImage,
+  fetchCareSubsFromSupabase,
+  updateCareSubStatusInSupabase,
+} from "@/lib/supabase";
 import {
   IconRefill,
   IconShieldCheck,
   IconScooter,
   IconPharmacist,
-  IconBell,
   IconCheck,
   IconPhone,
   IconWhatsapp,
@@ -44,1035 +43,957 @@ import {
   IconSparkles,
   IconHeartPulse,
   IconPlus,
-  IconBoxes,
+  IconRxClipboardDuo,
 } from "./icons";
-import CareMembershipCard, { DayPicker } from "./care-card";
-import { fmtPrice } from "./product-card";
 import Reveal from "./reveal";
 import { toast } from "sonner";
+import {
+  Search,
+  Camera,
+  Upload,
+  Calendar,
+  FileText,
+  UserCheck,
+  Clock,
+  Sparkles,
+  X,
+  ExternalLink,
+  RotateCw,
+} from "lucide-react";
 
 /* ------------------------------------------------------------------ */
-/* رعاية بحبح — premium monthly-treatment (علاج شهري) experience       */
+/* عميل أدوية شهرية — تجربة متكاملة للأدوية المزمنة وتكرار الروشتة     */
 /* ------------------------------------------------------------------ */
 
-const STEPS = [
-  { t: "care.step1t", d: "care.step1d", icon: IconBoxes, color: "#184C8A" },
-  { t: "care.step2t", d: "care.step2d", icon: IconPharmacist, color: "#059669" },
-  { t: "care.step3t", d: "care.step3d", icon: IconScooter, color: "#F59E0B" },
-  { t: "care.step4t", d: "care.step4d", icon: IconBell, color: "#2563EB" },
-] as const;
-
-const JOURNEY = [
-  { t: "care.journey.1t", d: "care.journey.1d", icon: IconBell, color: "#2563EB" },
-  { t: "care.journey.2t", d: "care.journey.2d", icon: IconPharmacist, color: "#059669" },
-  { t: "care.journey.3t", d: "care.journey.3d", icon: IconScooter, color: "#F59E0B" },
-  { t: "care.journey.4t", d: "care.journey.4d", icon: IconShieldCheck, color: "#184C8A" },
-] as const;
-
-const FAQS = [1, 2, 3, 4, 5, 6] as const;
-
-const todayISO = () => new Date().toISOString().slice(0, 10);
-
-/* tiny animated counter for the stats band */
-function useCountUp(target: number, dur = 1300) {
-  const [v, setV] = useState(0);
-  useEffect(() => {
-    let raf = 0;
-    const t0 = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - t0) / dur);
-      setV(Math.round(target * (1 - Math.pow(1 - p, 3))));
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, dur]);
-  return v;
-}
+type CareTab = "register" | "lookup" | "directory";
 
 export default function CareView() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const careSub = useBahbah((s) => s.careSub);
-  const wizardPlanFromStore = useBahbah((s) => s.careWizardPlan);
+  const careSubs = useBahbah((s) => s.careSubs);
   const user = useBahbah((s) => s.user);
-  const site = useSiteInfo();
-  const stockAdj = useBahbah((s) => s.stockAdj);
-  /* stats counters — hooks must live at the top level */
-  const statSubs = useCountUp(2400);
-  const statShips = useCountUp(5800);
-  const statOntime = useCountUp(98);
+  const { subscribeCare, refillMonthlyRx, toggleCareSubStatus, go, setConsultOpen } = useBahbah();
 
-  const { subscribeCare, pauseCare, resumeCare, cancelCare, changeCareDay, closeCareWizard, setConsultOpen, go, careMonthly, openProduct } = useBahbah();
-  const plans = useCarePlans();
+  const [activeTab, setActiveTab] = useState<CareTab>("register");
 
-  /* ---------------- wizard state ---------------- */
-  const [wizOpenLocal, setWizOpenLocal] = useState(false);
-  const [wizStep, setWizStep] = useState(1);
-  const [wizPlan, setWizPlan] = useState<string>("box-mass");
-  const [wizAddons, setWizAddons] = useState<string[]>([]);
-  const [wizName, setWizName] = useState(user?.name ?? "");
-  const [wizPhone, setWizPhone] = useState(user?.phone ?? "");
-  const [wizAddr, setWizAddr] = useState("");
-  const [wizZone, setWizZone] = useState("deirout-city");
-  const [wizDay, setWizDay] = useState(() => {
+  /* New Patient Form State */
+  const [name, setName] = useState(user?.name || "");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [address, setAddress] = useState("");
+  const [dayPref, setDayPref] = useState<number>(() => {
     const d = (new Date().getDate() + 3) % 28;
     return d === 0 ? 28 : d;
   });
+  const [notes, setNotes] = useState("");
+  const [prescriptionUrl, setPrescriptionUrl] = useState<string>("");
+  const [prescriptionPreview, setPrescriptionPreview] = useState<string | null>(null);
+  const [uploadingRx, setUploadingRx] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [registeredSuccessSub, setRegisteredSuccessSub] = useState<CareSub | null>(careSub);
 
+  /* Existing Patient Search State */
+  const [searchQuery, setSearchQuery] = useState("");
+  const [foundPatient, setFoundPatient] = useState<CareSubscriber | null>(null);
+  const [refilling, setRefilling] = useState(false);
+  const [refillSuccessOrder, setRefillSuccessOrder] = useState<string | null>(null);
 
-  const zoneDisabled = useBahbah((s) => s.zoneDisabled);
-  const allZones = useZones();
-  const zones = allZones.filter((z) => !zoneDisabled.includes(z.id));
+  /* Directory Filter */
+  const [dirSearch, setDirSearch] = useState("");
+  const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const activePlan = careSub ? plans.find((p) => p.id === careSub.planId) : undefined;
-
-  /* deep-link aware wizard state (home/account set careWizardPlan → open here) */
-  const wizOpen = wizOpenLocal || wizardPlanFromStore != null;
-  const effWizPlan = wizardPlanFromStore ?? wizPlan;
-  const wizPlanObj = plans.find((p) => p.id === effWizPlan);
-  const wizTotal = careMonthly(effWizPlan, wizAddons);
-  const firstShip = useMemo(() => nextDeliveryFor(wizDay, todayISO()), [wizDay]);
-
-  const openWizard = (planId: string) => {
-    setWizPlan(planId);
-    setWizAddons([]);
-    setWizStep(1);
-    setWizName((n) => n || careSub?.name || user?.name || "");
-    setWizPhone((p) => p || careSub?.phone || user?.phone || "");
-    setWizAddr((a) => a || careSub?.address || "");
-    setWizZone((z) => z || careSub?.zoneId || "deirout-city");
-    setWizOpenLocal(true);
-  };
-
-  const confirmSubscribe = () => {
-    if (!wizName.trim()) return toast.error(t("care.wiz.needName"));
-    if (wizPhone.trim().length < 8) return toast.error(t("care.wiz.needPhone"));
-    if (!wizAddr.trim()) return toast.error(t("care.wiz.needAddr"));
-    subscribeCare({
-      planId: wizPlan,
-      addons: wizAddons,
-      name: wizName,
-      phone: wizPhone,
-      address: wizAddr,
-      zoneId: wizZone,
-      dayPref: wizDay,
+  // Sync latest care subscriptions on load
+  useEffect(() => {
+    fetchCareSubsFromSupabase().then((subs) => {
+      if (subs && subs.length > 0) {
+        useBahbah.setState({ careSubs: subs });
+      }
     });
-    setWizOpenLocal(false);
-    closeCareWizard();
-    toast.success(t("care.subscribed"));
-    go("care");
-    setTimeout(() => document.getElementById("care-card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+  }, []);
+
+  /* Handle prescription photo file selection */
+  const handleRxFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show local preview immediately
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPrescriptionPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to Supabase Storage if available
+    setUploadingRx(true);
+    try {
+      const publicUrl = await uploadRxPrescriptionImage(file);
+      if (publicUrl) {
+        setPrescriptionUrl(publicUrl);
+        toast.success(lang === "ar" ? "تم رفع صورة الروشتة بنجاح" : "Prescription image uploaded successfully");
+      } else {
+        // Fallback to data URL
+        const dataUrlReader = new FileReader();
+        dataUrlReader.onload = () => {
+          setPrescriptionUrl(dataUrlReader.result as string);
+        };
+        dataUrlReader.readAsDataURL(file);
+        toast.info(lang === "ar" ? "تم حفظ صورة الروشتة محلياً" : "Prescription image saved locally");
+      }
+    } catch {
+      toast.error(lang === "ar" ? "تعذر الرفع، سيتم حفظ الصورة في الطلب" : "Upload failed, saved with order");
+    } finally {
+      setUploadingRx(false);
+    }
   };
 
-  const scrollToPlans = () =>
-    document.getElementById("care-plans")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  /* Submit New Monthly Patient */
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error(lang === "ar" ? "برجاء كتابة اسم المريض بالكامل" : "Please enter patient name");
+      return;
+    }
+    if (phone.trim().length < 8) {
+      toast.error(lang === "ar" ? "برجاء إدخال رقم هاتف صحيح للتواصل" : "Please enter a valid phone number");
+      return;
+    }
+    if (!address.trim()) {
+      toast.error(lang === "ar" ? "برجاء إدخال عنوان التوصيل بالتفصيل" : "Please enter delivery address");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      subscribeCare({
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        dayPref,
+        notes: notes.trim(),
+        prescriptionUrl: prescriptionUrl || prescriptionPreview || "",
+      });
+
+      const today = new Date().toISOString().slice(0, 10);
+      const nextDate = nextDeliveryFor(dayPref, today);
+
+      const createdSub: CareSub = {
+        memberNo: `M-${Math.floor(1000 + Math.random() * 9000)}`,
+        name: name.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        dayPref,
+        notes: notes.trim(),
+        prescriptionUrl: prescriptionUrl || prescriptionPreview || "",
+        since: today,
+        next: nextDate,
+        status: "active",
+        planId: "monthly-rx",
+        addons: [],
+      };
+
+      setRegisteredSuccessSub(createdSub);
+      toast.success(
+        lang === "ar"
+          ? "تم تسجيلك كعميل أدوية شهرية بنجاح! سيتم تجهيز العلاج في الموعد المحدد."
+          : "Monthly medicine registration successful!"
+      );
+    } catch {
+      toast.error(lang === "ar" ? "حدث خطأ أثناء التسجيل" : "Registration failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* Search Existing Patient */
+  const handlePatientSearch = () => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) {
+      toast.error(lang === "ar" ? "اكتب رقم الهاتف أو كود المريض للبحث" : "Enter phone or patient ID");
+      return;
+    }
+
+    const patient = careSubs.find(
+      (s) =>
+        s.id.toLowerCase().includes(q) ||
+        s.phone.replace(/\s+/g, "").includes(q.replace(/\s+/g, "")) ||
+        s.nameAr.toLowerCase().includes(q)
+    );
+
+    if (patient) {
+      setFoundPatient(patient);
+      toast.success(lang === "ar" ? `تم العثور على ملف: ${patient.nameAr}` : `Found: ${patient.nameAr}`);
+    } else {
+      setFoundPatient(null);
+      toast.error(
+        lang === "ar"
+          ? "لم يتم العثور على عميل شهري بهذه البيانات. يمكنك التسجيل كعميل جديد."
+          : "No monthly patient found. You can register as new."
+      );
+    }
+  };
+
+  /* Instant Monthly Refill Request */
+  const handleInstantRefill = async (patient: CareSubscriber) => {
+    setRefilling(true);
+    try {
+      const orderId = await refillMonthlyRx(patient);
+      setRefillSuccessOrder(orderId);
+      toast.success(
+        lang === "ar"
+          ? `تم إرسال طلب تكرار العلاج الشهري بنجاح برقم (${orderId}) وجارٍ تجهيزه في الصيدلية!`
+          : `Monthly refill order placed successfully (#${orderId})!`
+      );
+    } catch {
+      toast.error(lang === "ar" ? "تعذر إنشاء طلب التكرار" : "Refill request failed");
+    } finally {
+      setRefilling(false);
+    }
+  };
+
+  /* Filtered Directory */
+  const filteredDirectory = useMemo(() => {
+    const q = dirSearch.trim().toLowerCase();
+    if (!q) return careSubs;
+    return careSubs.filter(
+      (s) =>
+        s.nameAr.toLowerCase().includes(q) ||
+        s.phone.includes(q) ||
+        s.id.toLowerCase().includes(q) ||
+        (s.address && s.address.toLowerCase().includes(q))
+    );
+  }, [careSubs, dirSearch]);
 
   return (
-    <main className="pb-16 md:pb-20">
-      {/* ================= hero ================= */}
-      <section className="bb-hero-band relative overflow-hidden text-white">
-        <div className="bb-glow pointer-events-none absolute -top-24 start-[8%] size-64 rounded-full bg-[#059669]/30 blur-3xl" />
-        <div className="bb-glow pointer-events-none absolute -bottom-28 end-[5%] size-72 rounded-full bg-[#F59E0B]/20 blur-3xl" style={{ animationDelay: "1.6s" }} />
-        <span className="bb-float pointer-events-none absolute top-10 end-[12%] hidden text-5xl opacity-30 md:block">💪</span>
-        <span className="bb-float-slow pointer-events-none absolute bottom-12 start-[6%] hidden text-4xl opacity-25 md:block">🏋️</span>
+    <main className="min-h-screen pb-20">
+      {/* ================= Hero Banner ================= */}
+      <section className="bb-hero-band relative overflow-hidden bg-gradient-to-br from-[#184C8A] via-[#112D51] to-[#0B1E38] text-white">
+        <div className="bb-glow pointer-events-none absolute -top-24 start-[8%] size-72 rounded-full bg-[#059669]/30 blur-3xl" />
+        <div className="bb-glow pointer-events-none absolute -bottom-28 end-[5%] size-80 rounded-full bg-[#F59E0B]/20 blur-3xl" />
 
-        <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-12 md:px-6 md:pb-20 md:pt-16">
+        <div className="relative mx-auto max-w-7xl px-4 pb-14 pt-12 md:px-6 md:pb-16 md:pt-16">
           <div className="mx-auto max-w-3xl text-center">
-            <Badge className="mb-5 gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold text-white hover:bg-white/10">
-              <IconHeartPulse className="size-4 text-[#10B981]" />
-              {t("care.heroBadge")}
+            <Badge className="mb-4 gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-bold text-white backdrop-blur">
+              <IconRefill className="size-4 text-[#F59E0B]" />
+              {lang === "ar" ? "برنامج عميل الأدوية الشهرية والعلاج المزمن" : "Monthly Medicine & Chronic Care Program"}
             </Badge>
-            <h1 className="font-heading text-4xl font-black leading-[1.15] md:text-6xl">
-              {t("care.heroTitle")}
-            </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/80 md:text-lg">
-              {t("care.heroSub")}
-            </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Button
-                size="lg"
-                className="bb-ring h-13 rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-9 text-base font-black text-white shadow-xl shadow-[#EA580C]/25 transition hover:brightness-105 active:scale-95"
-                onClick={scrollToPlans}
-              >
-                <IconBoxes className="size-5" />
-                {t("care.cta")}
-                <IconChevronR className="size-4 rtl:rotate-180" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-13 rounded-full border-white/30 bg-white/5 px-7 text-base font-bold text-white backdrop-blur transition hover:bg-white/15 hover:text-white"
-                onClick={() => setConsultOpen(true)}
-              >
-                <IconPharmacist className="size-5" />
-                {t("fab.consult")}
-              </Button>
-            </div>
 
-            {/* animated stat band */}
-            <div className="mx-auto mt-9 grid max-w-lg grid-cols-3 gap-2.5">
-              {(
-                [
-                  [statSubs, "+", t("care.stats.subs")],
-                  [statShips, "+", t("care.stats.ship")],
-                  [statOntime, "%", t("care.stats.ontime")],
-                ] as const
-              ).map(([v, suffix, label], i) => (
-                <Reveal key={label} delay={i * 120}>
-                  <div className="rounded-2xl border border-white/15 bg-white/10 px-2 py-3.5 backdrop-blur">
-                    <p dir="ltr" className="font-heading text-xl font-black text-[#7FE0B4] md:text-2xl">
-                      {v.toLocaleString("en-US")}
-                      {suffix}
-                    </p>
-                    <p className="mt-1 text-[10px] font-bold text-white/75 md:text-xs">{label}</p>
-                  </div>
-                </Reveal>
-              ))}
+            <h1 className="font-heading text-3xl font-black leading-tight md:text-5xl">
+              {lang === "ar" ? "عميل الأدوية الشهرية — صيدلية بحبح" : "Bahbah Monthly Medicine Program"}
+            </h1>
+
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/80 md:text-base">
+              {lang === "ar"
+                ? "علاجك الشهري وأدويتك المزمنة بتوصلك لباب بيتك بانتظام في موعد محدد كل شهر دون انقطاع، بإشراف صيدلي معتمد وتوصيل 24 ساعة لجميع المحافظات."
+                : "Your monthly prescription and chronic treatments delivered right to your doorstep regularly every month under pharmacist supervision."}
+            </p>
+
+            {/* Navigation Tabs Pill Bar */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-white/10 p-1.5 backdrop-blur-md">
+              <button
+                onClick={() => setActiveTab("register")}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black transition-all md:text-sm ${
+                  activeTab === "register"
+                    ? "bg-[#F59E0B] text-white shadow-md shadow-[#F59E0B]/30"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <IconRxClipboardDuo className="size-4" />
+                {lang === "ar" ? "تسجيل عميل شهري جديد" : "New Patient Registration"}
+              </button>
+
+              <button
+                onClick={() => setActiveTab("lookup")}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black transition-all md:text-sm ${
+                  activeTab === "lookup"
+                    ? "bg-[#F59E0B] text-white shadow-md shadow-[#F59E0B]/30"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <Search className="size-4" />
+                {lang === "ar" ? "عميل سابق / تكرار العلاج" : "Existing Patient Refill"}
+              </button>
+
+              <button
+                onClick={() => setActiveTab("directory")}
+                className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-black transition-all md:text-sm ${
+                  activeTab === "directory"
+                    ? "bg-[#F59E0B] text-white shadow-md shadow-[#F59E0B]/30"
+                    : "text-white/80 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                <UserCheck className="size-4" />
+                {lang === "ar" ? "خانة العملاء المشتركين" : "Registered Patients Directory"}
+                <span className="ms-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px]">
+                  {careSubs.length}
+                </span>
+              </button>
             </div>
           </div>
         </div>
-
-        <div className="absolute inset-x-0 -bottom-1 h-6 rounded-t-[2.5rem] bg-background" />
       </section>
 
-      {/* ================= membership card ================= */}
-      {careSub && activePlan && (
-        <section id="care-card" className="mx-auto max-w-3xl scroll-mt-24 px-4 pt-8 md:px-6">
+      {/* ================= TAB 1: تسجيل عميل شهري جديد ================= */}
+      {activeTab === "register" && (
+        <section className="mx-auto max-w-4xl px-4 pt-10 md:px-6">
           <Reveal>
-            <CareMembershipCard
-              actions={
-                <div className="flex flex-wrap items-center gap-2">
-                  {careSub.status === "paused" ? (
-                    <Button
-                      size="sm"
-                      className="h-9 rounded-full bg-[#059669] px-5 font-black text-white hover:bg-[#047857]"
-                      onClick={() => {
-                        resumeCare();
-                        toast.success(t("care.resume"));
-                      }}
-                    >
-                      <IconRefill className="size-4" />
-                      {t("care.resume")}
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-9 rounded-full border-white/30 bg-white/10 px-5 font-black text-white hover:bg-white/20 hover:text-white"
-                      onClick={() => {
-                        pauseCare();
-                        toast.success(t("care.pause"));
-                      }}
-                    >
-                      {t("care.pause")}
-                    </Button>
-                  )}
-                  {/* change preferred day inline */}
-                  <DayPicker value={careSub.dayPref} onChange={(d) => {
-                    changeCareDay(d);
-                    toast.success(t("care.changeDay"));
-                  }} dark />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 rounded-full border-[#FF9C9C]/40 bg-transparent px-5 font-black text-[#FFB4B4] hover:bg-[#DC4B4B]/25 hover:text-white"
-                    onClick={() => {
-                      cancelCare();
-                      toast.success(t("care.cancel"));
-                    }}
-                  >
-                    {t("care.cancel")}
-                  </Button>
+            <div className="overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-lg md:p-10">
+              <div className="flex items-center justify-between border-b border-border/60 pb-5">
+                <div className="flex items-center gap-3">
+                  <span className="grid size-12 place-items-center rounded-2xl bg-[#EAF2FA] text-[#184C8A]">
+                    <IconRxClipboardDuo className="size-6" />
+                  </span>
+                  <div>
+                    <h2 className="font-heading text-xl font-black md:text-2xl">
+                      {lang === "ar" ? "تسجيل عميل أدوية شهرية جديد" : "Register New Monthly Patient"}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === "ar"
+                        ? "سجل بياناتك وصور الروشتة وحدد ميعاد الاستلام الشهري المفضل"
+                        : "Fill in patient details, attach prescription, and choose delivery day"}
+                    </p>
+                  </div>
                 </div>
-              }
-            />
+                <Badge className="rounded-full bg-[#EAF6F1] px-3 py-1 font-bold text-[#059669]">
+                  {lang === "ar" ? "توصيل 24 ساعة" : "24/7 Delivery"}
+                </Badge>
+              </div>
+
+              {registeredSuccessSub ? (
+                <div className="mt-6 space-y-6">
+                  <div className="rounded-2xl border border-[#059669]/30 bg-[#ECFDF5] p-5 text-[#065F46]">
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-10 place-items-center rounded-full bg-[#059669] text-white">
+                        <IconCheck className="size-5" />
+                      </span>
+                      <div>
+                        <h3 className="font-heading text-base font-black">
+                          {lang === "ar" ? "تم تسجيلك بنجاح كعميل أدوية شهرية!" : "Successfully Registered!"}
+                        </h3>
+                        <p className="text-xs opacity-90">
+                          {lang === "ar"
+                            ? "تم إنشاء ملفك الشهري وجدولته لدى صيدلية بحبح تحت إشراف د. هاشم بحبح"
+                            : "Your monthly profile is ready and scheduled with Bahbah Pharmacy"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Membership Profile Card */}
+                  <div className="rounded-3xl border border-border bg-gradient-to-br from-[#184C8A] to-[#112D51] p-6 text-white shadow-xl">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/15 pb-4">
+                      <div>
+                        <span className="text-[11px] font-bold text-white/70">
+                          {lang === "ar" ? "كود العميل الشهري:" : "Patient Code:"}
+                        </span>
+                        <p className="font-heading text-2xl font-black text-[#F59E0B]">
+                          {registeredSuccessSub.memberNo}
+                        </p>
+                      </div>
+                      <div className="text-end">
+                        <span className="text-[11px] font-bold text-white/70">
+                          {lang === "ar" ? "موعد الاستلام القادم:" : "Next Delivery:"}
+                        </span>
+                        <p className="font-heading text-lg font-black text-white" dir="ltr">
+                          {registeredSuccessSub.next}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <span className="text-[11px] text-white/70">{lang === "ar" ? "اسم المريض:" : "Patient Name:"}</span>
+                        <p className="font-bold text-white">{registeredSuccessSub.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-white/70">{lang === "ar" ? "رقم الهاتف / واتساب:" : "Phone:"}</span>
+                        <p className="font-bold text-white" dir="ltr">{registeredSuccessSub.phone}</p>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <span className="text-[11px] text-white/70">{lang === "ar" ? "عنوان التوصيل:" : "Delivery Address:"}</span>
+                        <p className="text-sm font-semibold text-white/90">{registeredSuccessSub.address}</p>
+                      </div>
+                      {registeredSuccessSub.notes && (
+                        <div className="sm:col-span-2 rounded-xl bg-white/10 p-3">
+                          <span className="text-[11px] font-bold text-[#F59E0B]">{lang === "ar" ? "الملاحظات والتركيزات:" : "Notes:"}</span>
+                          <p className="mt-1 text-xs text-white/90">{registeredSuccessSub.notes}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {registeredSuccessSub.prescriptionUrl && (
+                      <div className="mt-4 flex items-center gap-3 rounded-2xl bg-black/25 p-3">
+                        <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white">
+                          <Image
+                            src={registeredSuccessSub.prescriptionUrl}
+                            alt="Prescription"
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white">{lang === "ar" ? "الروشتة الشهرية المعتمدة" : "Active Prescription"}</p>
+                          <button
+                            onClick={() => setPreviewModalImg(registeredSuccessSub.prescriptionUrl || null)}
+                            className="text-[11px] font-bold text-[#F59E0B] hover:underline"
+                          >
+                            {lang === "ar" ? "معاينة الروشتة بحجم كامل" : "View full image"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-6 flex flex-wrap items-center gap-3">
+                      <a
+                        href={`https://wa.me/201011500166?text=${encodeURIComponent(
+                          `السلام عليكم د. هاشم، أنا مسجل كعميل أدوية شهرية في صيدلية بحبح (كود: ${registeredSuccessSub.memberNo} - الاسم: ${registeredSuccessSub.name}).`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-11 items-center gap-2 rounded-full bg-[#25D366] px-6 text-xs font-black text-white shadow-md hover:brightness-105"
+                      >
+                        <IconWhatsapp className="size-4" />
+                        {lang === "ar" ? "تواصل مع الصيدلي عبر واتساب لتأكيد الروشتة" : "Confirm via WhatsApp"}
+                      </a>
+
+                      <Button
+                        variant="outline"
+                        className="h-11 rounded-full border-white/30 bg-white/10 text-xs font-bold text-white hover:bg-white/20 hover:text-white"
+                        onClick={() => {
+                          setRegisteredSuccessSub(null);
+                          setName("");
+                          setPhone("");
+                          setAddress("");
+                          setNotes("");
+                          setPrescriptionPreview(null);
+                          setPrescriptionUrl("");
+                        }}
+                      >
+                        <IconPlus className="size-4" />
+                        {lang === "ar" ? "تسجيل مريض / روشتة أخرى" : "Register another patient"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleRegisterSubmit} className="mt-6 space-y-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {/* Patient Name */}
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-bold text-foreground/80">
+                        {lang === "ar" ? "اسم المريض ثلاثي *" : "Patient Full Name *"}
+                      </span>
+                      <Input
+                        required
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder={lang === "ar" ? "مثال: محمد أحمد علي" : "e.g. Mohamed Ahmed"}
+                        className="h-11 rounded-xl"
+                      />
+                    </label>
+
+                    {/* Phone Number */}
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-bold text-foreground/80">
+                        {lang === "ar" ? "رقم الموبايل / واتساب (للتأكيد ومتابعة الشحن) *" : "Phone / WhatsApp *"}
+                      </span>
+                      <Input
+                        required
+                        type="tel"
+                        dir="ltr"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="010XXXXXXXX"
+                        className="h-11 rounded-xl"
+                      />
+                    </label>
+
+                    {/* Full Address */}
+                    <label className="block space-y-1.5 sm:col-span-2">
+                      <span className="text-xs font-bold text-foreground/80">
+                        {lang === "ar" ? "العنوان بالتفصيل (المحافظة - المركز/المدينة - الشارع - علامة مميزة) *" : "Full Delivery Address *"}
+                      </span>
+                      <Input
+                        required
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder={lang === "ar" ? "مثال: ديروط - شارع البحر الأعظم - بجوار البنك الأهلي" : "Full address details..."}
+                        className="h-11 rounded-xl"
+                      />
+                    </label>
+
+                    {/* Preferred Day of Month */}
+                    <label className="block space-y-1.5">
+                      <span className="text-xs font-bold text-foreground/80">
+                        {lang === "ar" ? "اليوم المفضل للتوصيل شهرياً *" : "Preferred Monthly Delivery Day *"}
+                      </span>
+                      <Select
+                        value={String(dayPref)}
+                        onValueChange={(v) => setDayPref(Number(v))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl">
+                          <SelectValue placeholder="اختار يوم التوصيل" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                            <SelectItem key={d} value={String(d)}>
+                              {lang === "ar" ? `يوم ${d} من كل شهر ميلادي` : `Day ${d} of every month`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </label>
+
+                    {/* Delivery Promise Badge */}
+                    <div className="flex flex-col justify-end">
+                      <div className="flex items-center gap-2 rounded-xl bg-[#EAF2FA] p-3 text-xs font-bold text-[#184C8A]">
+                        <IconScooter className="size-5 shrink-0" />
+                        <span>
+                          {lang === "ar"
+                            ? "شحن سريع لجميع المحافظات مع تتبع مباشر عبر واتساب"
+                            : "Fast express shipping across all governorates"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prescription Upload / Photo Capture */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-foreground/80">
+                      {lang === "ar" ? "تصوير الروشتة أو صورة العلبة / العلاج *" : "Prescription Photo Upload / Camera *"}
+                    </span>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleRxFileChange}
+                      className="hidden"
+                    />
+
+                    {prescriptionPreview ? (
+                      <div className="relative overflow-hidden rounded-2xl border border-border bg-muted/40 p-3">
+                        <div className="flex items-center justify-between pb-3">
+                          <span className="text-xs font-bold text-[#059669]">
+                            {lang === "ar" ? "✓ تم التقاط / اختيار صورة الروشتة" : "✓ Prescription image selected"}
+                          </span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            className="h-8 rounded-full px-3 text-xs"
+                            onClick={() => {
+                              setPrescriptionPreview(null);
+                              setPrescriptionUrl("");
+                            }}
+                          >
+                            <X className="size-3.5" />
+                            {lang === "ar" ? "حذف وتصوير أخرى" : "Retake"}
+                          </Button>
+                        </div>
+                        <div className="relative h-48 w-full overflow-hidden rounded-xl bg-black/10">
+                          <Image
+                            src={prescriptionPreview}
+                            alt="Prescription preview"
+                            fill
+                            className="object-contain"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => fileInputRef.current?.click()}
+                        className="group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#184C8A]/30 bg-[#EAF2FA]/40 p-6 text-center transition hover:border-[#184C8A] hover:bg-[#EAF2FA]/80"
+                      >
+                        <div className="grid size-14 place-items-center rounded-full bg-white text-[#184C8A] shadow-md transition group-hover:scale-110">
+                          <Camera className="size-7" />
+                        </div>
+                        <p className="mt-3 font-heading text-sm font-black text-[#184C8A]">
+                          {lang === "ar" ? "اضغط هنا لتصوير الروشتة بالكاميرا أو رفعها من الموبايل" : "Click to capture prescription photo or upload"}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {lang === "ar" ? "يدعم JPG, PNG, WEBP — واضحة ومقروءة" : "Supports JPG, PNG — clear & readable"}
+                        </p>
+                        {uploadingRx && (
+                          <p className="mt-2 text-xs font-bold text-[#F59E0B] animate-pulse">
+                            {lang === "ar" ? "جارٍ معالجة ورفع الصورة..." : "Processing image..."}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes / Special Instructions Box */}
+                  <label className="block space-y-1.5">
+                    <span className="text-xs font-bold text-foreground/80">
+                      {lang === "ar" ? "خانة للملاحظات (لو حابب تكتب تركيزات معينة أو بدائل مقبولة أو تفاصيل خاصة)" : "Notes & Specific Instructions"}
+                    </span>
+                    <Textarea
+                      rows={3}
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder={
+                        lang === "ar"
+                          ? "اكتب هنا أي تفاصيل: مثل تركيز معين للدواء، شركات مفضلة أو مرفوضة، مواعيد مناسبة للتسليم، أي أدوية حساسية..."
+                          : "Write specific notes, acceptable alternatives, concentrations, allergies..."
+                      }
+                      className="rounded-xl"
+                    />
+                  </label>
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <Button
+                      type="submit"
+                      disabled={submitting}
+                      size="lg"
+                      className="h-13 w-full rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EA580C] text-base font-black text-white shadow-lg shadow-[#F59E0B]/30 hover:brightness-105 active:scale-95 transition-all"
+                    >
+                      <IconCheck className="size-5" />
+                      {submitting
+                        ? (lang === "ar" ? "جارٍ تسجيل ملف المريض..." : "Saving registration...")
+                        : (lang === "ar" ? "تأكيد تسجيل العميل الشهري وجدولة العلاج" : "Confirm Monthly Registration")}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
           </Reveal>
         </section>
       )}
 
-      {/* ================= صناديق العلاج الشهري — هدف حقيقي ومخزون مباشر ================= */}
-      <section id="care-plans" className="mx-auto max-w-7xl scroll-mt-20 px-4 pt-12 md:px-6 md:pt-16">
-        <Reveal>
-          <SectionHeadMini
-            icon={<IconBoxes className="size-6 text-white" />}
-            title={t("care.title")}
-            sub={t("care.sub")}
-            tone="#F59E0B"
-          />
-        </Reveal>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {plans.map((plan, i) => {
-            const Icon = plan.icon;
-            const mine = careSub?.planId === plan.id;
-            const meds = plan.medIds
-              .map((id) => getProduct(id))
-              .filter(Boolean) as NonNullable<ReturnType<typeof getProduct>>[];
-            const stocks = plan.medIds.map((id) => effStock(id, stockAdj));
-            const outCount = stocks.filter((s) => s === 0).length;
-            const lowCount = stocks.filter((s) => s > 0 && s <= 5).length;
-            const stockChip = outCount > 0
-              ? { key: t("stock.boxOut"), cls: "bg-amber-50 text-amber-800 ring-amber-500/40", dot: "bg-[#F59E0B]" }
-              : lowCount > 0
-                ? { key: t("stock.boxLow"), cls: "bg-red-50 text-red-700 ring-red-500/30", dot: "bg-red-600" }
-                : { key: t("stock.boxFull"), cls: "bg-emerald-50 text-emerald-800 ring-emerald-500/30", dot: "bg-[#059669]" };
-            return (
-              <Reveal key={plan.id} delay={(i % 3) * 90}>
-                <div
-                  className={`group relative flex h-full flex-col overflow-hidden rounded-3xl border bg-card p-6 shadow-sm bb-card-hover ${
-                    plan.popular ? "border-[#F59E0B] shadow-lg ring-2 ring-[#F59E0B]/25" : "border-border/70"
-                  } ${mine ? "outline-2 outline-offset-2 outline-[#059669]" : ""}`}
+      {/* ================= TAB 2: عميل سابق وتكرار العلاج ================= */}
+      {activeTab === "lookup" && (
+        <section className="mx-auto max-w-4xl px-4 pt-10 md:px-6">
+          <Reveal>
+            <div className="overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-lg md:p-10">
+              <div className="flex items-center gap-3 border-b border-border/60 pb-5">
+                <span className="grid size-12 place-items-center rounded-2xl bg-[#FFF4E5] text-[#C56A0A]">
+                  <Search className="size-6" />
+                </span>
+                <div>
+                  <h2 className="font-heading text-xl font-black md:text-2xl">
+                    {lang === "ar" ? "عميل سابق / طلب تكرار العلاج فوراً" : "Existing Patient Refill"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {lang === "ar"
+                      ? "ابحث برقم موبايلك أو كود المريض لمراجعة روشتتك وطلب تكرار العلاج هذا الشهر فوراً"
+                      : "Search by phone or patient ID to view prescription and request immediate monthly refill"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Search Bar */}
+              <div className="mt-6 flex gap-2">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handlePatientSearch()}
+                  placeholder={lang === "ar" ? "ادخل رقم الموبايل أو كود المريض (مثال: 010... أو M-101)" : "Enter phone or patient code (e.g. 010... or M-101)"}
+                  className="h-12 flex-1 rounded-xl text-sm font-bold"
+                  dir="ltr"
+                />
+                <Button
+                  onClick={handlePatientSearch}
+                  className="h-12 rounded-xl bg-[#184C8A] px-6 font-black text-white hover:bg-[#112D51]"
                 >
-                  {plan.popular && !mine && (
-                    <span className="absolute top-0 end-6 rounded-b-xl bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-3 py-1 text-[11px] font-black text-white shadow-md">
-                      <IconSparkles className="mb-0.5 me-1 inline size-3.5" />
-                      {t("misc.new")}
-                    </span>
-                  )}
-                  {mine && (
-                    <span className="absolute top-0 end-6 flex items-center gap-1 rounded-b-xl bg-gradient-to-r from-[#059669] to-[#10B981] px-3 py-1 text-[11px] font-black text-white shadow-md">
-                      <IconCheck className="mb-0.5 inline size-3.5" />
-                      {t("care.active")}
-                    </span>
-                  )}
-                  <span
-                    className="absolute -end-12 -top-12 size-32 rounded-full opacity-10 transition duration-500 group-hover:scale-150"
-                    style={{ backgroundColor: plan.color }}
-                  />
-                  <div className="flex items-center gap-3">
-                    <span
-                      className="grid size-14 shrink-0 place-items-center rounded-2xl text-white shadow-md transition duration-300 group-hover:scale-110 group-hover:rotate-3"
-                      style={{ backgroundColor: plan.color }}
-                    >
-                      <Icon className="size-7" />
-                    </span>
+                  <Search className="size-4.5" />
+                  {lang === "ar" ? "بحث" : "Search"}
+                </Button>
+              </div>
+
+              {/* Found Patient Record */}
+              {foundPatient && (
+                <div className="mt-6 space-y-5 rounded-3xl border border-border bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] p-6 text-foreground">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
                     <div>
-                      <h3 className="font-heading text-lg font-black md:text-xl">
-                        {lang === "ar" ? plan.nameAr : plan.nameEn}
-                      </h3>
-                      <p className="mt-0.5 text-[11px] font-bold text-muted-foreground md:text-xs">
-                        {lang === "ar" ? plan.tagAr : plan.tagEn}
+                      <span className="text-[11px] font-bold text-muted-foreground">
+                        {lang === "ar" ? "كود المريض:" : "Patient Code:"}
+                      </span>
+                      <p className="font-heading text-xl font-black text-[#184C8A]">
+                        {foundPatient.id}
                       </p>
                     </div>
-                  </div>
 
-                  <p className="mt-4 min-h-10 text-sm leading-relaxed text-muted-foreground">
-                    {lang === "ar" ? plan.descAr : plan.descEn}
-                  </p>
-
-                  {/* اللي جوه الصندوق — صور حقيقية من المخزن */}
-                  <div className="mt-4">
-                    <p className="mb-2 text-[11px] font-bold text-muted-foreground">{t("care.includes")}:</p>
-                    <div className="mb-3 flex items-center gap-2">
-                      {meds.map((m, k) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => openProduct(m.id)}
-                          title={lang === "ar" ? m.nameAr : m.nameEn}
-                          className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
-                          style={{ zIndex: meds.length - k }}
-                        >
-                          {m.img ? (
-                            <Image src={m.img} alt={m.nameEn} fill sizes="56px" className="object-contain p-1" />
-                          ) : (
-                            <span className="grid size-full place-items-center bg-[#EAF2FA]">
-                              <m.icon className="size-6 text-[#184C8A]" strokeWidth={1.6} />
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                      <span className="ms-1 rounded-full bg-muted px-2.5 py-1 text-[10px] font-black text-foreground/70">
-                        {meds.length} {lang === "ar" ? "أصناف" : "items"}
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {meds.map((m) => (
-                        <span
-                          key={m.id}
-                          className="flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-foreground/75"
-                        >
-                          <IconCheck className="size-3 text-[#059669]" />
-                          {lang === "ar" ? m.nameAr : m.nameEn}
-                        </span>
-                      ))}
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={`rounded-full px-3 py-1 font-bold ${
+                          foundPatient.status === "active"
+                            ? "bg-[#ECFDF5] text-[#059669]"
+                            : "bg-[#FEF2F2] text-[#DC2626]"
+                        }`}
+                      >
+                        {foundPatient.status === "active"
+                          ? (lang === "ar" ? "توصيل شهري نشط" : "Active Subscription")
+                          : (lang === "ar" ? "متوقف مؤقتاً" : "Paused")}
+                      </Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 rounded-full text-xs font-bold"
+                        onClick={() => toggleCareSubStatus(foundPatient.id)}
+                      >
+                        <RotateCw className="size-3.5" />
+                        {foundPatient.status === "active"
+                          ? (lang === "ar" ? "إيقاف مؤقت" : "Pause")
+                          : (lang === "ar" ? "استئناف" : "Resume")}
+                      </Button>
                     </div>
                   </div>
 
-                  {/* حالة المخزون — مباشرة من المخزن */}
-                  <div className={`mt-4 flex items-center gap-2 rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${stockChip.cls}`}>
-                    <span className={`relative flex size-2`}>
-                      <span className={`absolute inline-flex size-full animate-ping rounded-full opacity-60 ${stockChip.dot}`} />
-                      <span className={`relative inline-flex size-2 rounded-full ${stockChip.dot}`} />
-                    </span>
-                    {stockChip.key}
-                  </div>
-
-                  <div className="mt-auto pt-5">
-                    <div className="flex items-end justify-between border-t border-border/60 pt-4">
-                      <div>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="font-heading text-3xl font-black" style={{ color: plan.color }}>
-                            {plan.price.toLocaleString("en-US")}
-                          </span>
-                          <span className="text-xs font-bold text-muted-foreground">{t("care.perMonth")}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground line-through">
-                          {plan.oldPrice.toLocaleString("en-US")} {t("misc.currency")}
-                        </span>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "اسم المريض:" : "Patient Name:"}</span>
+                      <p className="font-bold text-base">{foundPatient.nameAr}</p>
+                    </div>
+                    <div>
+                      <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "رقم الهاتف:" : "Phone:"}</span>
+                      <p className="font-bold text-base" dir="ltr">{foundPatient.phone}</p>
+                    </div>
+                    {foundPatient.address && (
+                      <div className="sm:col-span-2">
+                        <span className="text-[11px] text-muted-foreground">{lang === "ar" ? "عنوان التوصيل:" : "Delivery Address:"}</span>
+                        <p className="text-sm font-semibold">{foundPatient.address}</p>
                       </div>
-                      <span className="rounded-full bg-[#ECFDF5] px-2.5 py-1 text-[10px] font-black text-[#059669]">
-                        {fmtPrice(plan.oldPrice - plan.price, t)} {t("cart.savings")}
-                      </span>
+                    )}
+                    {foundPatient.notes && (
+                      <div className="sm:col-span-2 rounded-2xl bg-[#FFFBEB] p-3 text-[#B45E0A] ring-1 ring-[#F59E0B]/20">
+                        <span className="text-[11px] font-bold">{lang === "ar" ? "الملاحظات والتركيزات المسجلة:" : "Recorded Notes:"}</span>
+                        <p className="mt-1 text-xs font-semibold">{foundPatient.notes}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {foundPatient.prescriptionUrl && (
+                    <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-xs">
+                      <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+                        <Image
+                          src={foundPatient.prescriptionUrl}
+                          alt="Prescription"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold">{lang === "ar" ? "صورة الروشتة المسجلة في ملف المريض" : "Saved Prescription Image"}</p>
+                        <button
+                          onClick={() => setPreviewModalImg(foundPatient.prescriptionUrl || null)}
+                          className="mt-0.5 text-xs font-bold text-[#184C8A] hover:underline"
+                        >
+                          {lang === "ar" ? "عرض الروشتة بحجم كامل" : "View full image"}
+                        </button>
+                      </div>
                     </div>
+                  )}
+
+                  {/* Refill Success Alert */}
+                  {refillSuccessOrder && (
+                    <div className="rounded-2xl border border-[#059669]/30 bg-[#ECFDF5] p-4 text-[#065F46]">
+                      <p className="font-heading text-sm font-black">
+                        {lang === "ar"
+                          ? `✓ تم إنشاء طلب تكرار العلاج لهذا الشهر بنجاح برقم: (${refillSuccessOrder})`
+                          : `Refill order generated: #${refillSuccessOrder}`}
+                      </p>
+                      <p className="mt-1 text-xs opacity-90">
+                        {lang === "ar"
+                          ? "تم إرسال الطلب فوراً إلى سيستم صيدلية بحبح وسيقوم الصيدلي بالتجهيز والشحن."
+                          : "Order dispatched to pharmacy team for dispatch and delivery."}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap items-center gap-3 pt-2">
                     <Button
-                      className="mt-4 h-12 w-full rounded-full text-base font-black text-white shadow-md transition hover:brightness-110 active:scale-[0.98]"
-                      style={{ backgroundColor: plan.color }}
-                      onClick={() => openWizard(plan.id)}
+                      size="lg"
+                      disabled={refilling}
+                      className="h-12 flex-1 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EA580C] text-sm font-black text-white shadow-lg shadow-[#F59E0B]/30 hover:brightness-105"
+                      onClick={() => handleInstantRefill(foundPatient)}
                     >
-                      <IconBoxes className="size-5" />
-                      {mine ? t("care.manage") : t("care.subscribe")}
+                      <IconRefill className="size-4.5" />
+                      {refilling
+                        ? (lang === "ar" ? "جارٍ إرسال طلب التكرار..." : "Sending refill order...")
+                        : (lang === "ar" ? "⚡ طلب تكرار العلاج هذا الشهر فوراً" : "Instant Monthly Refill Now")}
                     </Button>
+
+                    <a
+                      href={`https://wa.me/201011500166?text=${encodeURIComponent(
+                        `السلام عليكم، أنا المريض ${foundPatient.nameAr} (كود: ${foundPatient.id})، أرغب بتكرار علاجي الشهري المسجل لدى صيدلية بحبح.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-12 items-center gap-2 rounded-full bg-[#25D366] px-6 text-xs font-black text-white shadow-md hover:brightness-105"
+                    >
+                      <IconWhatsapp className="size-4" />
+                      {lang === "ar" ? "واتساب الصيدلي" : "WhatsApp"}
+                    </a>
                   </div>
                 </div>
-              </Reveal>
-            );
-          })}
-        </div>
-        <Reveal>
-          <p className="mt-6 flex flex-wrap items-center justify-center gap-2 rounded-2xl bg-amber-50/80 border border-amber-200/60 px-4 py-3.5 text-center text-xs font-bold text-amber-900 md:text-sm">
-            <IconRefill className="size-4.5 shrink-0" />
-            {t("care.monthlyNote")} · {t("stock.live")}
-          </p>
-        </Reveal>
-      </section>
-
-      {/* ================= smart plan builder ================= */}
-      <BuilderSection onSubscribe={openWizard} />
-
-      {/* ================= how it works ================= */}
-      <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-18">
-        <Reveal>
-          <div className="text-center">
-            <h2 className="font-heading text-2xl font-black md:text-3xl">{t("care.how")}</h2>
-            <p className="mt-2 text-sm text-muted-foreground md:text-base">{t("care.howSub")}</p>
-          </div>
-        </Reveal>
-        <div className="relative mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="absolute inset-x-16 top-9 hidden border-t-2 border-dashed border-[#059669]/30 lg:block" />
-          {STEPS.map((s, i) => (
-            <Reveal key={s.t} delay={i * 100}>
-              <div className="relative flex h-full flex-col items-center rounded-3xl border border-border/70 bg-card p-6 text-center shadow-sm bb-card-hover">
-                <span
-                  className="relative z-10 grid size-18 place-items-center rounded-full text-white shadow-lg ring-8 ring-background"
-                  style={{ backgroundColor: s.color }}
-                >
-                  <s.icon className="size-8" />
-                  <span className="absolute -top-1 -end-1 grid size-7 place-items-center rounded-full bg-white font-heading text-sm font-black text-[#0B1E38] shadow ring-2 ring-background">
-                    {i + 1}
-                  </span>
-                </span>
-                <h3 className="mt-4 font-heading text-base font-black">{t(s.t)}</h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground md:text-[13px]">{t(s.d)}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= shipment journey ================= */}
-      <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-18">
-        <Reveal>
-          <div className="text-center">
-            <h2 className="font-heading text-2xl font-black md:text-3xl">{t("care.journey.title")}</h2>
-            <p className="mt-2 text-sm text-muted-foreground md:text-base">{t("care.journey.sub")}</p>
-          </div>
-        </Reveal>
-        <div className="mt-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {JOURNEY.map((s, i) => (
-            <Reveal key={s.t} delay={i * 100}>
-              <div className="relative h-full rounded-3xl border border-border/70 bg-gradient-to-b from-card to-muted/40 p-6 shadow-sm bb-card-hover">
-                <div className="flex items-center justify-between">
-                  <span
-                    className="grid size-12 place-items-center rounded-2xl text-white shadow-md"
-                    style={{ backgroundColor: s.color }}
-                  >
-                    <s.icon className="size-6" />
-                  </span>
-                  <span className="font-heading text-4xl font-black text-muted-foreground/15">
-                    0{i + 1}
-                  </span>
-                </div>
-                <h3 className="mt-3.5 font-heading text-base font-black">{t(s.t)}</h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground md:text-[13px]">{t(s.d)}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-      </section>
-
-      {/* ================= personal pharmacist ================= */}
-      <section className="mx-auto max-w-4xl px-4 pt-14 md:px-6 md:pt-18">
-        <Reveal>
-          <div className="relative overflow-hidden rounded-3xl border border-[#184C8A]/15 bg-gradient-to-l from-[#EAF2FA] via-card to-card p-6 bb-card-shadow md:p-8">
-            <span className="absolute -end-14 -top-14 size-44 rounded-full bg-[#184C8A]/10" />
-            <div className="relative flex flex-col items-start gap-5 md:flex-row md:items-center">
-              <span className="bb-ring grid size-20 shrink-0 place-items-center rounded-3xl bg-gradient-to-br from-[#184C8A] to-[#0B1E38] text-white shadow-xl">
-                <IconPharmacist className="size-10" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-black uppercase tracking-wide text-[#184C8A]">
-                  {t("care.pharm.title")}
-                </p>
-                <h3 className="mt-1 font-heading text-xl font-black md:text-2xl">{t("care.pharm.name")}</h3>
-                <p className="mt-0.5 text-xs font-bold text-[#059669]">{t("care.pharm.role")}</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t("care.pharm.d")}</p>
-              </div>
-              <div className="flex w-full shrink-0 flex-col gap-2 md:w-auto">
-                <a
-                  href={`tel:${site.phone1Href}`}
-                  className="flex h-11 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#184C8A] to-[#0B1E38] px-6 text-sm font-black text-white shadow-md transition hover:brightness-110"
-                >
-                  <IconPhone className="size-4.5" />
-                  {t("care.pharm.call")}
-                </a>
-                <a
-                  href={`https://wa.me/${WASLY.whatsapp}?text=${encodeURIComponent(
-                    lang === "ar"
-                      ? "أهلًا صيدلية بحبح — أنا مشترك رعاية بحبح وعايز أستفسر عن خطتي"
-                      : "Hello Bahbah Pharmacy — I'm a Bahbah Care member with a question about my plan"
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="bb-whatsapp-gradient flex h-11 items-center justify-center gap-2 rounded-full px-6 text-sm font-black text-white shadow-md transition hover:brightness-105"
-                >
-                  <IconWhatsapp className="size-4.5" />
-                  {t("care.pharm.wa")}
-                </a>
-              </div>
+              )}
             </div>
-          </div>
-        </Reveal>
-      </section>
+          </Reveal>
+        </section>
+      )}
 
-      {/* ================= savings calculator ================= */}
-      <CalcSection onSubscribe={openWizard} />
-
-      {/* ================= FAQ ================= */}
-      <section className="mx-auto max-w-4xl px-4 pt-14 md:px-6 md:pt-18">
-        <Reveal>
-          <div className="text-center">
-            <h2 className="font-heading text-2xl font-black md:text-3xl">{t("care.faq")}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{t("care.faqSub")}</p>
-          </div>
-        </Reveal>
-        <Reveal>
-          <Accordion type="single" collapsible className="mt-7 space-y-3">
-            {FAQS.map((n) => (
-              <AccordionItem
-                key={n}
-                value={`faq-${n}`}
-                className="rounded-2xl border border-border/70 bg-card px-5 shadow-sm last:border-b"
-              >
-                <AccordionTrigger className="py-4 text-start text-sm font-black hover:no-underline md:text-base">
-                  {t(`care.faq${n}q` as "care.faq1q")}
-                </AccordionTrigger>
-                <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
-                  {t(`care.faq${n}a` as "care.faq1a")}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </Reveal>
-      </section>
-
-      {/* ================= contact CTA ================= */}
-      <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-18">
-        <Reveal>
-          <div className="bb-hero-band relative overflow-hidden rounded-3xl px-6 py-10 text-white md:px-12">
-            <div className="bb-glow pointer-events-none absolute -top-20 end-[10%] size-56 rounded-full bg-[#059669]/30 blur-3xl" />
-            <div className="relative flex flex-col items-center justify-between gap-6 md:flex-row">
-              <div className="text-center md:text-start">
-                <h3 className="font-heading text-2xl font-black md:text-3xl">{t("consult.title")}</h3>
-                <p className="mt-2 max-w-md text-sm text-white/75 md:text-base">{t("consult.desc")}</p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Button
-                  size="lg"
-                  className="h-12 rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-7 font-black text-white shadow-lg shadow-[#EA580C]/25 transition hover:brightness-105 active:scale-95"
-                  onClick={() => setConsultOpen(true)}
-                >
-                  <IconPharmacist className="size-5" />
-                  {t("fab.consult")}
-                </Button>
-                <a
-                  href={`tel:${site.phone1Href}`}
-                  className="flex h-12 items-center gap-2 rounded-full border border-white/30 bg-white/10 px-6 text-sm font-black text-white backdrop-blur transition hover:bg-white/20"
-                >
-                  <IconPhone className="size-5" />
-                  <span dir="ltr">{site.phone1}</span>
-                </a>
-              </div>
-            </div>
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ================= subscribe wizard (bottom sheet) ================= */}
-      <Sheet
-        open={wizOpen}
-        onOpenChange={(o) => {
-          setWizOpenLocal(o);
-          if (!o) closeCareWizard();
-        }}
-      >
-        <SheetContent
-          side="bottom"
-          className="mx-auto max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl p-0 nice-scrollbar"
-        >
-          <div className="mx-auto mt-1.5 h-1.5 w-14 rounded-full bg-muted" />
-          <SheetHeader className="px-5 pb-2 pt-3 text-start md:px-6">
-            <SheetTitle className="font-heading text-xl font-black md:text-2xl">
-              {t("care.wiz.title")}
-            </SheetTitle>
-            <SheetDescription className="text-xs md:text-sm">{t("care.wiz.addonsD")}</SheetDescription>
-          </SheetHeader>
-
-          <div className="px-5 pb-6 md:px-6">
-            {/* step dots */}
-            <div className="mb-4 flex items-center gap-1.5">
-              {[1, 2].map((n) => (
-                <span
-                  key={n}
-                  className={`h-1.5 flex-1 rounded-full transition ${wizStep >= n ? "bg-[#059669]" : "bg-muted"}`}
-                />
-              ))}
-            </div>
-
-            {/* chosen plan chip */}
-            {wizPlanObj && (
-              <div
-                className="flex items-center justify-between gap-3 rounded-2xl p-4 text-white shadow-md"
-                style={{ background: `linear-gradient(120deg, #112D51, ${wizPlanObj.color})` }}
-              >
+      {/* ================= TAB 3: خانة العملاء المشتركين ================= */}
+      {activeTab === "directory" && (
+        <section className="mx-auto max-w-5xl px-4 pt-10 md:px-6">
+          <Reveal>
+            <div className="overflow-hidden rounded-3xl border border-border/80 bg-card p-6 shadow-lg md:p-10">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-5">
                 <div className="flex items-center gap-3">
-                  <span className="grid size-11 place-items-center rounded-xl bg-white/20">
-                    <wizPlanObj.icon className="size-5.5" />
+                  <span className="grid size-12 place-items-center rounded-2xl bg-[#EAF6F1] text-[#059669]">
+                    <UserCheck className="size-6" />
                   </span>
                   <div>
-                    <p className="text-[10px] font-bold text-white/70">{t("care.wiz.plan")}</p>
-                    <p className="font-heading text-sm font-black md:text-base">
-                      {lang === "ar" ? wizPlanObj.nameAr : wizPlanObj.nameEn}
+                    <h2 className="font-heading text-xl font-black md:text-2xl">
+                      {lang === "ar" ? "سجل وخانة عملاء الأدوية الشهرية" : "Registered Monthly Patients Directory"}
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      {lang === "ar"
+                        ? "دليل وقائمة المرضى المسجلين في برنامج التوصيل الشهري المنتظم"
+                        : "Directory of patients registered in the monthly delivery program"}
                     </p>
                   </div>
                 </div>
-                <p className="font-heading text-lg font-black md:text-xl">
-                  {wizTotal.toLocaleString("en-US")}
-                  <span className="ms-1 text-[10px] font-bold text-white/70">{t("care.perMonth")}</span>
-                </p>
+
+                <div className="w-full sm:w-64">
+                  <Input
+                    value={dirSearch}
+                    onChange={(e) => setDirSearch(e.target.value)}
+                    placeholder={lang === "ar" ? "بحث بالاسم أو الهاتف أو الكود..." : "Filter by name, phone or ID..."}
+                    className="h-10 rounded-xl text-xs"
+                  />
+                </div>
               </div>
-            )}
 
-            {wizStep === 1 && (
-              <div className="mt-4 space-y-2.5">
-                <p className="text-xs font-black text-foreground/75">{t("care.wiz.addons")}</p>
-                {careAddons.map((a) => {
-                  const on = wizAddons.includes(a.id);
-                  const Icon = a.icon;
-                  return (
-                    <button
-                      key={a.id}
-                      type="button"
-                      onClick={() =>
-                        setWizAddons((cur) =>
-                          on ? cur.filter((x) => x !== a.id) : [...cur, a.id]
-                        )
-                      }
-                      className={`flex w-full items-center gap-3 rounded-2xl border-2 p-3.5 text-start transition active:scale-[0.99] ${
-                        on ? "border-[#059669] bg-[#ECFDF5]/80" : "border-border bg-card hover:border-[#059669]/40"
-                      }`}
-                    >
-                      <span className={`grid size-10 shrink-0 place-items-center rounded-xl ${on ? "bg-[#059669] text-white" : "bg-muted text-muted-foreground"}`}>
-                        <Icon className="size-5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-heading text-sm font-black">
-                          {lang === "ar" ? a.nameAr : a.nameEn}
-                        </span>
-                        <span className="block truncate text-[11px] text-muted-foreground">
-                          {lang === "ar" ? a.descAr : a.descEn}
-                        </span>
-                      </span>
-                      <span className="shrink-0 font-heading text-sm font-black text-[#059669]">
-                        +{a.price}
-                      </span>
-                      <span className={`grid size-5.5 shrink-0 place-items-center rounded-full border-2 ${on ? "border-[#059669] bg-[#059669] text-white" : "border-border"}`}>
-                        {on && <IconCheck className="size-3.5" />}
-                      </span>
-                    </button>
-                  );
-                })}
-
-                <div className="flex items-center justify-between rounded-2xl bg-[#ECFDF5] px-4 py-3">
-                  <span className="text-sm font-black text-[#059669]">{t("care.wiz.total")}</span>
-                  <span className="font-heading text-xl font-black text-[#059669]">
-                    {fmtPrice(wizTotal, t)}
-                    <span className="ms-1 text-[10px]">{t("care.perMonth")}</span>
-                  </span>
-                </div>
-
-                <Button
-                  className="h-12 w-full rounded-full text-base font-black"
-                  onClick={() => setWizStep(2)}
-                >
-                  {t("care.wiz.next")}
-                  <IconChevronR className="size-4 rtl:rotate-180" />
-                </Button>
-              </div>
-            )}
-
-            {wizStep === 2 && (
-              <div className="mt-4 space-y-3">
-                <p className="text-xs font-black text-foreground/75">{t("care.wiz.details")}</p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="space-y-1.5">
-                    <span className="text-xs font-bold text-foreground/75">{t("checkout.name")}</span>
-                    <Input value={wizName} onChange={(e) => setWizName(e.target.value)} className="h-12 rounded-xl" />
-                  </label>
-                  <label className="space-y-1.5">
-                    <span className="text-xs font-bold text-foreground/75">{t("checkout.phone")}</span>
-                    <Input value={wizPhone} onChange={(e) => setWizPhone(e.target.value)} inputMode="tel" className="h-12 rounded-xl" />
-                  </label>
-                </div>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-bold text-foreground/75">{t("dv.pick")}</span>
-                  <Select value={wizZone} onValueChange={setWizZone}>
-                    <SelectTrigger className="h-12 rounded-xl font-bold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zones.map((z) => (
-                        <SelectItem key={z.id} value={z.id}>
-                          {lang === "ar" ? z.nameAr : z.nameEn} · {z.fee} {t("misc.currency")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-bold text-foreground/75">{t("checkout.address")}</span>
-                  <Textarea value={wizAddr} onChange={(e) => setWizAddr(e.target.value)} rows={2} className="rounded-xl" />
-                </label>
-                <label className="block space-y-1.5">
-                  <span className="text-xs font-bold text-foreground/75">{t("care.wiz.day")}</span>
-                  <Select
-                    value={String(wizDay)}
-                    onValueChange={(v) => setWizDay(Number(v))}
-                  >
-                    <SelectTrigger className="h-12 rounded-xl font-bold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-64">
-                      {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-                        <SelectItem key={d} value={String(d)}>
-                          {d}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="block text-[11px] text-muted-foreground">{t("care.dayHint")}</span>
-                </label>
-
-                <div className="rounded-2xl border border-[#059669]/30 bg-[#ECFDF5]/80 p-4">
-                  <p className="flex items-center gap-2 text-xs font-black text-[#059669]">
-                    <IconScooter className="size-4" />
-                    {t("care.wiz.firstShip")}: <span dir="ltr" className="font-heading">{firstShip}</span>
+              {filteredDirectory.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm font-bold text-muted-foreground">
+                    {lang === "ar" ? "لا توجد نتائج مطابقة في سجل العملاء" : "No registered patients match your search"}
                   </p>
-                  <p className="mt-1 text-[11px] font-bold text-muted-foreground">
-                    {t("care.wiz.total")}: {fmtPrice(wizTotal, t)}{t("care.perMonth")}
-                  </p>
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <Button variant="outline" className="h-12 flex-1 rounded-full font-bold" onClick={() => setWizStep(1)}>
-                    {t("care.wiz.back")}
-                  </Button>
                   <Button
-                    className="h-12 flex-[2] rounded-full bg-gradient-to-r from-[#059669] to-[#10B981] text-base font-black text-white shadow-md hover:brightness-105"
-                    onClick={confirmSubscribe}
+                    variant="outline"
+                    className="mt-4 rounded-full text-xs font-bold"
+                    onClick={() => setActiveTab("register")}
                   >
-                    <IconCheck className="size-5" />
-                    {t("care.wiz.confirm")}
+                    <IconPlus className="size-4" />
+                    {lang === "ar" ? "تسجيل عميل جديد الآن" : "Register a patient now"}
                   </Button>
                 </div>
-              </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-    </main>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* smart plan builder — condition chips + addon toggles + live totals  */
-/* ------------------------------------------------------------------ */
-function BuilderSection({ onSubscribe }: { onSubscribe: (planId: string) => void }) {
-  const t = useT();
-  const lang = useBahbah((s) => s.lang);
-  const plans = useCarePlans();
-  const [planId, setPlanId] = useState("box-mass");
-  const [picked, setPicked] = useState<string[]>([]);
-
-  const plan = plans.find((p) => p.id === planId) ?? plans[0];
-  const monthly = careMonthlyLite(plan.id, picked);
-  const monthlySave = Math.max(0, plan.oldPrice - plan.price);
-  const addonSave = picked.reduce((s, id) => s + Math.round((addonById(id)?.price ?? 0) * 0.1), 0);
-  const yearly = (monthlySave + addonSave) * 12;
-  const Icon = plan.icon;
-
-  return (
-    <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-18">
-      <Reveal>
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0B1E38] via-[#112D51] to-[#184C8A] p-6 text-white shadow-xl md:p-9">
-          <div className="bb-glow pointer-events-none absolute -top-24 end-[6%] size-64 rounded-full bg-[#059669]/25 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-20 start-[4%] size-56 rounded-full bg-[#F59E0B]/20 blur-3xl" />
-
-          <div className="relative">
-            <div className="text-center">
-              <Badge className="mb-3 gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold text-white hover:bg-white/10">
-                <IconSparkles className="size-3.5 text-[#F7D774]" />
-                {t("care.builder.title")}
-              </Badge>
-              <h2 className="font-heading text-2xl font-black md:text-3xl">{t("care.builder.title")}</h2>
-              <p className="mx-auto mt-2 max-w-xl text-sm text-white/75 md:text-base">{t("care.builder.sub")}</p>
-            </div>
-
-            <div className="mt-7 grid gap-5 lg:grid-cols-[1fr_320px]">
-              {/* left: config */}
-              <div className="space-y-5">
-                <div>
-                  <p className="mb-2.5 text-xs font-black text-[#F7D774]">{t("care.builder.base")}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {plans.map((p) => {
-                      const on = p.id === planId;
-                      const PI = p.icon;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setPlanId(p.id)}
-                          className={`flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-black transition md:text-sm ${
-                            on
-                              ? "border-transparent text-[#112D51] shadow-lg"
-                              : "border-white/25 bg-white/5 text-white/85 hover:bg-white/15"
-                          }`}
-                          style={on ? { backgroundColor: "#F7D774" } : undefined}
-                        >
-                          <PI className={`size-4.5 ${on ? "text-[#8a6d00]" : "text-white/70"}`} />
-                          {lang === "ar" ? p.nameAr : p.nameEn}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="mb-2.5 text-xs font-black text-[#F7D774]">{t("care.builder.addons")}</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {careAddons.map((a) => {
-                      const on = picked.includes(a.id);
-                      const AI = a.icon;
-                      return (
-                        <button
-                          key={a.id}
-                          type="button"
-                          onClick={() =>
-                            setPicked((cur) => (on ? cur.filter((x) => x !== a.id) : [...cur, a.id]))
-                          }
-                          className={`flex items-center gap-3 rounded-2xl border p-3 text-start transition active:scale-[0.98] ${
-                            on ? "border-[#10B981] bg-white/15" : "border-white/15 bg-white/5 hover:bg-white/10"
-                          }`}
-                        >
-                          <span
-                            className={`grid size-9 shrink-0 place-items-center rounded-xl ${
-                              on ? "bg-[#059669] text-white" : "bg-white/10 text-white/70"
+              ) : (
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                  {filteredDirectory.map((patient) => (
+                    <div
+                      key={patient.id}
+                      className="flex flex-col justify-between rounded-2xl border border-border/80 bg-muted/20 p-4 transition hover:border-[#184C8A]/40 hover:bg-card hover:shadow-md"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="rounded-lg bg-[#EAF2FA] px-2 py-0.5 font-heading text-xs font-black text-[#184C8A]">
+                            {patient.id}
+                          </span>
+                          <Badge
+                            className={`rounded-full text-[10px] font-bold ${
+                              patient.status === "active"
+                                ? "bg-[#ECFDF5] text-[#059669]"
+                                : "bg-[#FEF2F2] text-[#DC2626]"
                             }`}
                           >
-                            {on ? <IconCheck className="size-4.5" /> : <AI className="size-4.5" />}
+                            {patient.status === "active" ? (lang === "ar" ? "نشط" : "Active") : (lang === "ar" ? "متوقف" : "Paused")}
+                          </Badge>
+                        </div>
+
+                        <div>
+                          <h4 className="font-heading text-sm font-black text-foreground">
+                            {patient.nameAr}
+                          </h4>
+                          <p className="text-xs text-muted-foreground" dir="ltr">
+                            {patient.phone}
+                          </p>
+                        </div>
+
+                        {patient.address && (
+                          <p className="line-clamp-2 text-xs text-muted-foreground">
+                            📍 {patient.address}
+                          </p>
+                        )}
+
+                        {patient.notes && (
+                          <div className="rounded-xl bg-[#FFFBEB] p-2 text-[11px] font-semibold text-[#B45E0A]">
+                            📝 {patient.notes}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+                        {patient.prescriptionUrl ? (
+                          <button
+                            onClick={() => setPreviewModalImg(patient.prescriptionUrl || null)}
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-[#184C8A] hover:underline"
+                          >
+                            <FileText className="size-3.5" />
+                            {lang === "ar" ? "معاينة الروشتة" : "View Rx"}
+                          </button>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">
+                            {lang === "ar" ? "لا توجد صورة روشتة" : "No Rx image"}
                           </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-xs font-black md:text-sm">
-                              {lang === "ar" ? a.nameAr : a.nameEn}
-                            </span>
-                            <span className="block truncate text-[10px] text-white/60">
-                              {lang === "ar" ? a.descAr : a.descEn}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-xs font-black text-[#F7D774]">+{a.price}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        )}
+
+                        <div className="flex items-center gap-1.5">
+                          <Button
+                            size="sm"
+                            className="h-8 rounded-full bg-[#F59E0B] px-3 text-[11px] font-black text-white hover:bg-[#EA580C]"
+                            onClick={() => handleInstantRefill(patient)}
+                          >
+                            <IconRefill className="size-3" />
+                            {lang === "ar" ? "تكرار" : "Refill"}
+                          </Button>
+
+                          <a
+                            href={`https://wa.me/201011500166?text=${encodeURIComponent(
+                              `مرحباً، بخصوص العميل الشهري ${patient.nameAr} (كود: ${patient.id}).`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="grid size-8 place-items-center rounded-full bg-[#25D366] text-white hover:brightness-105"
+                          >
+                            <IconWhatsapp className="size-4" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-
-              {/* right: live summary */}
-              <div className="h-fit rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur lg:sticky lg:top-24">
-                <div className="flex items-center gap-3 border-b border-white/15 pb-4">
-                  <span className="grid size-11 place-items-center rounded-2xl bg-[#F7D774] text-[#112D51]">
-                    <Icon className="size-5.5" />
-                  </span>
-                  <p className="font-heading text-sm font-black leading-snug">
-                    {lang === "ar" ? plan.nameAr : plan.nameEn}
-                  </p>
-                </div>
-                <div className="mt-4 space-y-3">
-                  <div>
-                    <p className="text-[11px] font-bold text-white/65">{t("care.builder.monthly")}</p>
-                    <p dir="ltr" className="font-heading text-3xl font-black text-[#10B981]">
-                      {monthly.toLocaleString("en-US")}
-                      <span className="ms-1 text-xs font-bold text-white/70">{t("misc.currency")}</span>
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-bold text-white/65">{t("care.builder.yearly")}</p>
-                    <p dir="ltr" className="font-heading text-2xl font-black text-[#F7D774]">
-                      ≈ {yearly.toLocaleString("en-US")}
-                      <span className="ms-1 text-xs font-bold text-white/70">{t("misc.currency")}</span>
-                    </p>
-                  </div>
-                  <Button
-                    className="h-12 w-full rounded-full bg-gradient-to-r from-[#059669] to-[#10B981] text-base font-black text-white shadow-lg hover:brightness-105 active:scale-[0.98]"
-                    onClick={() => onSubscribe(plan.id)}
-                  >
-                    <IconRefill className="size-5" />
-                    {t("care.builder.cta")}
-                  </Button>
-                  <p className="flex items-center justify-center gap-1.5 text-center text-[10px] font-bold text-white/60">
-                    <IconShieldCheck className="size-3.5" />
-                    {t("care.monthlyNote")}
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
-          </div>
-        </div>
-      </Reveal>
-    </section>
-  );
-}
+          </Reveal>
+        </section>
+      )}
 
-/* ------------------------------------------------------------------ */
-/* savings calculator — 15% plan discount + delivery-fee savings       */
-/* ------------------------------------------------------------------ */
-function CalcSection({ onSubscribe }: { onSubscribe: (planId: string) => void }) {
-  const t = useT();
-  const lang = useBahbah((s) => s.lang);
-  const [meds, setMeds] = useState(350);
-
-  const monthly = Math.round(meds * 0.15 + 15); // 15% plan saving + avg delivery fee
-  const yearly = monthly * 12;
-
-  return (
-    <section className="mx-auto max-w-4xl px-4 pt-14 md:px-6 md:pt-18">
-      <Reveal>
-        <div className="rounded-3xl border border-border/70 bg-card p-6 shadow-md md:p-8">
-          <div className="text-center">
-            <h2 className="font-heading text-2xl font-black md:text-3xl">{t("care.calc.title")}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{t("care.calc.sub")}</p>
-          </div>
-
-          <div className="mt-7">
-            <div className="flex items-end justify-between">
-              <label className="text-xs font-bold text-foreground/75 md:text-sm">{t("care.calc.label")}</label>
-              <p dir="ltr" className="font-heading text-lg font-black text-[#184C8A] md:text-xl">
-                {meds.toLocaleString("en-US")} <span className="text-xs font-bold text-muted-foreground">{t("misc.currency")}</span>
-              </p>
+      {/* Full Prescription Preview Modal */}
+      <Dialog open={!!previewModalImg} onOpenChange={() => setPreviewModalImg(null)}>
+        <DialogContent className="max-w-xl p-4">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-base font-black">
+              {lang === "ar" ? "معاينة صورة الروشتة الشهرية" : "Prescription Image Preview"}
+            </DialogTitle>
+          </DialogHeader>
+          {previewModalImg && (
+            <div className="relative mt-2 h-[70vh] w-full overflow-hidden rounded-xl bg-black/5">
+              <Image
+                src={previewModalImg}
+                alt="Prescription full preview"
+                fill
+                className="object-contain"
+              />
             </div>
-            <Slider
-              value={[meds]}
-              onValueChange={(v) => setMeds(v[0])}
-              min={100}
-              max={1500}
-              step={25}
-              className="mt-3"
-            />
-            <div className="mt-1 flex justify-between text-[10px] font-bold text-muted-foreground" dir="ltr">
-              <span>100</span>
-              <span>1500</span>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-[#ECFDF5] p-4 text-center">
-              <p className="text-[11px] font-black text-[#059669]">{t("care.calc.monthly")}</p>
-              <p dir="ltr" className="mt-1 font-heading text-2xl font-black text-[#059669]">
-                +{monthly.toLocaleString("en-US")}
-                <span className="ms-1 text-xs">{t("misc.currency")}</span>
-              </p>
-            </div>
-            <div className="rounded-2xl bg-gradient-to-br from-[#FFFBEB] to-[#FEF3C7] p-4 text-center">
-              <p className="text-[11px] font-black text-[#D97706]">{t("care.calc.yearly")}</p>
-              <p dir="ltr" className="mt-1 font-heading text-2xl font-black text-[#D97706]">
-                +{yearly.toLocaleString("en-US")}
-                <span className="ms-1 text-xs">{t("misc.currency")}</span>
-              </p>
-            </div>
-          </div>
-          <p className="mt-3 text-center text-[11px] font-bold text-muted-foreground">
-            {t("care.calc.ship")} · {lang === "ar" ? "تقديري وقابل للزيادة مع الإضافات" : "estimate — grows with add-ons"}
-          </p>
-
-          <Button
-            className="bb-ring mx-auto mt-5 h-12 rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-9 text-base font-black text-white shadow-lg shadow-[#EA580C]/25 hover:brightness-105 active:scale-95"
-            onClick={() => onSubscribe("box-mass")}
-          >
-            <IconPlus className="size-5" />
-            {t("care.cta")}
-          </Button>
-        </div>
-      </Reveal>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* helpers — keep light lookups out of the render loop                 */
-/* ------------------------------------------------------------------ */
-
-/* monthly price of a plan + addons (base catalog prices, builder view) */
-function careMonthlyLite(planId: string, addons: string[]) {
-  const plan = carePlans.find((p) => p.id === planId);
-  const base = plan?.price ?? 0;
-  return base + addons.reduce((s, id) => s + (addonById(id)?.price ?? 0), 0);
-}
-
-/* section header with colored icon pill */
-function SectionHeadMini({
-  icon,
-  title,
-  sub,
-  tone,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  sub: string;
-  tone: string;
-}) {
-  return (
-    <div className="flex flex-col items-center gap-3 text-center">
-      <span
-        className="grid size-13 place-items-center rounded-2xl text-white shadow-lg"
-        style={{ backgroundColor: tone }}
-      >
-        {icon}
-      </span>
-      <div>
-        <h2 className="font-heading text-2xl font-black md:text-3xl">{title}</h2>
-        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground md:text-base">{sub}</p>
-      </div>
-    </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </main>
   );
 }

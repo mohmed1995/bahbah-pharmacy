@@ -281,7 +281,19 @@ export default function PharmacistPortal() {
                       {r.id} — {lang === "ar" ? r.customerAr : r.customerEn}
                     </p>
                     <p className="truncate text-[11px] font-bold text-muted-foreground">
-                      {r.fileName} · <span dir="ltr">{r.phone}</span>
+                      {r.fileName && (r.fileName.startsWith("http://") || r.fileName.startsWith("https://")) ? (
+                        <a
+                          href={r.fileName}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-[#1E4E8F] underline hover:text-[#163a6b]"
+                        >
+                          عرض الروشتة ↗
+                        </a>
+                      ) : (
+                        <span>{r.fileName}</span>
+                      )}{" "}
+                      · <span dir="ltr">{r.phone}</span>
                     </p>
                   </div>
                 </div>
