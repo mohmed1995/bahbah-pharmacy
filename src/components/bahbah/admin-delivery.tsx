@@ -319,11 +319,9 @@ function ZonesPanel() {
   const lang = useBahbah((s) => s.lang);
   const zoneDisabled = useBahbah((s) => s.zoneDisabled);
   const zoneEdits = useBahbah((s) => s.zoneEdits);
+  const adminOrders = useBahbah((s) => s.adminOrders) || [];
   const { toggleZone, updateZoneEdit } = useBahbah();
   const zones = useZones();
-
-  /* demo monthly orders per zone */
-  const demoOrders = [312, 268, 205, 142, 96, 88, 74, 61, 55, 40];
 
   return (
     <div className="space-y-4">
@@ -398,7 +396,7 @@ function ZonesPanel() {
                 </div>
                 <div>
                   <p className="font-heading text-sm font-black text-[#C56A0A]">
-                    {demoOrders[i % demoOrders.length]}
+                    {adminOrders.filter((o) => o.delivery?.zoneId === z.id).length}
                   </p>
                   <p className="text-[10px] font-bold text-muted-foreground">{t("adm.zoneOrders")}</p>
                 </div>

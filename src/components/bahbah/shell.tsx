@@ -5,6 +5,12 @@ import {
   Pill,
   ShieldCheck,
   Facebook,
+  Smartphone,
+  Download,
+  Share2,
+  MoreVertical,
+  CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
@@ -92,7 +98,7 @@ export function Header() {
   const user = useBahbah((s) => s.user);
   const view = useBahbah((s) => s.view);
   const siteEdits = useBahbah((s) => s.siteEdits);
-  const { go, openCatalog, setCartOpen, setSearchOpen, toggleLang, openAccount, setConsultOpen } = useBahbah();
+  const { go, openCatalog, setCartOpen, setSearchOpen, toggleLang, openAccount, setConsultOpen, setInstallAppOpen } = useBahbah();
   const count = cartCount(cart);
 
   const navItems: { label: string; onClick: () => void; active: boolean }[] = [
@@ -123,6 +129,14 @@ export function Header() {
             </span>
           </div>
           <div className="flex items-center gap-4 text-[11px] font-bold">
+            <button
+              onClick={() => setInstallAppOpen(true)}
+              className="flex items-center gap-1.5 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 transition hover:bg-emerald-500/30 hover:text-white"
+            >
+              <Smartphone className="size-3 text-emerald-400" />
+              {lang === "ar" ? "📱 تثبيت التطبيق" : "📱 Install App"}
+            </button>
+            <span className="text-white/30">|</span>
             <a href={`tel:${WASLY.hotline}`} dir="ltr" className="flex items-center gap-1.5 text-white/90 transition hover:text-[#F59E0B]">
               <IconPhone className="size-3 text-[#F59E0B]" />
               {WASLY.hotline}
@@ -221,6 +235,15 @@ export function Header() {
             <IconUserRound className="size-5" />
           </button>
 
+          {/* install app (mobile) */}
+          <button
+            onClick={() => setInstallAppOpen(true)}
+            className="grid size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted active:scale-95 md:hidden"
+            aria-label={lang === "ar" ? "تثبيت التطبيق" : "Install App"}
+          >
+            <Smartphone className="size-5 text-emerald-600" />
+          </button>
+
           {/* search (mobile) */}
           <button
             onClick={() => setSearchOpen(true)}
@@ -228,6 +251,16 @@ export function Header() {
             aria-label={t("search.title")}
           >
             <IconSearchGlass className="size-5" />
+          </button>
+
+          {/* install app (desktop) */}
+          <button
+            onClick={() => setInstallAppOpen(true)}
+            className="hidden h-10 items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-50/50 px-3 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 hover:text-emerald-800 active:scale-95 lg:flex"
+            aria-label={lang === "ar" ? "تثبيت التطبيق" : "Install App"}
+          >
+            <Smartphone className="size-4 text-emerald-600" />
+            <span>{lang === "ar" ? "تطبيق الهاتف" : "Mobile App"}</span>
           </button>
 
           {/* ask pharmacist (fixed in header) */}
@@ -1001,7 +1034,7 @@ export function Footer() {
   const lang = useBahbah((s) => s.lang);
   const view = useBahbah((s) => s.view);
   const site = useSiteInfo();
-  const { go, openCatalog } = useBahbah();
+  const { go, openCatalog, setInstallAppOpen } = useBahbah();
   if (view === "admin" || view === "courier" || view === "pharmacist") return null;
 
   return (
@@ -1044,6 +1077,15 @@ export function Footer() {
               <li><button className="hover:text-white transition" onClick={() => go("cart")}>{t("nav.cart")}</button></li>
               <li><button className="hover:text-white transition" onClick={() => go("account")}>{t("nav.account")}</button></li>
               <li><button className="hover:text-white transition" onClick={() => go("offers")}>{t("nav.offers")}</button></li>
+              <li>
+                <button
+                  className="flex items-center gap-1.5 font-bold text-[#F59E0B] hover:text-white transition"
+                  onClick={() => setInstallAppOpen(true)}
+                >
+                  <Smartphone className="size-3.5 text-[#F59E0B]" />
+                  {lang === "ar" ? "📱 تثبيت التطبيق على الهاتف" : "📱 Install App"}
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -1140,6 +1182,231 @@ export function Footer() {
         </p>
       </div>
     </footer>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* PWA App Install Modal & Mobile Guide                               */
+/* ------------------------------------------------------------------ */
+export function InstallAppModal() {
+  const open = useBahbah((s) => s.installAppOpen);
+  const setOpen = useBahbah((s) => s.setInstallAppOpen);
+  const lang = useBahbah((s) => s.lang);
+  const [platform, setPlatform] = useState<"android" | "ios">("android");
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [installed, setInstalled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const ua = navigator.userAgent || "";
+      if (/iPhone|iPad|iPod/i.test(ua)) {
+        setPlatform("ios");
+      } else {
+        setPlatform("android");
+      }
+
+      const handleBeforeInstall = (e: Event) => {
+        e.preventDefault();
+        setDeferredPrompt(e);
+      };
+
+      window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.addEventListener("appinstalled", () => {
+        setInstalled(true);
+        setDeferredPrompt(null);
+      });
+
+      return () => {
+        window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      };
+    }
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
+      if (choice && choice.outcome === "accepted") {
+        setInstalled(true);
+      }
+      setDeferredPrompt(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent aria-describedby={undefined} className="max-w-md rounded-3xl p-6 sm:p-7">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="relative size-12 shrink-0">
+              <Image
+                src="/images/bahbah-badge.png"
+                alt="Bahbah Pharmacy"
+                width={48}
+                height={48}
+                className="size-full rounded-2xl bg-white p-1 shadow-md ring-1 ring-border object-contain"
+              />
+            </div>
+            <div>
+              <DialogTitle className="font-heading text-lg font-black text-slate-900">
+                {lang === "ar" ? "تثبيت تطبيق صيدلية بحبح" : "Install Bahbah Pharmacy App"}
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                {lang === "ar" ? "تطبيق رسمي سريع وخفيف على هاتفك بدون إشغال ذاكرة" : "Fast, lightweight official web app for your phone"}
+              </p>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {installed ? (
+          <div className="rounded-2xl bg-emerald-50 p-5 text-center text-emerald-800">
+            <CheckCircle2 className="mx-auto mb-2 size-10 text-emerald-600" />
+            <p className="font-black text-base">
+              {lang === "ar" ? "تم تثبيت التطبيق بنجاح على هاتفك!" : "App installed successfully!"}
+            </p>
+            <p className="text-xs text-emerald-700 mt-1">
+              {lang === "ar" ? "يمكنك فتحه الآن من شاشتك الرئيسية في أي وقت وبدون متصفح." : "You can open it anytime from your home screen."}
+            </p>
+            <Button
+              onClick={() => setOpen(false)}
+              className="mt-4 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              {lang === "ar" ? "تم، شكراً" : "Done"}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Direct prompt button if supported by browser */}
+            {deferredPrompt && (
+              <Button
+                onClick={handleInstallClick}
+                className="h-12 w-full rounded-2xl bg-emerald-600 font-black text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/25 flex items-center justify-center gap-2"
+              >
+                <Download className="size-5" />
+                {lang === "ar" ? "تثبيت فوري الآن بنقرة واحدة" : "Install App Directly Now"}
+              </Button>
+            )}
+
+            {/* Platform selector */}
+            <div className="grid grid-cols-2 gap-1 rounded-2xl bg-muted p-1 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setPlatform("android")}
+                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 transition ${
+                  platform === "android"
+                    ? "bg-white text-[#184C8A] shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>🤖 أندرويد (Chrome)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPlatform("ios")}
+                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 transition ${
+                  platform === "ios"
+                    ? "bg-white text-[#184C8A] shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span>🍏 آيفون / آيباد (Safari)</span>
+              </button>
+            </div>
+
+            {/* Platform instructions */}
+            {platform === "android" ? (
+              <div className="space-y-3 rounded-2xl border border-border/80 bg-slate-50/70 p-4 text-xs">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#184C8A] text-[11px] font-black text-white">1</span>
+                  <div className="leading-relaxed">
+                    <p className="font-bold text-slate-800">
+                      اضغط على خيارات المتصفح <span className="inline-flex items-center px-1 font-mono text-[13px] font-bold text-slate-700 bg-white border rounded">⋮</span>
+                    </p>
+                    <p className="text-slate-500">الثلاث نقاط في أعلى زاوية المتصفح (Google Chrome).</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#184C8A] text-[11px] font-black text-white">2</span>
+                  <div className="leading-relaxed">
+                    <p className="font-bold text-slate-800">
+                      اختر <span className="font-bold text-emerald-700">"التثبيت على الهاتف"</span> أو <span className="font-bold text-emerald-700">"إضافة إلى الشاشة الرئيسية"</span>
+                    </p>
+                    <p className="text-slate-500">Install app أو Add to Home screen.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#184C8A] text-[11px] font-black text-white">3</span>
+                  <div className="leading-relaxed">
+                    <p className="font-bold text-slate-800">اضغط "تثبيت" (Install)</p>
+                    <p className="text-slate-500">ستظهر أيقونة التطبيق على شاشة هاتفك فوراً ويمكنك فتحه بدون متصفح!</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 rounded-2xl border border-border/80 bg-slate-50/70 p-4 text-xs">
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#184C8A] text-[11px] font-black text-white">1</span>
+                  <div className="leading-relaxed">
+                    <p className="font-bold text-slate-800">
+                      اضغط على زر المشاركة <span className="inline-flex items-center px-1.5 py-0.5 font-bold text-blue-600 bg-white border rounded">⎋</span>
+                    </p>
+                    <p className="text-slate-500">زر المربع الذي يخرج منه سهم للأعلى في شريط متصفح Safari السفلي.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#184C8A] text-[11px] font-black text-white">2</span>
+                  <div className="leading-relaxed">
+                    <p className="font-bold text-slate-800">
+                      اسحب للأسفل واختر <span className="font-bold text-blue-700">"إضافة إلى الشاشة الرئيسية" (Add to Home Screen ⊞)</span>
+                    </p>
+                    <p className="text-slate-500">ستجدها بين الخيارات المتاحة في القائمة.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#184C8A] text-[11px] font-black text-white">3</span>
+                  <div className="leading-relaxed">
+                    <p className="font-bold text-slate-800">اضغط "إضافة" (Add) في الزاوية العلوية</p>
+                    <p className="text-slate-500">سيتم تثبيت التطبيق وتظهر أيقونة صيدلية بحبح على شاشة هاتفك فوراً.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Feature highlights */}
+            <div className="grid grid-cols-2 gap-2 pt-1 text-[11px] text-slate-600">
+              <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-2">
+                <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                <span>حفظ بيانات الطلب تلقائياً</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-2">
+                <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                <span>ربط فوري بالواتساب</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-2">
+                <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                <span>تكرار الأدوية الشهرية بسهولة</span>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-xl bg-slate-100/80 px-2.5 py-2">
+                <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                <span>شحن سريع لجميع المحافظات</span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="w-full rounded-2xl h-11 text-xs font-bold"
+            >
+              {lang === "ar" ? "فهمت ذلك، إغلاق" : "Got it, Close"}
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 

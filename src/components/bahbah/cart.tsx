@@ -992,6 +992,21 @@ export function SuccessView() {
   );
   const driver = driverById(order?.delivery?.driverId);
 
+  const waMessage = order
+    ? `السلام عليكم د. هاشم (صيدلية بحبح)، قمت بعمل طلب جديد من الموقع برقم (${order.id}):
+الاسم: ${order.customerAr || ""}
+الهاتف: ${order.phone || ""}
+العنوان: ${order.address || ""}
+إجمالي الحساب: ${order.total} ج.م
+طريقة الدفع: ${order.payment === "cod" ? "دفع عند الاستلام" : order.payment}
+الأصناف المطلوبة:
+${(order.items || []).map((it) => `- ${it.nameAr || it.productId} (عدد ${it.qty})`).join("\n")}
+
+برجاء تأكيد الطلب والتجهيز في أسرع وقت.`
+    : `السلام عليكم صيدلية بحبح، قمت بعمل طلب جديد من الموقع برقم (${lastOrderId}).`;
+
+  const waUrl = `https://wa.me/201011500166?text=${encodeURIComponent(waMessage)}`;
+
   return (
     <main className="mx-auto flex max-w-xl flex-col items-center px-4 py-16 text-center md:py-20">
       <div className="grid size-24 place-items-center rounded-full bg-[#EAF6F1]">
@@ -999,17 +1014,42 @@ export function SuccessView() {
       </div>
       <h1 className="mt-6 font-heading text-3xl font-black">{t("checkout.success")}</h1>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
-        {t("checkout.successD")}
+        {lang === "ar"
+          ? "تم تسجيل طلبك بنجاح في سيستم صيدلية بحبح وحُفظ في قاعدة البيانات."
+          : t("checkout.successD")}
       </p>
+
       {lastOrderId && (
-        <Badge className="mt-5 rounded-full bg-[#EAF1F9] px-5 py-2 font-heading text-base font-black text-[#1E4E8F] hover:bg-[#EAF1F9]">
+        <Badge className="mt-4 rounded-full bg-[#EAF1F9] px-6 py-2.5 font-heading text-lg font-black text-[#1E4E8F] hover:bg-[#EAF1F9]">
           {t("checkout.orderNo")}: {lastOrderId}
         </Badge>
       )}
 
+      {/* Primary WhatsApp Action Button */}
+      <div className="mt-6 w-full max-w-md">
+        <a
+          href={waUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex h-14 w-full items-center justify-center gap-3 rounded-full bg-[#25D366] text-sm md:text-base font-black text-white shadow-xl shadow-[#25D366]/30 hover:brightness-105 active:scale-95 transition-all"
+        >
+          <IconWhatsapp className="size-6 shrink-0" />
+          <span>
+            {lang === "ar"
+              ? "📲 إرسال الطلب لواتساب الصيدلية فوراً لتأكيد الشحن"
+              : "Send Order to Pharmacy WhatsApp Now"}
+          </span>
+        </a>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {lang === "ar"
+            ? "اضغط لإرسال بيانات طلبك تلقائياً لدكتور هاشم بحبح لبدء التجهيز السريع"
+            : "Click to forward order details directly to pharmacist on WhatsApp"}
+        </p>
+      </div>
+
       {/* delivery assignment card */}
       {order?.delivery && (
-        <div className="mt-5 flex w-full max-w-sm items-center gap-3 rounded-2xl border border-[#F09428]/30 bg-[#FFF4E5]/70 p-4 text-start">
+        <div className="mt-6 flex w-full max-w-md items-center gap-3 rounded-2xl border border-[#F09428]/30 bg-[#FFF4E5]/70 p-4 text-start">
           <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#F09428]/15 text-[#C56A0A]">
             {order.delivery.type === "pickup" ? <IconStorefront className="size-5.5" /> : <IconScooter className="size-5.5" />}
           </span>
@@ -1022,7 +1062,7 @@ export function SuccessView() {
                 ? lang === "ar" ? BRANCH.nameAr : BRANCH.nameEn
                 : driver
                   ? (lang === "ar" ? driver.nameAr : driver.nameEn)
-                  : "—"}
+                  : "كابتن أسطول بحبح"}
             </p>
             <p className="mt-0.5 text-[11px] font-bold text-[#B45E0A]">
               {order.delivery.type === "pickup"
@@ -1033,10 +1073,10 @@ export function SuccessView() {
         </div>
       )}
 
-      <div className="mt-8 flex w-full max-w-sm flex-col gap-2.5">
+      <div className="mt-6 flex w-full max-w-md flex-col gap-2.5">
         <Button
           size="lg"
-          className="h-12 w-full rounded-full text-base font-bold"
+          className="h-12 w-full rounded-full text-base font-bold bg-[#184C8A] text-white hover:bg-[#112D51]"
           onClick={() => (lastOrderId ? openTrack(lastOrderId) : go("account"))}
         >
           <Truck className="size-5" />

@@ -13,6 +13,7 @@ import {
   RxDialog,
   ConsultDialog,
   ICDialog,
+  InstallAppModal,
 } from "./shell";
 import HomeView from "./home";
 import CatalogView from "./catalog";
@@ -212,6 +213,7 @@ export default function BahbahApp() {
       <RxDialog />
       <ConsultDialog />
       <ICDialog />
+      <InstallAppModal />
 
       {!staffView && <FloatingCartBar />}
 

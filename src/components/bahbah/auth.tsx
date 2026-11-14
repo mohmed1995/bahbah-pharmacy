@@ -40,7 +40,6 @@ import { toast } from "sonner";
 /* Login / Signup — role-aware (patient / courier / pharmacist / admin) */
 /* ------------------------------------------------------------------ */
 const ROLE_CHIPS: { role: Role; labelKey: "role.patient" | "role.courier" | "role.pharmacist" | "role.admin"; quickKey: "auth.quickPatient" | "auth.quickCourier" | "auth.quickPharmacist" | "auth.quickAdmin"; email: string; color: string; icon: React.ReactNode }[] = [
-  { role: "patient", labelKey: "role.patient", quickKey: "auth.quickPatient", email: "", color: "#1E4E8F", icon: <UserCircle className="size-4" /> },
   { role: "courier", labelKey: "role.courier", quickKey: "auth.quickCourier", email: "courier@bahbah.eg", color: "#F09428", icon: <Bike className="size-4" /> },
   { role: "pharmacist", labelKey: "role.pharmacist", quickKey: "auth.quickPharmacist", email: "hashem@bahbah.eg", color: "#2E9E6B", icon: <Pill className="size-4" /> },
   { role: "admin", labelKey: "role.admin", quickKey: "auth.quickAdmin", email: "admin@bahbah.eg", color: "#112D51", icon: <ShieldCheck className="size-4" /> },
@@ -48,15 +47,19 @@ const ROLE_CHIPS: { role: Role; labelKey: "role.patient" | "role.courier" | "rol
 
 export function LoginView() {
   const t = useT();
+  const lang = useBahbah((s) => s.lang);
   const { login, go } = useBahbah();
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [role, setRole] = useState<Role>("patient");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
 
-  const valid = email.includes("@") && password.length >= 6 && (mode === "login" || name.trim().length >= 2);
+  /* Main Patient Login by Phone/WhatsApp */
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [submittingCustomer, setSubmittingCustomer] = useState(false);
+
+  /* Staff Mode */
+  const [isStaffMode, setIsStaffMode] = useState(false);
+  const [staffRole, setStaffRole] = useState<Role>("pharmacist");
+  const [staffEmail, setStaffEmail] = useState("hashem@bahbah.eg");
+  const [staffPassword, setStaffPassword] = useState("Hashem@Bahbah2026");
 
   const finish = (user: { name: string; email: string; phone?: string; role: Role; driverId?: string }, displayName: string) => {
     login(user);
@@ -64,137 +67,232 @@ export function LoginView() {
     go(roleHome(user.role));
   };
 
-  const submit = async () => {
-    if (!valid) {
-      toast.error(t("auth.invalid"));
+  /* Patient One-Tap Login (No Email, No Password) */
+  const handleCustomerLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = customerPhone.trim().replace(/\s+/g, "");
+    if (cleanPhone.length < 8) {
+      toast.error(lang === "ar" ? "برجاء كتابة رقم موبايل أو واتساب صحيح" : "Please enter a valid phone number");
       return;
     }
 
-    /* Signup: Register customer in Supabase Auth */
-    if (mode === "signup") {
-      try {
-        await signUpWithSupabase(email, password, {
-          name: name.trim() || email.split("@")[0],
-          phone: phone.trim() || undefined,
-          role: "patient",
-        });
-      } catch (err) {
-        console.warn("Supabase signup error:", err);
-      }
-      finish(
-        { name: name.trim() || email.split("@")[0], email: email.trim(), phone: phone.trim() || undefined, role: "patient" },
-        name.trim() || email.split("@")[0]
-      );
-      return;
-    }
+    setSubmittingCustomer(true);
+    const dispName = customerName.trim() || (lang === "ar" ? "عميل بحبح" : "Bahbah Customer");
+    const syntheticEmail = `${cleanPhone}@bahbah.eg`;
 
-    /* Login: Authenticate with Supabase Auth */
     try {
-      const { data, error } = await signInWithSupabase(email, password);
+      // Background Supabase signup/signin without email requirement
+      await signUpWithSupabase(syntheticEmail, "Bahbah@Patient2026", {
+        name: dispName,
+        phone: cleanPhone,
+        role: "patient",
+      }).catch(() => {});
+    } catch {
+      // Continue locally seamlessly
+    } finally {
+      setSubmittingCustomer(false);
+      finish(
+        {
+          name: dispName,
+          phone: cleanPhone,
+          email: syntheticEmail,
+          role: "patient",
+        },
+        dispName
+      );
+    }
+  };
+
+  /* Staff Login */
+  const handleStaffLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!staffEmail.includes("@") || staffPassword.length < 3) {
+      toast.error(lang === "ar" ? "بيانات الدخول غير مكتملة" : "Incomplete login details");
+      return;
+    }
+
+    try {
+      const { data, error } = await signInWithSupabase(staffEmail, staffPassword);
       if (!error && data?.user) {
         const meta = data.user.user_metadata || {};
-        const userRole = (meta.role as Role) || role;
-        const userName = meta.name || email.split("@")[0];
-        const driverId = meta.driverId;
+        const role = (meta.role as Role) || staffRole;
+        const name = meta.name || staffEmail.split("@")[0];
         finish(
-          { name: userName, email: data.user.email || email.trim(), phone: meta.phone || phone.trim() || undefined, role: userRole, driverId },
-          userName.split(" — ")[0]
+          { name, email: staffEmail, role, driverId: meta.driverId },
+          name
         );
         return;
       }
-    } catch (err) {
-      console.warn("Supabase auth error:", err);
+    } catch {
+      // Fallback
     }
 
-    /* Fallback for staff accounts or offline mode */
-    if (role !== "patient") {
-      const staff = matchStaff(email, password);
-      if (!staff || staff.role !== role) {
-        toast.error(t("auth.staffErr"));
-        return;
-      }
-      finish({ ...staff, phone: phone.trim() || undefined }, staff.name.split(" — ")[0]);
+    const staff = matchStaff(staffEmail, staffPassword);
+    if (staff) {
+      finish(staff, staff.name.split(" — ")[0]);
       return;
     }
-    finish(
-      { name: name.trim() || email.split("@")[0], email: email.trim(), phone: phone.trim() || undefined, role: "patient" },
-      name.trim() || email.split("@")[0]
-    );
+    toast.error(lang === "ar" ? "بيانات الدخول غير صحيحة" : "Invalid staff credentials");
   };
-
-  const activeChip = ROLE_CHIPS.find((c) => c.role === role)!;
 
   return (
     <main className="flex items-center justify-center px-4 py-12 md:py-16">
       <div className="w-full max-w-md">
         <div className="hero-pattern rounded-3xl px-6 py-8 text-center text-white">
-          <h1 className="font-heading text-2xl font-black">{t("auth.welcome")}</h1>
-          <p className="mt-1 text-sm text-white/70">{t("brand.tagline")}</p>
+          <h1 className="font-heading text-2xl font-black">
+            {isStaffMode
+              ? (lang === "ar" ? "بوابة طاقم صيدلية بحبح" : "Staff Portal")
+              : (lang === "ar" ? "تسجيل ودخول برقم الموبايل / واتساب" : "Quick Login with Phone")}
+          </h1>
+          <p className="mt-1 text-sm text-white/80">
+            {isStaffMode
+              ? (lang === "ar" ? "دخول الصيادلة والإدارة ومندوبي التوصيل" : "Admin, Pharmacists & Couriers")
+              : (lang === "ar" ? "ادخل رقمك وتابع طلباتك بكل سهولة وبدون تعقيد" : "Fast & simple access for patients")}
+          </p>
         </div>
 
-        <div className="-mt-4 rounded-3xl border border-border/70 bg-card p-6 shadow-lg">
-          {/* role picker */}
-          <p className="text-[11px] font-black text-muted-foreground">{t("auth.rolePick")}</p>
-          <div className="mt-2 grid grid-cols-4 gap-2">
-            {ROLE_CHIPS.map((c) => (
-              <button
-                key={c.role}
-                onClick={() => {
-                  setRole(c.role);
-                  if (c.role !== "patient" && mode === "login") setEmail(c.email);
-                }}
-                className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-[11px] font-black transition ${
-                  role === c.role
-                    ? "border-transparent text-white shadow-md"
-                    : "border-border/70 bg-muted/40 text-muted-foreground hover:border-[#1E4E8F]/30"
-                }`}
-                style={role === c.role ? { backgroundColor: c.color } : undefined}
+        <div className="-mt-4 rounded-3xl border border-border/70 bg-card p-6 shadow-xl">
+          {!isStaffMode ? (
+            /* ================= Patient Phone/WhatsApp Login ================= */
+            <form onSubmit={handleCustomerLogin} className="space-y-4">
+              <div className="rounded-2xl border border-[#2E9E6B]/30 bg-[#EAF6F1] p-3.5 text-[#166534]">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid size-8 place-items-center rounded-full bg-[#2E9E6B] text-white">
+                    <Phone className="size-4" />
+                  </span>
+                  <div className="text-xs">
+                    <p className="font-bold">
+                      {lang === "ar" ? "دخول فوري مباشر بدون إيميل ولا كلمة سر" : "No email or password needed!"}
+                    </p>
+                    <p className="text-[11px] opacity-80">
+                      {lang === "ar" ? "فقط اكتب رقمك واسمك وسيتم تسجيل دخولك ومتابعة طلباتك فوراً" : "Just enter your mobile & name"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phone / WhatsApp */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-foreground/85">
+                  {lang === "ar" ? "رقم الموبايل / واتساب *" : "Phone / WhatsApp Number *"}
+                </span>
+                <IconInput
+                  icon={<Phone className="size-4" />}
+                  placeholder="010XXXXXXXX"
+                  value={customerPhone}
+                  onChange={setCustomerPhone}
+                  dir="ltr"
+                  type="tel"
+                />
+              </div>
+
+              {/* Patient Name */}
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-foreground/85">
+                  {lang === "ar" ? "اسمك الكريم (اختياري)" : "Your Name (Optional)"}
+                </span>
+                <IconInput
+                  icon={<UserIcon className="size-4" />}
+                  placeholder={lang === "ar" ? "مثال: محمد أحمد" : "e.g. Mohamed"}
+                  value={customerName}
+                  onChange={setCustomerName}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={submittingCustomer}
+                size="lg"
+                className="h-13 w-full rounded-full bg-[#184C8A] text-base font-black text-white shadow-lg shadow-[#184C8A]/25 hover:bg-[#112D51] active:scale-95 transition-all"
               >
-                {c.icon}
-                {t(c.labelKey)}
-              </button>
-            ))}
-          </div>
-
-          <Tabs value={mode} onValueChange={(v) => setMode(v as "login" | "signup")} className="mt-4">
-            <TabsList className="grid h-12 w-full grid-cols-2 rounded-full">
-              <TabsTrigger value="login" className="rounded-full font-bold">
-                {t("auth.login")}
-              </TabsTrigger>
-              <TabsTrigger value="signup" className="rounded-full font-bold">
-                {t("auth.signup")}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value={mode} className="mt-4 space-y-3.5">
-              {mode === "signup" && (
-                <>
-                  <IconInput icon={<UserIcon className="size-4" />} placeholder={t("auth.name")} value={name} onChange={setName} />
-                  <IconInput icon={<Phone className="size-4" />} placeholder={t("auth.phone")} value={phone} onChange={setPhone} dir="ltr" />
-                </>
-              )}
-              <IconInput icon={<Mail className="size-4" />} placeholder={t("auth.email")} value={email} onChange={setEmail} dir="ltr" />
-              <IconInput icon={<Lock className="size-4" />} placeholder={t("auth.password")} value={password} onChange={setPassword} type="password" dir="ltr" />
-
-              {role !== "patient" && mode === "login" && (
-                <p className="rounded-xl bg-[#EAF1F9]/70 px-3.5 py-2.5 text-[11px] font-bold leading-relaxed text-[#1E4E8F]" dir="ltr">
-                  حساب معتمد للطاقم: {activeChip.email}
-                </p>
-              )}
-
-              {/* زر الدخول / إنشاء الحساب الحقيقي */}
-              <Button size="lg" className="h-12 w-full rounded-full text-base font-bold bg-[#1E4E8F] text-white hover:bg-[#163b6d]" onClick={submit}>
-                {mode === "login" ? t("auth.loginBtn") : t("auth.signupBtn")}
+                <CheckCircle2 className="size-5" />
+                {lang === "ar" ? "دخول فوري ومتابعة طلباتي" : "Instant Login"}
               </Button>
 
-              <button
-                className="w-full text-center text-sm font-bold text-[#1E4E8F] hover:underline"
-                onClick={() => setMode(mode === "login" ? "signup" : "login")}
+              {/* Switch to Staff Portal */}
+              <div className="pt-3 text-center border-t border-border/60">
+                <button
+                  type="button"
+                  className="text-xs font-bold text-muted-foreground hover:text-[#184C8A] transition"
+                  onClick={() => setIsStaffMode(true)}
+                >
+                  {lang === "ar" ? "🔐 دخول الإدارة وطاقم العمل (Admin / Pharmacist)" : "Staff & Admin Portal"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            /* ================= Staff Login Portal ================= */
+            <form onSubmit={handleStaffLogin} className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <span className="text-xs font-bold text-muted-foreground">
+                  {lang === "ar" ? "اختر الحساب المصرح:" : "Select Staff Account:"}
+                </span>
+                <button
+                  type="button"
+                  className="text-xs font-bold text-[#184C8A] hover:underline"
+                  onClick={() => setIsStaffMode(false)}
+                >
+                  ← {lang === "ar" ? "رجوع لدخول العملاء" : "Back to Patient Login"}
+                </button>
+              </div>
+
+              {/* Role Chips */}
+              <div className="grid grid-cols-3 gap-2">
+                {ROLE_CHIPS.map((c) => (
+                  <button
+                    type="button"
+                    key={c.role}
+                    onClick={() => {
+                      setStaffRole(c.role);
+                      setStaffEmail(c.email);
+                      setStaffPassword("Hashem@Bahbah2026");
+                    }}
+                    className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-[11px] font-black transition ${
+                      staffRole === c.role
+                        ? "border-transparent text-white shadow-md"
+                        : "border-border/70 bg-muted/40 text-muted-foreground hover:border-[#1E4E8F]/30"
+                    }`}
+                    style={staffRole === c.role ? { backgroundColor: c.color } : undefined}
+                  >
+                    {c.icon}
+                    {t(c.labelKey)}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-foreground/80">البريد الإلكتروني للطاقم</span>
+                <IconInput
+                  icon={<Mail className="size-4" />}
+                  placeholder="admin@bahbah.eg"
+                  value={staffEmail}
+                  onChange={setStaffEmail}
+                  dir="ltr"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <span className="text-xs font-bold text-foreground/80">كلمة المرور</span>
+                <IconInput
+                  icon={<Lock className="size-4" />}
+                  placeholder="••••••••"
+                  value={staffPassword}
+                  onChange={setStaffPassword}
+                  type="password"
+                  dir="ltr"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                size="lg"
+                className="h-12 w-full rounded-full bg-[#112D51] text-base font-bold text-white hover:bg-[#0B1E38]"
               >
-                {mode === "login" ? t("auth.toSignup") : t("auth.toLogin")}
-              </button>
-            </TabsContent>
-          </Tabs>
+                {lang === "ar" ? "تسجيل دخول الطاقم" : "Staff Login"}
+              </Button>
+            </form>
+          )}
         </div>
       </div>
     </main>

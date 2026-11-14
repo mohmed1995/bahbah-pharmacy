@@ -233,6 +233,7 @@ interface BahbahState {
   rxOpen: boolean;
   consultOpen: boolean;
   icOpen: boolean; // drug-interaction checker dialog
+  installAppOpen: boolean;
 
   /* ---- accessibility ---- */
   bigText: boolean;
@@ -311,6 +312,7 @@ interface BahbahState {
   setRxOpen: (v: boolean) => void;
   setConsultOpen: (v: boolean) => void;
   setIcOpen: (v: boolean) => void;
+  setInstallAppOpen: (v: boolean) => void;
 
   /* ---- accessibility & coupons & care ---- */
   toggleBigText: () => void;
@@ -453,6 +455,7 @@ export const useBahbah = create<BahbahState>()(
       rxOpen: false,
       consultOpen: false,
       icOpen: false,
+      installAppOpen: false,
       bigText: false,
       elderMode: false,
       appliedCoupon: null,
@@ -650,9 +653,9 @@ export const useBahbah = create<BahbahState>()(
       },
 
       submitRx: ({ fileName, phone, noteAr, noteEn }) => {
-        const n = 2042 + get().rxQueue.filter((r) => r.id.startsWith("RX-")).length - demoRxQueue.length;
+        const rxId = `RX-${1001 + get().rxQueue.length}`;
         const rx: RxRequest = {
-          id: `RX-${Math.max(n, 2042)}`,
+          id: rxId,
           customerAr: get().user?.name || "عميل بحبح",
           customerEn: get().user?.name || "Bahbah Customer",
           phone,
@@ -689,6 +692,7 @@ export const useBahbah = create<BahbahState>()(
       setRxOpen: (v) => set({ rxOpen: v }),
       setConsultOpen: (v) => set({ consultOpen: v }),
       setIcOpen: (v) => set({ icOpen: v }),
+      setInstallAppOpen: (v) => set({ installAppOpen: v }),
 
       toggleBigText: () => {
         const next = !get().bigText;

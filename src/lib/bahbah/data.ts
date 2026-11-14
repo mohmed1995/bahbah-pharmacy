@@ -1527,52 +1527,7 @@ export interface RxRequest {
   noteEn: string;
 }
 
-export const demoRxQueue: RxRequest[] = [
-  {
-    id: "RX-2041",
-    customerAr: "منى عبد الله",
-    customerEn: "Mona Abdullah",
-    phone: "0111 456 7890",
-    fileName: "rx-mona-oct.jpg",
-    date: "2026-11-12",
-    status: "new",
-    noteAr: "روشتة ضغط — محتاجة كارديولوك 5 مجم",
-    noteEn: "BP prescription — needs Cardiolock 5mg",
-  },
-  {
-    id: "RX-2040",
-    customerAr: "أحمد محمد",
-    customerEn: "Ahmed Mohamed",
-    phone: "0100 123 4567",
-    fileName: "ahmed-antibiotic.pdf",
-    date: "2026-11-11",
-    status: "new",
-    noteAr: "مضاد حيوي لمدة ٧ أيام",
-    noteEn: "7-day antibiotic course",
-  },
-  {
-    id: "RX-2039",
-    customerAr: "سارة فؤاد",
-    customerEn: "Sara Fouad",
-    phone: "0122 987 6543",
-    fileName: "sara-vitamins.jpg",
-    date: "2026-11-10",
-    status: "approved",
-    noteAr: "فيتامين د + حديد للحوامل",
-    noteEn: "Vitamin D + iron for pregnancy",
-  },
-  {
-    id: "RX-2038",
-    customerAr: "كريم عادل",
-    customerEn: "Karim Adel",
-    phone: "0114 222 3344",
-    fileName: "karim-skin.jpg",
-    date: "2026-11-09",
-    status: "rejected",
-    noteAr: "الصورة غير واضحة — يرجى الرفع مرة أخرى",
-    noteEn: "Photo unreadable — please re-upload",
-  },
-];
+export const demoRxQueue: RxRequest[] = [];
 
 export type DriverStatus = "available" | "busy" | "offline";
 
@@ -2302,9 +2257,9 @@ export interface Coupon {
 }
 
 export const demoCoupons: Coupon[] = [
-  { code: "BAHBAH10", percent: 10, minTotal: 200, uses: 132, active: true },
-  { code: "BAHBAH20", percent: 20, minTotal: 500, uses: 47, active: true },
-  { code: "DEIROUT15", percent: 15, minTotal: 300, uses: 88, active: true },
+  { code: "BAHBAH10", percent: 10, minTotal: 200, uses: 0, active: true },
+  { code: "BAHBAH20", percent: 20, minTotal: 500, uses: 0, active: true },
+  { code: "DEIROUT15", percent: 15, minTotal: 300, uses: 0, active: true },
 ];
 
 /* ------------------------------------------------------------------ */

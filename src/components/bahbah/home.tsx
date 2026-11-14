@@ -651,6 +651,105 @@ function TrustStrip() {
 }
 
 /* ------------------------------------------------------------------ */
+/* How to order in 3 simple steps — شرح طريقة الطلب بكل بساطة         */
+/* ------------------------------------------------------------------ */
+function HowToOrderSection() {
+  const lang = useBahbah((s) => s.lang);
+  const { go, setRxOpen, setInstallAppOpen } = useBahbah();
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 pt-12 md:px-6">
+      <div className="overflow-hidden rounded-3xl border border-border/80 bg-gradient-to-br from-[#F8FAFC] via-[#F1F5F9] to-card p-6 shadow-sm md:p-8">
+        <div className="text-center">
+          <Badge className="mb-2.5 rounded-full bg-[#EAF1F9] px-3.5 py-1 text-xs font-bold text-[#184C8A]">
+            {lang === "ar" ? "سهلناها عليك" : "Simple 3-Step Process"}
+          </Badge>
+          <h2 className="font-heading text-2xl font-black text-[#112D51] md:text-3xl">
+            {lang === "ar" ? "كيف تطلب من صيدلية بحبح في 3 خطوات بسيطة؟" : "How to Order from Bahbah in 3 Simple Steps"}
+          </h2>
+          <p className="mt-1.5 text-xs text-muted-foreground md:text-sm">
+            {lang === "ar" ? "بدون تسجيل إيميل ولا تعقيد، علاجك يوصلك لباب بيتك بأبسط وأسرع طريقة" : "No complicated forms or emails required"}
+          </p>
+        </div>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          {/* Step 1 */}
+          <div className="flex flex-col items-center rounded-2xl border border-border/70 bg-card p-5 text-center shadow-xs transition hover:shadow-md">
+            <span className="grid size-12 place-items-center rounded-2xl bg-[#EAF2FA] text-[#184C8A] font-heading text-lg font-black shadow-xs">
+              1
+            </span>
+            <h3 className="mt-3.5 font-heading text-base font-black text-foreground">
+              {lang === "ar" ? "اختار منتجك أو صور الروشتة" : "Pick Medicine or Upload Rx"}
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              {lang === "ar"
+                ? "تصفح أدوية ومستلزمات الصيدلية وأضفها للسلة، أو اضغط زر (ابعت روشتتك) وصور الروشتة بالكاميرا فوراً."
+                : "Browse and add products to cart, or upload a prescription photo directly."}
+            </p>
+          </div>
+
+          {/* Step 2 */}
+          <div className="flex flex-col items-center rounded-2xl border border-border/70 bg-card p-5 text-center shadow-xs transition hover:shadow-md">
+            <span className="grid size-12 place-items-center rounded-2xl bg-[#FFF4E5] text-[#C56A0A] font-heading text-lg font-black shadow-xs">
+              2
+            </span>
+            <h3 className="mt-3.5 font-heading text-base font-black text-foreground">
+              {lang === "ar" ? "اكتب اسمك ورقم الواتساب والعنوان" : "Enter Name, WhatsApp & Address"}
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              {lang === "ar"
+                ? "فقط اسمك ورقم موبايلك وعنوانك في خطوة واحدة، بدون أي حاجة لكلمة سر أو بريد إلكتروني."
+                : "Just your name, phone and address — zero passwords or email hassles."}
+            </p>
+          </div>
+
+          {/* Step 3 */}
+          <div className="flex flex-col items-center rounded-2xl border border-border/70 bg-card p-5 text-center shadow-xs transition hover:shadow-md">
+            <span className="grid size-12 place-items-center rounded-2xl bg-[#ECFDF5] text-[#059669] font-heading text-lg font-black shadow-xs">
+              3
+            </span>
+            <h3 className="mt-3.5 font-heading text-base font-black text-foreground">
+              {lang === "ar" ? "استلم وادفع عند الاستلام كاش أو إنستاباي" : "Receive & Pay on Delivery"}
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+              {lang === "ar"
+                ? "مندوب واصلي يوصلك لحد باب البيت مع إمكانية الدفع كاش أو فودافون كاش أو إنستاباي، مع متابعة واتساب مستمرة."
+                : "Fast express delivery right to your door with live tracking and WhatsApp updates."}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <Button
+            size="lg"
+            className="h-11 rounded-full bg-[#184C8A] px-7 text-xs font-black text-white hover:bg-[#112D51]"
+            onClick={() => go("catalog")}
+          >
+            {lang === "ar" ? "ابدأ الطلب الآن" : "Start Ordering"}
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-11 rounded-full border-[#10B981]/40 px-6 text-xs font-bold text-[#059669] hover:bg-[#ECFDF5]"
+            onClick={() => setRxOpen(true)}
+          >
+            {lang === "ar" ? "📸 تصوير الروشتة بالكاميرا" : "Upload Prescription"}
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-11 rounded-full border-[#184C8A]/30 px-6 text-xs font-bold text-[#184C8A] hover:bg-[#EAF1F9]"
+            onClick={() => setInstallAppOpen(true)}
+          >
+            {lang === "ar" ? "📱 تثبيت التطبيق على الهاتف" : "Install Mobile App"}
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Categories — real product photos, big-company tiles                 */
 /* ------------------------------------------------------------------ */
 function Categories() {
@@ -1393,6 +1492,7 @@ export default function HomeView() {
       <FreeShipStrip />
       <AdCarousel />
       <TrustStrip />
+      <HowToOrderSection />
       <Categories />
       <OffersSection />
       <CareSection />
