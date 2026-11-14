@@ -76,8 +76,8 @@ export default function CareMembershipCard({ actions }: { actions?: React.ReactN
         {/* header row */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="grid size-12 place-items-center overflow-hidden rounded-2xl bg-white/15 shadow-inner ring-1 ring-white/20">
-              <Image src="/images/bahbah-badge.png" alt="Bahbah" width={44} height={44} className="size-10 object-contain" />
+            <span className="grid size-12 place-items-center overflow-hidden rounded-2xl bg-white p-1 shadow-md ring-2 ring-white/60">
+              <Image src="/images/bahbah-badge.png" alt="Bahbah" width={40} height={40} className="size-9 object-contain" />
             </span>
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#F7D774]">

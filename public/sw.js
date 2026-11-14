@@ -1,63 +1,86 @@
-const V = 'bahbah-v42';
-const SHELL = [
-  './',
-  './manifest.webmanifest',
-  './icon.svg',
-  './icon-192.png',
-  './icon-512.png',
-  './pharmacy-hero-brand-bg.webp',
-  './bahbah-logo.webp',
-  './products.json'
+/*
+ * Bahbah Pharmacy — service worker (Cloudflare Pages)
+ * Page shell: network-first with offline fallback.
+ * Static assets (images, JS, CSS): cache-first, refreshed in background.
+ */
+const VERSION = "bahbah-v2";
+const CORE_CACHE = `${VERSION}-core`;
+const ASSET_CACHE = `${VERSION}-assets`;
+
+const CORE_ASSETS = [
+  "/",
+  "/offline.html",
+  "/manifest.webmanifest",
+  "/images/bahbah-badge.png",
 ];
 
-self.addEventListener('install', e => {
-  self.skipWaiting();
-  e.waitUntil(
-    caches.open(V).then(c => Promise.allSettled(SHELL.map(u => c.add(u))))
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches
+      .open(CORE_CACHE)
+      .then((cache) => cache.addAll(CORE_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('activate', e => {
-  e.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== V).map(k => caches.delete(k))
-    )).then(() => self.clients.claim())
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => !k.startsWith(VERSION))
+            .map((k) => caches.delete(k))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', e => {
-  const r = e.request;
-  const u = new URL(r.url);
-  if (r.method !== 'GET') return;
-  if (u.origin !== location.origin && !/fonts\.(googleapis|gstatic)\.com/.test(u.host)) return;
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
 
-  // Always Network First for HTML and dynamic API to ensure latest fixes load instantly
-  if (r.mode === 'navigate' || u.pathname.endsWith('.html') || u.pathname === '/' || u.pathname.endsWith('/store-config.json')) {
-    e.respondWith(
-      fetch(r)
-        .then(res => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(V).then(c => c.put(r, clone));
-          }
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
+  /* page navigations → network first, cache fallback, offline page last */
+  if (req.mode === "navigate") {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          const copy = res.clone();
+          caches.open(CORE_CACHE).then((c) => c.put(req, copy));
           return res;
         })
-        .catch(() => caches.match(r).then(m => m || caches.match('./')))
+        .catch(() =>
+          caches
+            .match(req)
+            .then((hit) => hit || caches.match("/offline.html"))
+        )
     );
     return;
   }
 
-  // Stale-while-revalidate for static assets
-  e.respondWith(
-    caches.match(r).then(cached => {
-      const fetchPromise = fetch(r).then(networkRes => {
-        if (networkRes.ok) {
-          const clone = networkRes.clone();
-          caches.open(V).then(c => c.put(r, clone));
-        }
-        return networkRes;
-      }).catch(() => null);
-      return cached || fetchPromise;
-    })
-  );
+  /* static assets → cache first, refresh in background */
+  const isAsset =
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/images/") ||
+    /\.(png|jpg|jpeg|webp|svg|ico|woff2?|css|js)$/.test(url.pathname);
+
+  if (isAsset) {
+    event.respondWith(
+      caches.match(req).then((hit) => {
+        const fetching = fetch(req)
+          .then((res) => {
+            const copy = res.clone();
+            caches.open(ASSET_CACHE).then((c) => c.put(req, copy));
+            return res;
+          })
+          .catch(() => hit);
+        return hit || fetching;
+      })
+    );
+  }
 });

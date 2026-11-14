@@ -272,7 +272,7 @@ function CosmeticOffersCarousel() {
               className="h-11 rounded-full bg-[#2E9E6B] px-6 text-sm font-black text-white hover:bg-[#258257] shadow-lg shadow-[#2E9E6B]/20 transition active:scale-95"
               onClick={() => {
                 addToCart(slide.id);
-                toast.success(t("cart.added"));
+                toast.success(t("product.added"));
               }}
             >
               <ShoppingBag className="size-4 me-1.5" />

@@ -1,0 +1,11 @@
+# الخطوات (مرة واحدة):
+#   cloudflared tunnel login
+#   cloudflared tunnel create bahbah
+#   cloudflared tunnel route dns bahbah bahbah.YOURDOMAIN.com
+#   cloudflared service install         (يشتغل تلقائيًا مع الجهاز)
+tunnel: PUT-TUNNEL-ID
+credentials-file: PUT-PATH/PUT-TUNNEL-ID.json
+ingress:
+  - hostname: bahbah.YOURDOMAIN.com
+    service: http://localhost:3000
+  - service: http_status:404

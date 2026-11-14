@@ -4,3 +4,9 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+.next/
+out/
+*.zip
+backups/
+temp_repo/
+tsconfig.tsbuildinfo

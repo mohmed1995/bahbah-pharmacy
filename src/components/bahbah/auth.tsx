@@ -84,15 +84,6 @@ export function LoginView() {
     );
   };
 
-  const quickLogin = (r: Role) => {
-    if (r === "patient") {
-      finish({ name: "أحمد محمد", email: "demo@bahbah.pharmacy", phone: "0100 123 4567", role: "patient" }, "أحمد");
-      return;
-    }
-    const acc = STAFF_ACCOUNTS.find((a) => a.role === r)!;
-    finish({ name: acc.nameAr, email: acc.email, role: acc.role, driverId: acc.driverId }, acc.nameAr.split(" — ")[0]);
-  };
-
   const activeChip = ROLE_CHIPS.find((c) => c.role === role)!;
 
   return (

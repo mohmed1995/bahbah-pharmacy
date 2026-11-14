@@ -1,0 +1,63 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>مراجعة الروشتة</title>
+<style>
+:root{--ink:#10201F;--teal:#0E5A57;--line:#D8E2E0;--bg:#F4F7F6}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Tahoma,sans-serif}
+header{background:var(--teal);color:#fff;padding:12px 16px;display:flex;justify-content:space-between}
+header a{color:#fff}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:12px;max-width:1100px;margin:auto}
+@media(max-width:800px){.g{grid-template-columns:1fr}}
+.c{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px}
+#view{height:360px;overflow:auto;background:#EEF3F2;border-radius:8px;margin-top:8px}
+#view img{transform-origin:top right;max-width:none;width:100%}
+.r{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+input{font:inherit;padding:8px;border:1px solid var(--line);border-radius:8px;flex:1;min-width:100px}
+button,a.b{border:1px solid var(--teal);background:#fff;color:var(--teal);border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer;text-decoration:none}
+.f{background:var(--teal);color:#fff}
+.hit,.ln{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.m{color:#5B6E6C;font-size:13px}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #F2A900;outline-offset:2px}
+</style></head><body>
+<header><b>مراجعة الروشتة</b><a href="/admin">رجوع</a></header>
+<div class="g">
+ <section class="c"><b>صورة الروشتة</b>
+  <div class="m">الصورة تبقى على هذا الجهاز فقط ولا تُرفع لأي خادم.</div>
+  <div class="r"><input id="file" type="file" accept="image/*">
+   <button id="rot">تدوير</button><input id="zoom" type="range" min="100" max="300" value="100" aria-label="تكبير"></div>
+  <div id="view"><img id="img" alt="الروشتة" hidden></div></section>
+ <section class="c"><b>الأصناف</b>
+  <div class="r"><input id="q" placeholder="ابحث عن الدواء اللي قريته" autocomplete="off"></div>
+  <div id="hits"></div><hr><div id="lines"></div><b id="tot"></b>
+  <div class="r"><input id="nm" placeholder="اسم العميل"><input id="ph" placeholder="رقم العميل 01xxxxxxxxx" inputmode="tel"></div>
+  <div class="r"><a class="b f" id="send" href="#" target="_blank" rel="noopener">جهّز عرض السعر على واتساب</a><button id="rec">سجّل كطلب مكتمل</button></div>
+  <div class="m">تأكد من كل صنف بنفسك: الجرعة والتركيز والعدد. هذه الشاشة لا تقرأ الروشتة، أنت اللي بتقرأها.</div></section>
+</div>
+<script>
+const $=s=>document.getElementById(s), h=(t,p={},...k)=>{const e=document.createElement(t);Object.assign(e,p);e.append(...k);return e;};
+let lines=[], rot=0, t;
+$('file').onchange=e=>{const f=e.target.files[0]; if(!f)return; $('img').src=URL.createObjectURL(f); $('img').hidden=false;};
+const tf=()=>{$('img').style.width=$('zoom').value+'%'; $('img').style.transform=`rotate(${rot}deg)`;};
+$('rot').onclick=()=>{rot=(rot+90)%360;tf();}; $('zoom').oninput=tf;
+$('q').oninput=()=>{clearTimeout(t);t=setTimeout(async()=>{
+  const v=$('q').value.trim(); if(!v) return $('hits').replaceChildren();
+  const list=(await (await fetch('/api/search?q='+encodeURIComponent(v))).json()).slice(0,6);
+  $('hits').replaceChildren(...list.map(p=>h('div',{className:'hit'},
+    h('div',{},p.name,h('div',{className:'m'},[p.ingredient,p.strength,p.form].filter(Boolean).join(' · ')||'مادة فعالة غير مؤكدة')),
+    h('div',{},p.price+' ج ',h('button',{onclick:()=>add(p)},'+')))));},200);};
+function add(p){const l=lines.find(x=>x.id===p.id); l?l.qty++:lines.push({id:p.id,name:p.name,price:p.price,qty:1}); draw();}
+function draw(){
+  $('lines').replaceChildren(...lines.map((l,i)=>h('div',{className:'ln'},h('div',{},l.name,h('div',{className:'m'},`${l.price} ج × ${l.qty}`)),
+    h('div',{},h('button',{onclick:()=>{l.qty++;draw();}},'+'),' ',h('button',{onclick:()=>{l.qty>1?l.qty--:lines.splice(i,1);draw();}},'−')))));
+  const sub=lines.reduce((a,l)=>a+l.price*l.qty,0); $('tot').textContent=lines.length?`المجموع: ${sub.toFixed(2)} ج (بدون التوصيل)`:'';
+  link();}
+function link(){
+  const ph=$('ph').value.replace(/\D/g,'').replace(/^0/,'20');
+  const sub=lines.reduce((a,l)=>a+l.price*l.qty,0);
+  const txt=`أهلاً ${$('nm').value||''}، ده تجهيز روشتتك من صيدلية بحبح:\n`+lines.map(l=>`• ${l.name} × ${l.qty} = ${(l.price*l.qty).toFixed(2)} ج`).join('\n')+`\nالمجموع: ${sub.toFixed(2)} ج + التوصيل.\nتأكد من الأصناف وردّ علينا بـ "تمام" لنجهزها.`;
+  $('send').href=ph.length>=11&&lines.length?`https://wa.me/${ph}?text=${encodeURIComponent(txt)}`:'#';}
+$('nm').oninput=$('ph').oninput=link;
+$('rec').onclick=async()=>{const ph=$('ph').value.replace(/\D/g,'').replace(/^0/,'20'),total=lines.reduce((a,l)=>a+l.price*l.qty,0);
+  if(!lines.length||ph.length<11) return alert('اكتب رقم العميل وأضف صنف على الأقل');
+  const r=await fetch('/api/admin/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:ph,total,src:'rx'})});
+  if(r.ok){lines=[];draw();alert('تم تسجيل الطلب');}else alert((await r.json()).error);};
+</script></body></html>

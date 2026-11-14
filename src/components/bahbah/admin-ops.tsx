@@ -61,7 +61,7 @@ export function OrdersSection() {
   const lang = useBahbah((s) => s.lang);
   const orders = useBahbah((s) => s.adminOrders);
   const { adminAdvance, adminCancel } = useBahbah();
-  const list = orders ?? adminDemoOrders;
+  const list = orders ?? [];
 
   const [filter, setFilter] = useState<"all" | Order["status"]>("all");
   const [q, setQ] = useState("");

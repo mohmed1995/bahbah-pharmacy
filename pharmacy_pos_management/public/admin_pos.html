@@ -1,0 +1,3163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>صيدلية بحبح | نظام الكاشير وإدارة الصيدلية الفاخر 2026</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Cairo', 'Tajawal', sans-serif; }
+    
+    /* Modern Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #060913; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+
+    /* Ultra-Luxury Corporate Theme */
+    .bg-luxury-navy { 
+      background: radial-gradient(circle at 15% 15%, #0f1c3f 0%, #080d1e 40%, #04060d 100%); 
+    }
+    .glass-panel { 
+      background: rgba(13, 21, 46, 0.72); 
+      backdrop-filter: blur(20px); 
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08); 
+    }
+    .glass-panel-elevated { 
+      background: rgba(16, 26, 56, 0.88); 
+      backdrop-filter: blur(24px); 
+      border: 1px solid rgba(99, 102, 241, 0.3); 
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.15);
+    }
+    .glass-card-hover { 
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+    }
+    .glass-card-hover:hover { 
+      border-color: rgba(99, 102, 241, 0.5); 
+      transform: translateY(-2px); 
+      box-shadow: 0 14px 35px -10px rgba(99, 102, 241, 0.35); 
+    }
+
+    /* Vibrant Gradients */
+    .btn-gradient-indigo { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+    .btn-gradient-emerald { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+    .btn-gradient-cyan { background: linear-gradient(135deg, #0891b2 0%, #06b6d4 100%); }
+    .btn-gradient-amber { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+    .btn-gradient-rose { background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%); }
+
+    /* Autocomplete active selection */
+    .autocomplete-item.active {
+      background: rgba(99, 102, 241, 0.3);
+      border-right: 4px solid #6366f1;
+    }
+
+    /* Thermal Receipt Printing Layout (ESC/POS 80mm & 58mm) */
+    @media print {
+      body * { visibility: hidden !important; }
+      #thermalReceiptPrintArea, #thermalReceiptPrintArea * { visibility: visible !important; }
+      #stickerPrintArea, #stickerPrintArea * { visibility: visible !important; }
+      
+      #thermalReceiptPrintArea {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 78mm !important;
+        max-width: 80mm !important;
+        padding: 2mm 3mm !important;
+        color: #000 !important;
+        background: #fff !important;
+        font-family: 'Courier New', Courier, monospace, 'Cairo', sans-serif !important;
+        font-size: 11px !important;
+        line-height: 1.3 !important;
+      }
+
+      #stickerPrintArea {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 48mm !important;
+        max-width: 50mm !important;
+        padding: 2mm !important;
+        color: #000 !important;
+        background: #fff !important;
+        font-family: 'Cairo', sans-serif !important;
+        page-break-after: always;
+      }
+
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-luxury-navy text-slate-100 flex flex-col h-screen overflow-hidden select-none">
+
+  <!-- TOP LUXURY HEADER -->
+  <header class="bg-[#080d1e]/90 backdrop-blur-xl border-b border-white/10 px-3 md:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2.5 shrink-0 shadow-2xl z-30">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 md:w-11 md:h-11 rounded-2xl btn-gradient-indigo flex items-center justify-center font-black text-white text-xl shadow-lg shadow-indigo-500/30">
+        Rx
+      </div>
+      <div>
+        <h1 class="text-base md:text-lg font-black text-white tracking-wide flex items-center gap-2">
+          صيدلية بحبح | Bahbah Luxury POS
+          <span class="text-[11px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full font-mono font-bold">
+            10,215 صنف متاح
+          </span>
+        </h1>
+        <p class="text-xs text-slate-400 hidden lg:flex items-center gap-2">
+          <span>طباعة حرارية 80mm</span> • 
+          <span class="text-cyan-400">أوتوكومبليت ذكي</span> • 
+          <span class="text-emerald-400">تفاعلات سريرية</span> •
+          <span class="text-amber-400">كروت QR</span> •
+          <span class="text-purple-400">حسابات الآجل والديون</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Live Clock & Status Bar -->
+    <div class="hidden xl:flex items-center gap-3 bg-[#050814]/80 px-3.5 py-1.5 rounded-2xl border border-white/10 text-xs">
+      <div class="flex items-center gap-1.5 text-cyan-300">
+        <span>🕒</span>
+        <span id="liveClock" class="font-mono font-bold">--:--:--</span>
+      </div>
+      <div class="h-4 w-px bg-white/10"></div>
+      <div class="flex items-center gap-1 text-emerald-400">
+        <span>💼</span>
+        <span>الوردية: صباحية</span>
+      </div>
+    </div>
+
+    <!-- Quick Tools & Navigation Buttons -->
+    <div class="flex items-center gap-1.5 flex-wrap">
+      <!-- Quick Backup Button -->
+      <button 
+        onclick="downloadBackupJSON()" 
+        class="bg-[#0f172a] hover:bg-slate-800 text-slate-300 border border-white/10 font-bold px-2.5 py-1.5 rounded-xl shadow text-xs flex items-center gap-1 transition active:scale-95"
+        title="تنزيل نسخة احتياطية كاملة من قاعدة البيانات"
+      >
+        <span>💾</span>
+        <span class="hidden md:inline">نسخ احتياطي</span>
+      </button>
+
+      <!-- Pediatric Dose Calculator Quick Button -->
+      <button 
+        onclick="openPediatricModal()" 
+        class="bg-[#0f172a] hover:bg-slate-800 text-amber-300 border border-amber-500/30 font-bold px-2.5 py-1.5 rounded-xl shadow text-xs flex items-center gap-1 transition active:scale-95"
+        title="حاسبة جرعات أدوية الأطفال والحرارة بالوزن"
+      >
+        <span>👶</span>
+        <span class="hidden md:inline">جرعات الأطفال</span>
+      </button>
+
+      <!-- Camera Scanner Button -->
+      <button 
+        onclick="toggleCameraScanner()" 
+        class="bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-500/40 font-bold px-3 py-1.5 rounded-xl shadow-lg text-xs flex items-center gap-1.5 transition active:scale-95"
+        title="فتح كاميرا الموبايل لمسح باركود الدواء أو كارت المريض"
+      >
+        <span>📷</span>
+        <span class="hidden sm:inline">مسح بالكاميرا</span>
+      </button>
+
+      <!-- Mobile QR Connect Modal Button -->
+      <button 
+        onclick="openMobileQRModal()" 
+        class="btn-gradient-cyan text-white font-bold px-3 py-1.5 rounded-xl shadow-lg shadow-cyan-500/20 text-xs flex items-center gap-1.5 transition active:scale-95"
+      >
+        <span>📱</span>
+        <span>فتح بالموبايل</span>
+      </button>
+
+      <!-- Main Tabs (Expanded with Debts & Expiry) -->
+      <div class="flex bg-[#050814] p-1 rounded-2xl border border-white/10 gap-1 text-xs font-semibold overflow-x-auto no-scrollbar">
+        <button id="tab-pos-btn" onclick="switchTab('pos')" class="btn-gradient-indigo text-white px-2.5 md:px-3.5 py-1.5 rounded-xl shadow-lg shadow-indigo-500/25 transition shrink-0">
+          🛒 الكاشير (F1)
+        </button>
+        <button id="tab-chronic-btn" onclick="switchTab('chronic')" class="text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0">
+          <span>🩺</span>
+          <span>مرضى شهريين (<span id="chronicBadge" class="text-cyan-400 font-bold">0</span>)</span>
+        </button>
+        <button id="tab-debts-btn" onclick="switchTab('debts')" class="text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0">
+          <span>📒</span>
+          <span>آجل وديون (<span id="debtsBadge" class="text-amber-400 font-bold">0</span>)</span>
+        </button>
+        <button id="tab-invoices-btn" onclick="switchTab('invoices')" class="text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0">
+          <span>📑</span>
+          <span>الفواتير (<span id="invoicesBadge" class="text-emerald-400 font-bold">0</span>)</span>
+        </button>
+        <button id="tab-expiry-btn" onclick="switchTab('expiry')" class="text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0">
+          <span>⏳</span>
+          <span>الصلاحيات (<span id="expiryBadge" class="text-rose-400 font-bold">0</span>)</span>
+        </button>
+        <button id="tab-shortages-btn" onclick="switchTab('shortages')" class="text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0">
+          <span class="text-amber-400">⚠️</span>
+          <span>النواقص (<span id="shortagesBadge" class="text-amber-400 font-bold">0</span>)</span>
+        </button>
+        <button id="tab-shift-btn" onclick="switchTab('shift')" class="text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0">
+          <span class="text-emerald-400">💼</span>
+          <span>الدرج</span>
+        </button>
+        <button id="tab-analytics-btn" onclick="switchTab('analytics')" class="text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0">
+          <span class="text-purple-400">📊</span>
+          <span>أرباح</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- LIVE CAMERA SCANNER OVERLAY -->
+  <div id="cameraScannerContainer" class="hidden fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-indigo-500/40 rounded-3xl p-5 max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <span>📷</span> مسح باركود الدواء أو QR كارت المريض
+        </h3>
+        <button onclick="toggleCameraScanner()" class="text-slate-400 hover:text-white text-xl font-bold">✕</button>
+      </div>
+      <div id="cameraReader" class="w-full h-64 rounded-2xl overflow-hidden bg-black border border-white/10 relative"></div>
+      <p class="text-xs text-slate-400 text-center">
+        وجّه الكاميرا نحو باركود العلبة أو كود QR الخاص بالمريض الشهري للتعرف الفوري.
+      </p>
+    </div>
+  </div>
+
+  <!-- MODULE 1: POS & CASHIER (MAIN SCREEN) -->
+  <main id="posView" class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    
+    <!-- Left Area: Search & Auto-Complete & Drug Grid -->
+    <div class="flex-1 flex flex-col p-3 md:p-5 overflow-hidden">
+      
+      <!-- LUXURY SEARCH & AUTO-COMPLETE BOX -->
+      <div class="space-y-2 mb-3 relative">
+        <div class="relative">
+          <input 
+            id="searchInput" 
+            type="text" 
+            autocomplete="off"
+            placeholder="ابحث بالعربي أو الإنجليزي (بانادول، كونكور، Panadol, Augmentin, Cataflam) أو امسح الباركود / QR المريض..." 
+            class="w-full bg-[#0b1329] border-2 border-white/10 focus:border-indigo-500 rounded-2xl py-3.5 pr-12 pl-44 text-white text-sm md:text-base outline-none shadow-2xl transition placeholder:text-slate-500"
+            autofocus
+          />
+          <svg class="w-5 h-5 text-indigo-400 absolute right-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+          
+          <div class="absolute left-3 top-2.5 flex items-center gap-1.5">
+            <!-- Voice Search Button -->
+            <button onclick="toggleVoiceSearch()" id="voiceSearchBtn" class="text-slate-400 hover:text-cyan-300 p-1 text-sm transition" title="البحث الصوتي بالذكاء الاصطناعي">
+              🎙️
+            </button>
+            <button onclick="clearSearchInput()" id="clearSearchBtn" class="hidden text-slate-400 hover:text-white p-1 text-xs">✕</button>
+            <span class="text-[11px] font-bold bg-indigo-950/80 text-indigo-300 px-2.5 py-1 rounded-xl border border-indigo-700/40 pointer-events-none hidden sm:inline">
+              أوتوكومبليت ⚡
+            </span>
+          </div>
+        </div>
+
+        <!-- AUTO-COMPLETE LIVE DROPDOWN (HIGH-END LUXURY SaaS STYLE) -->
+        <div id="autocompleteDropdown" class="hidden absolute top-14 inset-x-0 bg-[#0d1633] border-2 border-indigo-500/50 rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto divide-y divide-white/5 backdrop-blur-2xl">
+          <!-- Populated dynamically via JS -->
+        </div>
+
+        <!-- Quick Pharmacy Category Pills -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold no-scrollbar">
+          <span class="text-slate-400 text-[11px] shrink-0">أشهر الأقسام:</span>
+          <button onclick="setSearchFilter('')" class="bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-xl hover:bg-indigo-600 hover:text-white transition shrink-0">الكل (10k+)</button>
+          <button onclick="setSearchFilter('panadol')" class="bg-[#0f172a] text-slate-300 border border-white/10 px-2.5 py-1 rounded-xl hover:border-indigo-500 transition shrink-0">مسكنات وحرارة 💊</button>
+          <button onclick="setSearchFilter('augmentin')" class="bg-[#0f172a] text-slate-300 border border-white/10 px-2.5 py-1 rounded-xl hover:border-indigo-500 transition shrink-0">مضادات حيوية 🛡️</button>
+          <button onclick="setSearchFilter('concor')" class="bg-[#0f172a] text-slate-300 border border-white/10 px-2.5 py-1 rounded-xl hover:border-indigo-500 transition shrink-0">ضغط وقلب ❤️</button>
+          <button onclick="setSearchFilter('glucophage')" class="bg-[#0f172a] text-slate-300 border border-white/10 px-2.5 py-1 rounded-xl hover:border-indigo-500 transition shrink-0">سكر وغدد 🩺</button>
+          <button onclick="setSearchFilter('congestal')" class="bg-[#0f172a] text-slate-300 border border-white/10 px-2.5 py-1 rounded-xl hover:border-indigo-500 transition shrink-0">برد ورشح ❄️</button>
+          <button onclick="setSearchFilter('antinal')" class="bg-[#0f172a] text-slate-300 border border-white/10 px-2.5 py-1 rounded-xl hover:border-indigo-500 transition shrink-0">جهاز هضمي 🍃</button>
+        </div>
+      </div>
+
+      <!-- Drugs Grid with Images & Prices -->
+      <div id="productsGrid" class="flex-1 overflow-y-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 pr-1">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+
+    <!-- Right Area: POS Cart & Checkout Panel -->
+    <div class="w-full lg:w-96 bg-[#080d1e]/95 border-t lg:border-t-0 lg:border-r border-white/10 flex flex-col p-4 md:p-5 shadow-2xl shrink-0">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <span>🛒</span> فاتورة البيع الحالية
+        </h3>
+        <div class="flex items-center gap-1.5">
+          <button onclick="openDeliveryModal()" class="text-xs bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-500/40 text-cyan-300 px-2 py-0.5 rounded-lg font-bold flex items-center gap-1 transition" title="إرسال الفاتورة ديلفري مع طيار">
+            <span>🛵</span> ديلفري
+          </button>
+          <span id="cartCountBadge" class="text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2.5 py-0.5 rounded-full font-bold">
+            0 أصناف
+          </span>
+          <button onclick="clearCart()" class="text-slate-400 hover:text-rose-400 p-1 text-xs" title="تفريغ الفاتورة">🗑️</button>
+        </div>
+      </div>
+
+      <!-- CLINICAL DRUG INTERACTIONS ALERT BANNER -->
+      <div id="drugInteractionsAlert" class="hidden my-2 p-3 rounded-2xl bg-rose-950/80 border border-rose-500/50 shadow-xl text-rose-200 text-xs animate-pulse">
+        <div class="flex items-center gap-1.5 font-bold mb-1 text-rose-300">
+          <span class="text-base">⚠️</span>
+          <span id="interactionTitle">تنبيه تعارض دوائي سريري!</span>
+        </div>
+        <p id="interactionDesc" class="text-[11px] text-rose-200/90 leading-relaxed"></p>
+      </div>
+
+      <!-- Items List -->
+      <div id="cartItemsList" class="flex-1 overflow-y-auto my-2 space-y-2 pr-1 max-h-56 lg:max-h-none">
+        <div class="flex flex-col items-center justify-center h-full text-slate-500 text-center py-6">
+          <span class="text-3xl mb-2 opacity-30">💊</span>
+          <p class="text-sm">الفاتورة فارغة حالياً</p>
+          <p class="text-xs text-slate-600 mt-1">اختر من القائمة أو امسح الباركود</p>
+        </div>
+      </div>
+
+      <!-- Cart Checkout Summary -->
+      <div class="bg-[#050814] p-4 rounded-3xl border border-white/10 mt-auto space-y-3 shadow-inner">
+        
+        <div class="flex justify-between items-center text-slate-400 text-xs">
+          <span>إجمالي الأصناف:</span>
+          <span id="cartSubtotal">0.00 ج.م</span>
+        </div>
+
+        <div class="flex justify-between items-center text-base font-bold text-white pt-2 border-t border-white/10">
+          <span>المطلوب دفعه:</span>
+          <span id="cartTotal" class="text-2xl text-emerald-400 font-black">0.00 ج.م</span>
+        </div>
+
+        <!-- Payment Methods -->
+        <div class="grid grid-cols-4 gap-1.5 pt-2 text-[11px] font-medium text-center">
+          <button id="pay-cash-btn" onclick="setPaymentMode('cash')" class="py-1.5 rounded-xl border btn-gradient-emerald text-white font-bold transition shadow-md">كاش 💵</button>
+          <button id="pay-instapay-btn" onclick="setPaymentMode('instapay')" class="py-1.5 rounded-xl border bg-[#0b1329] border-white/10 text-slate-300 transition">InstaPay ⚡</button>
+          <button id="pay-visa-btn" onclick="setPaymentMode('visa')" class="py-1.5 rounded-xl border bg-[#0b1329] border-white/10 text-slate-300 transition">فيزا 💳</button>
+          <button id="pay-later-btn" onclick="setPaymentMode('later')" class="py-1.5 rounded-xl border bg-[#0b1329] border-white/10 text-slate-300 transition">آجل 📝</button>
+        </div>
+
+        <!-- Checkout Actions -->
+        <div class="space-y-2 pt-1">
+          <button id="checkoutBtn" onclick="checkoutInvoice()" class="w-full btn-gradient-indigo hover:opacity-90 text-white font-black py-3 rounded-2xl shadow-xl shadow-indigo-500/25 text-sm transition active:scale-95 flex items-center justify-center gap-2">
+            <span>🖨️</span>
+            <span>حفظ وطباعة الإيصال الحراري (Enter)</span>
+          </button>
+          <button onclick="previewThermalReceipt()" class="w-full bg-[#0d1633] hover:bg-slate-800 text-cyan-300 border border-cyan-500/30 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+            <span>👁️</span>
+            <span>معاينة شكل الإيصال الحراري</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- MODULE 2: CHRONIC PATIENTS (مع QR الذكي للتعرف الفوري) -->
+  <main id="chronicView" class="hidden flex-1 p-4 md:p-6 overflow-y-auto">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <div class="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2">
+            <span>🩺</span> ملف المرضى الشهريين وبطاقات الـ QR الذكية
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            لكل مريض كارت QR ذكي خاص به: بمجرد مسحه بالكاميرا أو الباركود، يتعرف النظام عليه ويُنزل أدويته الشهرية في الفاتورة بضغطة واحدة!
+          </p>
+        </div>
+        <button onclick="openAddPatientModal()" class="btn-gradient-cyan text-white font-bold px-4 py-2 rounded-2xl text-xs flex items-center gap-1.5 shadow-lg shadow-cyan-500/20 active:scale-95">
+          <span>➕</span> إضافة مريض شهري جديد
+        </button>
+      </div>
+
+      <!-- Chronic Patients Grid -->
+      <div id="chronicPatientsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </main>
+
+  <!-- MODULE 3: DEBTS & CUSTOMER CREDIT (حسابات الآجل والديون) -->
+  <main id="debtsView" class="hidden flex-1 p-4 md:p-6 overflow-y-auto">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <div class="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2">
+            <span>📒</span> كشف حسابات العملاء الآجل والديون
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            متابعة ديون العملاء على النوتة، تسجيل دفعات السداد، وإرسال كشف حساب بالواتساب بضغطة واحدة
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openAddDebtorModal()" class="btn-gradient-amber text-white font-bold px-4 py-2 rounded-2xl text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 active:scale-95">
+            <span>➕</span> إضافة حساب عميل آجل
+          </button>
+        </div>
+      </div>
+
+      <!-- Total Debts Summary Card -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-slate-400 block mb-1">إجمالي الديون المستحقة عند العملاء</span>
+          <span id="totalDebtsAmount" class="text-2xl font-black text-amber-400">0.00 ج.م</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-slate-400 block mb-1">عدد حسابات الآجل المسجلة</span>
+          <span id="totalDebtorsCount" class="text-2xl font-black text-white">0 عميل</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-slate-400 block mb-1">متوسط الديون لكل عميل</span>
+          <span id="avgDebtAmount" class="text-2xl font-black text-cyan-300">0.00 ج.م</span>
+        </div>
+      </div>
+
+      <!-- Debts Table -->
+      <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-[#050814] text-slate-400 font-bold border-b border-white/10">
+            <tr>
+              <th class="p-4">اسم العميل</th>
+              <th class="p-4">رقم الهاتف</th>
+              <th class="p-4">سقف الائتمان</th>
+              <th class="p-4">الرصيد المدين الحالي</th>
+              <th class="p-4">آخر معاملة</th>
+              <th class="p-4 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="debtsTableBody" class="divide-y divide-white/5">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODULE 4: INVOICES LOG & RETURNS (سجل الفواتير والمرتجعات) -->
+  <main id="invoicesView" class="hidden flex-1 p-4 md:p-6 overflow-y-auto">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <div class="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2">
+            <span>📑</span> سجل الفواتير والمبيعات السابقة
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            إعادة طباعة أي إيصال سابق، أو استرجاع الأصناف وإلغاء الفاتورة مع استعادة الرصيد للمخزون
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <input 
+            id="invoiceSearchInput" 
+            type="text" 
+            oninput="renderInvoicesList(this.value)" 
+            placeholder="بحث برقم الفاتورة..." 
+            class="bg-[#050814] border border-white/10 rounded-xl px-3 py-1.5 text-xs text-white outline-none focus:border-indigo-500"
+          />
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-[#050814] text-slate-400 font-bold border-b border-white/10">
+            <tr>
+              <th class="p-4">رقم الفاتورة</th>
+              <th class="p-4">توقيت الشراء الدقيق</th>
+              <th class="p-4">عدد الأصناف</th>
+              <th class="p-4">طريقة الدفع</th>
+              <th class="p-4">إجمالي المبلغ</th>
+              <th class="p-4">الحالة</th>
+              <th class="p-4 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="invoicesTableBody" class="divide-y divide-white/5">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODULE 5: EXPIRY & NEAR-EXPIRY TRACKER (الصلاحيات والإكسباير) -->
+  <main id="expiryView" class="hidden flex-1 p-4 md:p-6 overflow-y-auto">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <div class="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2">
+            <span>⏳</span> إدارة تواريخ الصلاحية والرواكد (Expiry Tracker)
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            متابعة الأدوية التي أوشكت على انتهاء الصلاحية لإرجاعها للشركات والمخازن قبل الخسارة
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="exportExpiryReport()" class="btn-gradient-rose text-white font-bold px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1 shadow">
+            <span>📄</span> تصدير تقرير الإكسباير
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-[#050814] text-slate-400 font-bold border-b border-white/10">
+            <tr>
+              <th class="p-4">كود الصنف</th>
+              <th class="p-4">اسم الدواء</th>
+              <th class="p-4">رقم التشغيلة (Batch)</th>
+              <th class="p-4">تاريخ الانتهاء</th>
+              <th class="p-4">الرصيد المتبقي</th>
+              <th class="p-4">المخزن المورد</th>
+              <th class="p-4">الحالة</th>
+              <th class="p-4 text-center">إجراء</th>
+            </tr>
+          </thead>
+          <tbody id="expiryTableBody" class="divide-y divide-white/5">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODULE 6: SHORTAGES BOOK -->
+  <main id="shortagesView" class="hidden flex-1 p-4 md:p-6 overflow-y-auto">
+    <div class="max-w-5xl mx-auto space-y-6">
+      <div class="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2">
+            <span>📋</span> كشكول النواقص وطلبيات المخازن
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">تجميع النواقص تلقائياً وتوزيعها على مخازن الأدوية (ابن سينا، فارما أوفرسيز، المتحدة)</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="exportShortagesWhatsApp()" class="btn-gradient-emerald text-white font-bold px-4 py-2 rounded-2xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20">
+            <span>💬</span> تصدير لواتساب المندوب
+          </button>
+          <button onclick="clearShortages()" class="bg-rose-950/40 text-rose-300 hover:bg-rose-900 border border-rose-800/40 px-3 py-2 rounded-2xl text-xs font-bold transition">
+            مسح النواقص المكتملة
+          </button>
+        </div>
+      </div>
+
+      <div class="glass-panel rounded-3xl overflow-hidden shadow-2xl">
+        <table class="w-full text-right text-xs">
+          <thead class="bg-[#050814] text-slate-400 font-bold border-b border-white/10">
+            <tr>
+              <th class="p-4">كود الصنف</th>
+              <th class="p-4">اسم الدواء</th>
+              <th class="p-4">الرصيد الحالي</th>
+              <th class="p-4">الكمية المطلوبة</th>
+              <th class="p-4">المخزن المقترح</th>
+              <th class="p-4">الأولوية</th>
+              <th class="p-4 text-center">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="shortagesTableBody" class="divide-y divide-white/5">
+            <!-- Populated via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODULE 7: SHIFT & CASH REGISTER -->
+  <main id="shiftView" class="hidden flex-1 p-4 md:p-6 overflow-y-auto">
+    <div class="max-w-4xl mx-auto space-y-6">
+      <div class="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2">
+            <span>💼</span> إدارة الوردية الحالية وتسوية الدرج
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">حساب مبيعات الكاش والـ InstaPay والمصروفات النثرية لتقفيل الشيفت</p>
+        </div>
+        <button onclick="closeCurrentShift()" class="btn-gradient-amber text-white font-bold px-4 py-2 rounded-2xl text-xs shadow-lg shadow-orange-500/20 active:scale-95">
+          🔒 إغلاق وتقفيل الوردية
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-slate-400 block mb-1">بداية الدرج (العهدة)</span>
+          <span id="shiftStartingCash" class="text-xl font-black text-white">500.00 ج.م</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-emerald-400 block mb-1">مبيعات الكاش 💵</span>
+          <span id="shiftCashTotal" class="text-xl font-black text-emerald-400">0.00 ج.م</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-cyan-400 block mb-1">مبيعات InstaPay ⚡</span>
+          <span id="shiftInstaPayTotal" class="text-xl font-black text-cyan-400">0.00 ج.م</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-indigo-400 block mb-1">مبيعات الفيزا 💳</span>
+          <span id="shiftVisaTotal" class="text-xl font-black text-indigo-400">0.00 ج.م</span>
+        </div>
+      </div>
+
+      <div class="glass-panel p-5 rounded-3xl space-y-4">
+        <h3 class="font-bold text-white text-sm">تسوية النقدية الفعلية في الدرج:</h3>
+        <div class="flex justify-between items-center text-sm py-2 border-b border-white/10">
+          <span class="text-slate-400">إجمالي النقدية المفترض وجودها في الدرج (عهدة + كاش - مصروفات):</span>
+          <strong id="shiftExpectedInDrawer" class="text-emerald-400 font-bold text-lg">500.00 ج.م</strong>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="text-xs text-slate-300 font-semibold shrink-0">إضافة مصروفات نثرية (كهرباء، أكياس، بوفيه):</label>
+          <input id="expenseAmount" type="number" placeholder="المبلغ ج.م" class="w-28 bg-[#050814] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+          <input id="expenseReason" type="text" placeholder="السبب (مثال: أكياس صيدلية)" class="flex-1 min-w-[180px] bg-[#050814] border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none" />
+          <button onclick="addExpense()" class="bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 hover:bg-indigo-600 hover:text-white text-xs px-4 py-2 rounded-xl font-bold transition">خصم من الدرج</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODULE 8: EXECUTIVE ANALYTICS & PROFIT METRICS -->
+  <main id="analyticsView" class="hidden flex-1 p-4 md:p-6 overflow-y-auto">
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <div class="flex flex-wrap items-center justify-between border-b border-white/10 pb-4 gap-3">
+        <div>
+          <h2 class="text-xl font-black text-white flex items-center gap-2">
+            <span>📊</span> لوحة تحليلات الأرباح والمبيعات الحية
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">
+            مؤشرات الأداء المالي، حساب صافي الأرباح (Gross Margin)، والأدوية الأكثر مبيعاً
+          </p>
+        </div>
+        <div class="text-xs text-cyan-400 font-bold bg-cyan-950/80 px-3 py-1 rounded-xl border border-cyan-500/30">
+          تحديث فوري ⚡
+        </div>
+      </div>
+
+      <!-- KPI Metric Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-slate-400 block mb-1">إجمالي المبيعات</span>
+          <span id="metricTotalSales" class="text-2xl font-black text-white">0.00 ج.م</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-emerald-400 block mb-1">صافي الأرباح التقديري 📈</span>
+          <span id="metricGrossProfit" class="text-2xl font-black text-emerald-400">0.00 ج.م</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-cyan-400 block mb-1">هامش الربح (Margin %)</span>
+          <span id="metricProfitMargin" class="text-2xl font-black text-cyan-300">0.0%</span>
+        </div>
+        <div class="glass-panel p-4 rounded-3xl shadow">
+          <span class="text-xs text-indigo-400 block mb-1">إجمالي عدد الفواتير</span>
+          <span id="metricInvoicesCount" class="text-2xl font-black text-indigo-300">0</span>
+        </div>
+      </div>
+
+      <!-- Chart and Top Sellers -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Sales Chart -->
+        <div class="glass-panel p-5 rounded-3xl shadow">
+          <h4 class="font-bold text-white text-sm mb-4 flex items-center gap-2">
+            <span>📈</span> توزيع طرق الدفع للمبيعات
+          </h4>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="paymentMethodsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Selling Medicines -->
+        <div class="glass-panel p-5 rounded-3xl shadow">
+          <h4 class="font-bold text-white text-sm mb-4 flex items-center gap-2">
+            <span>🏆</span> أكثر الأدوية مبيعاً اليوم
+          </h4>
+          <div id="topSellersList" class="space-y-2 text-xs">
+            <p class="text-slate-500 text-center py-10">سيتم تجميع الإحصائيات مع تسجيل الفواتير</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL: GENERICS & ALTERNATIVE MEDICINE FINDER (بدائل ومثائل الأدوية) -->
+  <div id="genericsModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-cyan-500/40 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4 text-right">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🔄</span>
+          <div>
+            <h3 class="font-black text-white text-base">بدائل ومثائل الدواء المتاحة</h3>
+            <p id="genDrugTitle" class="text-xs text-cyan-300 font-bold"></p>
+          </div>
+        </div>
+        <button onclick="closeGenericsModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="bg-[#050814] p-3 rounded-2xl border border-white/10 text-xs">
+        <span class="text-slate-400">المادة الفعالة / العائلة الدوائية:</span>
+        <strong id="genActiveIngredient" class="text-white block mt-0.5 text-sm font-bold"></strong>
+      </div>
+
+      <div>
+        <h5 class="text-xs font-bold text-slate-300 mb-2">الأدوية البديلة المتوفرة حالياً في الصيدلية (مرتبة من الأقل سعراً):</h5>
+        <div id="genericsResultsList" class="space-y-2 max-h-64 overflow-y-auto pr-1">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+
+      <button onclick="closeGenericsModal()" class="w-full bg-[#111b36] hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+        إغلاق
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: DELIVERY & COURIER ORDER (توصيل الديلفري) -->
+  <div id="deliveryModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-cyan-500/40 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 text-right">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">🛵</span>
+          <div>
+            <h3 class="font-black text-white text-base">تجهيز أوردر توصيل ديلفري</h3>
+            <p class="text-xs text-cyan-300">تسجيل بيانات العميل وعنوان التوصيل واسم الطيار</p>
+          </div>
+        </div>
+        <button onclick="closeDeliveryModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-300 block mb-1">اسم العميل</label>
+          <input id="delivCustomerName" type="text" placeholder="مثال: د/ كريم النجار" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold outline-none focus:border-cyan-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-300 block mb-1">رقم الهاتف</label>
+            <input id="delivCustomerPhone" type="tel" placeholder="01xxxxxxxxx" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-mono font-bold outline-none focus:border-cyan-500" />
+          </div>
+          <div>
+            <label class="text-slate-300 block mb-1">اسم الطيار (المندوب)</label>
+            <select id="delivCourierName" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold outline-none focus:border-cyan-500">
+              <option>كابتن أحمد (طيار 1)</option>
+              <option>كابتن مصطفى (طيار 2)</option>
+              <option>كابتن إسلام (طيار 3)</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="text-slate-300 block mb-1">عنوان التوصيل بالتفصيل</label>
+          <input id="delivCustomerAddress" type="text" placeholder="الشارع، رقم العمارة، الدور، الشقة..." class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white outline-none focus:border-cyan-500" />
+        </div>
+        <div>
+          <label class="text-slate-300 block mb-1">مصاريف التوصيل (خدمة الديلفري ج.م)</label>
+          <input id="delivFee" type="number" value="15" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold outline-none focus:border-cyan-500" />
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="confirmDeliveryOrder()" class="flex-1 btn-gradient-cyan text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+          تأكيد وطباعة فاتورة الديلفري 🛵
+        </button>
+        <button onclick="closeDeliveryModal()" class="px-4 bg-[#111b36] hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / PAY DEBTOR (إضافة عميل آجل أو تسديد دفعة) -->
+  <div id="debtorModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-amber-500/40 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 text-right">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📒</span>
+          <h3 id="debtorModalTitle" class="font-black text-white text-base">تسجيل عميل آجل جديد</h3>
+        </div>
+        <button onclick="closeDebtorModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div id="debtorFormFields" class="space-y-3 text-xs">
+        <div>
+          <label class="text-slate-300 block mb-1">اسم العميل</label>
+          <input id="debName" type="text" placeholder="مثال: أ/ محمود حسني" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold outline-none focus:border-amber-500" />
+        </div>
+        <div>
+          <label class="text-slate-300 block mb-1">رقم الهاتف (واتساب)</label>
+          <input id="debPhone" type="tel" placeholder="01xxxxxxxxx" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-mono font-bold outline-none focus:border-amber-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-slate-300 block mb-1">سقف الائتمان (الحد الأقصى ج.م)</label>
+            <input id="debLimit" type="number" value="1000" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="text-slate-300 block mb-1">الرصيد المدين المبدئي ج.م</label>
+            <input id="debInitial" type="number" value="0" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold outline-none focus:border-amber-500" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Sub-form -->
+      <div id="debtorPaymentFields" class="hidden space-y-3 text-xs">
+        <div class="bg-[#050814] p-3 rounded-2xl border border-white/10">
+          <span class="text-slate-400">العميل:</span>
+          <strong id="payCustomerName" class="text-white block text-sm"></strong>
+          <span class="text-slate-400">الرصيد المدين المستحق:</span>
+          <strong id="payCustomerBalance" class="text-amber-400 block text-lg font-black"></strong>
+        </div>
+        <div>
+          <label class="text-slate-300 block mb-1">المبلغ المراد سداده الآن (ج.م):</label>
+          <input id="payAmountInput" type="number" step="0.5" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white text-base font-black text-emerald-400 outline-none focus:border-emerald-500" />
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button id="debtorSaveBtn" onclick="saveDebtor()" class="flex-1 btn-gradient-amber text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+          حفظ الحساب 💾
+        </button>
+        <button onclick="closeDebtorModal()" class="px-4 bg-[#111b36] hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PATIENT RECOGNIZED ALERT -->
+  <div id="patientRecognizedModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="glass-panel-elevated rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4 text-right">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="text-2xl animate-bounce">🌟</span>
+          <div>
+            <h3 class="font-black text-white text-lg">تم التعرف على المريض الشهري فوراً!</h3>
+            <p class="text-xs text-cyan-300">تم مسح كارت الـ QR والتحقق من الروشتة المسجلة</p>
+          </div>
+        </div>
+        <button onclick="closePatientRecognizedModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="bg-gradient-to-r from-indigo-950/80 to-purple-950/80 p-4 rounded-2xl border border-indigo-500/30 space-y-2">
+        <div class="flex justify-between items-center">
+          <h4 id="recPatientName" class="text-lg font-black text-white"></h4>
+          <span id="recPatientPhone" class="text-xs font-mono text-cyan-400 font-bold"></span>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-slate-300">التشخيص:</span>
+          <span id="recPatientDisease" class="bg-indigo-600/30 text-indigo-200 px-2.5 py-0.5 rounded-lg border border-indigo-500/30 font-bold"></span>
+          <span id="recPatientDay" class="text-slate-400 mr-auto text-[11px]"></span>
+        </div>
+      </div>
+
+      <div>
+        <h5 class="text-xs font-bold text-slate-300 mb-2 flex items-center gap-1.5">
+          <span>💊</span> قائمة الأدوية الشهرية المطلوب صرفها:
+        </h5>
+        <div id="recPatientMedsList" class="bg-[#050814] p-3 rounded-2xl border border-white/10 max-h-48 overflow-y-auto space-y-1.5 text-xs text-emerald-300">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button id="recConfirmDispenseBtn" onclick="applyPatientMedsToCart()" class="flex-1 btn-gradient-emerald text-white font-black py-3 rounded-2xl text-sm shadow-xl shadow-emerald-500/25 active:scale-95 flex items-center justify-center gap-2 transition">
+          <span>⚡</span>
+          <span>تنزيل الأدوية في الفاتورة وصرفها فوراً</span>
+        </button>
+        <button onclick="closePatientRecognizedModal()" class="px-4 bg-[#111b36] hover:bg-slate-700 text-slate-300 font-bold py-3 rounded-2xl text-xs transition">
+          إلغاء
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PATIENT QR CARD -->
+  <div id="patientQRModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0d1633] border border-white/15 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-center space-y-4">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <span>🪪</span> كارت المريض الشهري الذكي
+        </h3>
+        <button onclick="closePatientQRModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="bg-gradient-to-br from-indigo-950 to-purple-950 p-4 rounded-2xl border border-indigo-500/40 text-right space-y-1 shadow-inner">
+        <div class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">صيدلية بحبح • VIP Smart Health Card</div>
+        <h4 id="qrCardPatientName" class="text-base font-black text-white"></h4>
+        <p id="qrCardPatientDisease" class="text-xs text-cyan-300"></p>
+        <div class="flex justify-between items-center pt-1 text-[11px]">
+          <span id="qrCardPatientDay" class="text-slate-300"></span>
+          <span id="qrCardPatientPhone" class="text-indigo-300 font-mono"></span>
+        </div>
+      </div>
+
+      <div class="bg-white p-3 rounded-2xl inline-block shadow-2xl border-4 border-indigo-500/30">
+        <canvas id="patientQRCodeCanvas"></canvas>
+      </div>
+
+      <p class="text-[11px] text-slate-400 leading-relaxed">
+        اطبع هذا الكارت للمريض أو أرسله له على واتساب؛ مجرد مسحه عند قدومه للصيدلية تُفتح روشتته ويتم صرفها في ثوانٍ!
+      </p>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="printPatientCardOnly()" class="btn-gradient-indigo text-white font-bold py-2 rounded-xl text-xs shadow transition">
+          طباعة الكارت 🖨️
+        </button>
+        <button id="sendCardWhatsappBtn" onclick="sharePatientCardWhatsapp()" class="btn-gradient-emerald text-white font-bold py-2 rounded-xl text-xs shadow transition">
+          إرسال واتساب 💬
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SHELF BARCODE & PRICE STICKER GENERATOR (استيكرات الرف والعلب) -->
+  <div id="barcodeLabelModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-indigo-500/40 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4 text-center">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <span>🏷️</span> طباعة استيكر باركود وسعر الرف
+        </h3>
+        <button onclick="closeBarcodeLabelModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="bg-white text-black p-3 rounded-2xl shadow-xl inline-block border-2 border-indigo-500/30 text-center w-full max-w-[280px]">
+        <div class="text-[10px] font-bold text-gray-700">صيدلية بحبح</div>
+        <div id="lblDrugName" class="font-black text-xs text-black leading-tight my-0.5 truncate"></div>
+        <div id="lblDrugAr" class="text-[10px] text-gray-800 truncate"></div>
+        <div class="my-1">
+          <svg id="barcodeCanvas"></svg>
+        </div>
+        <div class="flex justify-between items-center border-t border-black pt-1 px-1">
+          <span class="font-black text-sm text-black" id="lblDrugPrice"></span>
+          <span class="text-[9px] font-bold text-gray-700" id="lblStripPrice"></span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-center gap-2 text-xs">
+        <label class="text-slate-300">عدد الاستيكرات للطباعة:</label>
+        <input id="lblQty" type="number" value="1" min="1" max="50" class="w-16 bg-[#050814] border border-white/10 rounded-xl px-2 py-1 text-center text-white font-bold" />
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="printBarcodeLabel()" class="flex-1 btn-gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs shadow-lg transition">
+          طباعة الاستيكر 🖨️
+        </button>
+        <button onclick="closeBarcodeLabelModal()" class="px-4 bg-[#111b36] hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PEDIATRIC DOSAGE CALCULATOR (حاسبة جرعات أدوية الأطفال بالوزن) -->
+  <div id="pediatricModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-amber-500/40 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 text-right">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">👶</span>
+          <div>
+            <h3 class="font-black text-white text-base">حاسبة جرعات الأطفال بالوزن الدقيق</h3>
+            <p class="text-[11px] text-amber-300">لحساب جرعات خافض الحرارة والمضادات الحيوية بالسنتيمتر</p>
+          </div>
+        </div>
+        <button onclick="closePediatricModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-300 block mb-1">اختر الدواء أو المادة الفعالة:</label>
+          <select id="pedDrugSelect" onchange="calculatePediatricDose()" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white text-xs outline-none focus:border-amber-500">
+            <option value="paracetamol_120">سيتال / بارامول شراب (باراسيتامول 120-250 ملغ)</option>
+            <option value="brufen_100">بروفين شراب (إيبوبروفين 100 ملغ/5 مل)</option>
+            <option value="augmentin_228">أوجمنتين / هاي بيوتك 228 أو 312 ملغ</option>
+            <option value="augmentin_457">أوجمنتين / هاي بيوتك 457 ملغ</option>
+            <option value="zyrtec">زيرتك / سيتريزين شراب للحساسية والرشح</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-slate-300 block mb-1">وزن الطفل (كجم)</label>
+            <input id="pedWeightInput" type="number" step="0.5" value="12" oninput="calculatePediatricDose()" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold text-sm outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="text-xs text-slate-300 block mb-1">عمر الطفل التقديري</label>
+            <input id="pedAgeInput" type="text" placeholder="مثال: سنتين ونصف" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white text-xs outline-none focus:border-amber-500" />
+          </div>
+        </div>
+
+        <!-- Calculated Result Box -->
+        <div class="bg-gradient-to-r from-amber-950/80 to-orange-950/80 p-4 rounded-2xl border border-amber-500/30 space-y-1.5">
+          <div class="text-[11px] text-amber-300 font-semibold">الجرعة الموصى بها سريرياً:</div>
+          <div id="pedResultDose" class="text-xl font-black text-amber-200">--</div>
+          <p id="pedAdvice" class="text-[11px] text-slate-300 leading-snug pt-1 border-t border-white/10">--</p>
+        </div>
+      </div>
+
+      <button onclick="closePediatricModal()" class="w-full bg-[#111b36] hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+        إغلاق الحاسبة
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: THERMAL RECEIPT LIVE PREVIEW -->
+  <div id="receiptPreviewModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-white/15 rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-white/10 pb-2">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <span>🧾</span> معاينة الإيصال الحراري 80mm
+        </h3>
+        <button onclick="closeReceiptPreview()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="bg-white text-black p-4 rounded-xl shadow-inner font-mono text-[11px] leading-relaxed max-h-96 overflow-y-auto" id="previewSlipContent">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="triggerActualPrint()" class="flex-1 btn-gradient-indigo text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg">
+          طباعة الإيصال الآن 🖨️
+        </button>
+        <button onclick="closeReceiptPreview()" class="px-4 bg-[#111b36] hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs transition">
+          إغلاق
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDDEN THERMAL RECEIPT (FOR ESC/POS 80MM / 58MM DIRECT PRINTING) -->
+  <div id="thermalReceiptPrintArea" class="hidden">
+    <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 6px; margin-bottom: 6px;">
+      <h2 style="font-size: 16px; font-weight: 900; margin: 0;">صيدلية بحبح</h2>
+      <p style="margin: 2px 0; font-size: 11px;">خدمة 24 ساعة • توصيل ديلفري سريع</p>
+      <p style="margin: 2px 0; font-size: 11px;">هاتف الصيدلية: 01000000000</p>
+      <p id="receiptDateTime" style="margin: 2px 0; font-size: 10px; font-weight: bold;"></p>
+      <p id="receiptInvNo" style="margin: 2px 0; font-size: 10px; font-weight: bold;"></p>
+      <p id="receiptCashier" style="margin: 1px 0; font-size: 9px;">الكاشير: د/ الصيدلي المسؤول (وردية صباحية)</p>
+    </div>
+
+    <table style="width: 100%; text-align: right; border-collapse: collapse; margin-bottom: 6px; font-size: 11px;">
+      <thead>
+        <tr style="border-bottom: 1px solid #000;">
+          <th style="padding: 3px 0;">الصنف</th>
+          <th style="text-align: center; padding: 3px 0;">العدد</th>
+          <th style="text-align: left; padding: 3px 0;">السعر</th>
+        </tr>
+      </thead>
+      <tbody id="receiptItemsBody">
+        <!-- Rendered dynamically -->
+      </tbody>
+    </table>
+
+    <div style="border-top: 1px dashed #000; padding-top: 6px; margin-bottom: 6px;">
+      <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 13px;">
+        <span>الإجمالي المطلوب:</span>
+        <span id="receiptTotalAmount"></span>
+      </div>
+      <div style="display: flex; justify-content: space-between; font-size: 10px; margin-top: 3px;">
+        <span>طريقة الدفع:</span>
+        <span id="receiptPaymentMethod" style="font-weight: bold;"></span>
+      </div>
+    </div>
+
+    <div style="text-align: center; border-top: 1px dashed #000; padding-top: 6px; font-size: 10px;">
+      <div style="display: flex; justify-content: center; margin: 5px 0;">
+        <canvas id="receiptQRCodeCanvas" style="width: 85px; height: 85px;"></canvas>
+      </div>
+      <p style="margin: 2px 0; font-weight: bold;">مع تمنياتنا لكم بدوام الصحة والشفاء العاجل ❤️</p>
+      <p style="margin: 2px 0; font-size: 9px;">البضاعة المباعة ترد وتستبدل خلال 14 يوم بالفاتورة وفقاً لحماية المستهلك</p>
+    </div>
+  </div>
+
+  <!-- HIDDEN STICKER PRINT AREA FOR THERMAL LABEL PRINTERS -->
+  <div id="stickerPrintArea" class="hidden">
+    <div style="text-align: center; font-size: 9px; font-weight: bold;">صيدلية بحبح</div>
+    <div id="prtDrugName" style="font-size: 11px; font-weight: 900; text-align: center; margin: 1px 0;"></div>
+    <div id="prtDrugAr" style="font-size: 10px; text-align: center;"></div>
+    <div style="text-align: center; margin: 2px 0;">
+      <svg id="prtBarcodeSvg"></svg>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; border-top: 1px solid #000; padding-top: 1px;">
+      <span id="prtPrice"></span>
+      <span id="prtStrip"></span>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD CHRONIC PATIENT -->
+  <div id="patientModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-white/15 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <span>🩺</span> تسجيل مريض شهري جديد
+        </h3>
+        <button onclick="closeAddPatientModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">اسم المريض الكامل</label>
+          <input id="patientName" type="text" placeholder="مثال: الحاج محمد عبد الرحمن" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold text-xs outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">رقم الهاتف (واتساب)</label>
+          <input id="patientPhone" type="tel" placeholder="01xxxxxxxxx" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white font-bold text-xs font-mono outline-none focus:border-indigo-500" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">نوع المرض / الحالة</label>
+          <input id="patientDisease" type="text" placeholder="مثال: ضغط + سكر + قلب" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white text-xs outline-none focus:border-indigo-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">يوم الصرف من كل شهر</label>
+          <input id="patientDay" type="number" min="1" max="31" value="1" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white text-xs font-bold outline-none focus:border-indigo-500" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">قائمة الأدوية الشهرية المعتادة (اكتب اسم الدواء والكمية):</label>
+        <textarea id="patientMeds" rows="3" placeholder="مثال:
+- Glucophage 1000mg (2 علبة)
+- Concor 5mg (1 علبة)
+- Ator 20mg (1 علبة)" class="w-full bg-[#050814] border border-white/10 rounded-xl p-2.5 text-white text-xs leading-relaxed outline-none focus:border-indigo-500"></textarea>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="savePatient()" class="flex-1 btn-gradient-cyan text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-cyan-500/20 active:scale-95">حفظ ملف المريض وإنشاء كارت QR 💾</button>
+        <button onclick="closeAddPatientModal()" class="px-4 bg-[#111b36] hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl text-xs transition">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal (Connect from Mobile) -->
+  <div id="qrModal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-white/15 rounded-3xl p-6 w-full max-w-sm shadow-2xl text-center space-y-4">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <span>📱</span> فتح البرنامج على الموبايل
+        </h3>
+        <button onclick="closeMobileQRModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <p class="text-xs text-slate-400 leading-relaxed">
+        امسح رمز الاستجابة السريعة (QR Code) بكاميرا هاتفك لفتح البرنامج مباشرة:
+      </p>
+
+      <div class="bg-white p-4 rounded-2xl inline-block shadow-xl border-4 border-indigo-500/30">
+        <canvas id="qrCanvas"></canvas>
+      </div>
+
+      <div class="bg-[#050814] p-3 rounded-xl border border-white/10 text-xs">
+        <span class="text-slate-400 block mb-1">أو افتح هذا الرابط مباشرة:</span>
+        <a id="mobileLinkAnchor" href="#" target="_blank" class="text-cyan-400 font-mono font-bold hover:underline break-all"></a>
+      </div>
+
+      <button onclick="copyMobileLink()" class="w-full bg-[#111b36] hover:bg-slate-700 text-slate-200 font-semibold py-2 rounded-xl text-xs transition">
+        نسخ الرابط 📋
+      </button>
+    </div>
+  </div>
+
+  <!-- Edit Drug Modal -->
+  <div id="editModal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-[#0b1329] border border-white/15 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-white/10 pb-3">
+        <div>
+          <h3 class="font-bold text-white text-base">تعديل بيانات الصنف والمخزون</h3>
+          <p id="editItemName" class="text-xs text-slate-400 font-medium"></p>
+        </div>
+        <button onclick="closeEditModal()" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="editCode" />
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">سعر البيع للجمهور (علبة)</label>
+          <input id="editPrice" type="number" step="0.25" class="w-full bg-[#050814] border border-white/10 focus:border-indigo-500 rounded-xl p-2.5 text-white font-bold outline-none" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">سعر التكلفة (شراء)</label>
+          <input id="editCost" type="number" step="0.25" class="w-full bg-[#050814] border border-white/10 focus:border-indigo-500 rounded-xl p-2.5 text-white font-bold outline-none" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">الرصيد الفعلي (علب)</label>
+          <input id="editBoxes" type="number" class="w-full bg-[#050814] border border-white/10 focus:border-indigo-500 rounded-xl p-2.5 text-white font-bold outline-none" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">الرصيد الفعلي (أشرطة)</label>
+          <input id="editStrips" type="number" class="w-full bg-[#050814] border border-white/10 focus:border-indigo-500 rounded-xl p-2.5 text-white font-bold outline-none" />
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button onclick="saveEdit()" class="flex-1 btn-gradient-indigo text-white font-bold py-2.5 rounded-xl transition shadow-lg shadow-indigo-500/20">حفظ التعديلات فوراً</button>
+        <button onclick="closeEditModal()" class="px-4 bg-[#111b36] hover:bg-slate-700 text-slate-300 font-semibold py-2.5 rounded-xl transition">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State Management
+    let products = [];
+    let cart = [];
+    let activePayment = 'cash';
+    let highlightedIndex = -1;
+    let cameraScannerInstance = null;
+    let currentlyRecognizedPatient = null;
+    let activeStickerProduct = null;
+    let paymentChartInstance = null;
+    let activePayingDebtorIndex = -1;
+
+    let shortages = JSON.parse(localStorage.getItem('pharmacy_shortages') || '[]');
+    let invoices = JSON.parse(localStorage.getItem('pharmacy_invoices') || '[]');
+
+    // Customer Credit & Debts (الآجل والشكك)
+    let debts = JSON.parse(localStorage.getItem('pharmacy_debts') || JSON.stringify([
+      {
+        id: 1,
+        name: "أ/ محمود حسني (بقالة النور)",
+        phone: "01099887766",
+        limit: 1000,
+        balance: 340.00,
+        lastTransaction: "2026-11-12"
+      },
+      {
+        id: 2,
+        name: "الحاجة أم أحمد (البيت الكبير)",
+        phone: "01122334455",
+        limit: 500,
+        balance: 185.50,
+        lastTransaction: "2026-11-10"
+      },
+      {
+        id: 3,
+        name: "المهندس وليد صبحي",
+        phone: "01233445566",
+        limit: 1500,
+        balance: 420.00,
+        lastTransaction: "2026-11-13"
+      }
+    ]));
+
+    // Near-Expiry Items
+    let expiryItems = JSON.parse(localStorage.getItem('pharmacy_expiry') || JSON.stringify([
+      {
+        code: "6221163000308",
+        name: "Atorstat 10 Mg 14 Tab",
+        batch: "BN-2024-912",
+        expiryDate: "2026-12",
+        boxes: 4,
+        distributor: "ابن سينا",
+        status: "قريب الانتهاء"
+      },
+      {
+        code: "000392",
+        name: "Coversyl 4mg 15tab",
+        batch: "CV-2023-418",
+        expiryDate: "2027-01",
+        boxes: 2,
+        distributor: "فارما أوفرسيز",
+        status: "قريب الانتهاء"
+      },
+      {
+        code: "08817600",
+        name: "Panadol actifast 20tab",
+        batch: "PN-2024-009",
+        expiryDate: "2027-02",
+        boxes: 6,
+        distributor: "المتحدة",
+        status: "ساري"
+      }
+    ]));
+
+    // Audio Synthesizer
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 880, type = 'sine', duration = 0.08) {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e) {}
+    }
+
+    function playSuccessChime() {
+      playBeep(523.25, 'triangle', 0.12);
+      setTimeout(() => playBeep(659.25, 'triangle', 0.15), 100);
+      setTimeout(() => playBeep(783.99, 'triangle', 0.25), 220);
+    }
+
+    // Default Chronic Patients
+    let patients = JSON.parse(localStorage.getItem('pharmacy_patients') || JSON.stringify([
+      {
+        id: 101,
+        name: "الحاج محمد عبد الرحمن",
+        phone: "01012345678",
+        disease: "سكر وضغط",
+        day: 1,
+        meds: "Glucophage 1000mg (2 علبة)\nCoversyl 5mg (1 علبة)",
+        items: [
+          { code: "6222003701324", name: "Glucophage 1000mg 30 T", unit: "box", qty: 2, price: 54 },
+          { code: "6223003960162", name: "Coversyl 5mg -30tab", unit: "box", qty: 1, price: 79 }
+        ],
+        lastDispensed: "2026-10-01"
+      },
+      {
+        id: 102,
+        name: "مدام سميحة كامل",
+        phone: "01287654321",
+        disease: "ضغط وقلب وكوليسترول",
+        day: 15,
+        meds: "Ator 20mg (1 علبة)\nExforge 10/160 (1 علبة)",
+        items: [
+          { code: "6221032115652", name: "Ator 20mg 10 T", unit: "box", qty: 1, price: 79 },
+          { code: "6223002642175", name: "Exforge 10/160 Mg 14tab", unit: "box", qty: 1, price: 218 }
+        ],
+        lastDispensed: "2026-10-15"
+      }
+    ]));
+
+    let shift = JSON.parse(localStorage.getItem('pharmacy_shift') || JSON.stringify({
+      startingCash: 500,
+      cash: 0,
+      instapay: 0,
+      visa: 0,
+      expenses: 0
+    }));
+
+    const mobileDirectUrl = "https://acts-www-village-locale.trycloudflare.com/admin_pos.html";
+
+    // Digital Clock
+    function updateClock() {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString('ar-EG', { hour12: true });
+      const clockEl = document.getElementById('liveClock');
+      if (clockEl) clockEl.innerText = timeStr;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Tab Navigation
+    function switchTab(tab) {
+      document.getElementById('posView').classList.add('hidden');
+      document.getElementById('chronicView').classList.add('hidden');
+      document.getElementById('debtsView').classList.add('hidden');
+      document.getElementById('invoicesView').classList.add('hidden');
+      document.getElementById('expiryView').classList.add('hidden');
+      document.getElementById('shortagesView').classList.add('hidden');
+      document.getElementById('shiftView').classList.add('hidden');
+      document.getElementById('analyticsView').classList.add('hidden');
+
+      const inactiveClass = 'text-slate-300 hover:text-white px-2 md:px-3 py-1.5 rounded-xl transition flex items-center gap-1 shrink-0';
+      document.getElementById('tab-pos-btn').className = 'text-slate-300 hover:text-white px-2.5 md:px-3.5 py-1.5 rounded-xl transition shrink-0';
+      document.getElementById('tab-chronic-btn').className = inactiveClass;
+      document.getElementById('tab-debts-btn').className = inactiveClass;
+      document.getElementById('tab-invoices-btn').className = inactiveClass;
+      document.getElementById('tab-expiry-btn').className = inactiveClass;
+      document.getElementById('tab-shortages-btn').className = inactiveClass;
+      document.getElementById('tab-shift-btn').className = inactiveClass;
+      document.getElementById('tab-analytics-btn').className = inactiveClass;
+
+      if (tab === 'pos') {
+        document.getElementById('posView').classList.remove('hidden');
+        document.getElementById('tab-pos-btn').className = 'btn-gradient-indigo text-white px-2.5 md:px-3.5 py-1.5 rounded-xl shadow-lg shadow-indigo-500/25 transition shrink-0';
+      } else if (tab === 'chronic') {
+        document.getElementById('chronicView').classList.remove('hidden');
+        document.getElementById('tab-chronic-btn').className = 'btn-gradient-cyan text-white px-2 md:px-3 py-1.5 rounded-xl shadow-lg shadow-cyan-500/25 transition flex items-center gap-1 shrink-0';
+        renderPatients();
+      } else if (tab === 'debts') {
+        document.getElementById('debtsView').classList.remove('hidden');
+        document.getElementById('tab-debts-btn').className = 'btn-gradient-amber text-white px-2 md:px-3 py-1.5 rounded-xl shadow-lg shadow-orange-500/25 transition flex items-center gap-1 shrink-0';
+        renderDebtsList();
+      } else if (tab === 'invoices') {
+        document.getElementById('invoicesView').classList.remove('hidden');
+        document.getElementById('tab-invoices-btn').className = 'btn-gradient-emerald text-white px-2 md:px-3 py-1.5 rounded-xl shadow-lg shadow-emerald-500/25 transition flex items-center gap-1 shrink-0';
+        renderInvoicesList();
+      } else if (tab === 'expiry') {
+        document.getElementById('expiryView').classList.remove('hidden');
+        document.getElementById('tab-expiry-btn').className = 'btn-gradient-rose text-white px-2 md:px-3 py-1.5 rounded-xl shadow-lg shadow-rose-500/25 transition flex items-center gap-1 shrink-0';
+        renderExpiryList();
+      } else if (tab === 'shortages') {
+        document.getElementById('shortagesView').classList.remove('hidden');
+        document.getElementById('tab-shortages-btn').className = 'btn-gradient-amber text-white px-2 md:px-3 py-1.5 rounded-xl shadow-lg shadow-orange-500/25 transition flex items-center gap-1 shrink-0';
+        renderShortages();
+      } else if (tab === 'shift') {
+        document.getElementById('shiftView').classList.remove('hidden');
+        document.getElementById('tab-shift-btn').className = 'btn-gradient-indigo text-white px-2 md:px-3 py-1.5 rounded-xl shadow-lg shadow-indigo-500/25 transition flex items-center gap-1 shrink-0';
+        updateShiftUI();
+      } else if (tab === 'analytics') {
+        document.getElementById('analyticsView').classList.remove('hidden');
+        document.getElementById('tab-analytics-btn').className = 'bg-purple-600 text-white px-2 md:px-3 py-1.5 rounded-xl shadow-lg shadow-purple-500/25 transition flex items-center gap-1 shrink-0';
+        renderAnalyticsDashboard();
+      }
+    }
+
+    function setSearchFilter(keyword) {
+      document.getElementById('searchInput').value = keyword;
+      loadProducts(keyword);
+    }
+
+    function clearSearchInput() {
+      const input = document.getElementById('searchInput');
+      input.value = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      document.getElementById('autocompleteDropdown').classList.add('hidden');
+      loadProducts('');
+      input.focus();
+    }
+
+    function setPaymentMode(mode) {
+      activePayment = mode;
+      ['cash', 'instapay', 'visa', 'later'].forEach(m => {
+        const btn = document.getElementById(`pay-${m}-btn`);
+        if (m === mode) {
+          btn.className = 'py-1.5 rounded-xl border btn-gradient-emerald text-white font-bold transition shadow-md';
+        } else {
+          btn.className = 'py-1.5 rounded-xl border bg-[#0b1329] border-white/10 text-slate-300 transition';
+        }
+      });
+    }
+
+    // Load Products from API
+    async function loadProducts(q = '') {
+      try {
+        const res = await fetch(`/api/inventory?q=${encodeURIComponent(q)}&limit=30`);
+        const data = await res.json();
+        products = data.items || [];
+        renderProducts();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderProducts() {
+      const grid = document.getElementById('productsGrid');
+      if (products.length === 0) {
+        grid.innerHTML = '<div class="col-span-3 text-center py-16 text-slate-500">لم يتم العثور على أدوية مطابقة للبحث</div>';
+        return;
+      }
+
+      grid.innerHTML = products.map(p => {
+        const imgTag = p.image_url 
+          ? `<img src="${p.image_url}" alt="${p.name}" class="w-16 h-16 object-contain rounded-2xl bg-[#050814] p-1 border border-white/10 shrink-0" onerror="this.src='https://placehold.co/100x100/172b4d/5e72e4?text=Rx'"/>`
+          : `<div class="w-16 h-16 rounded-2xl bg-[#0d1633] border border-white/10 flex items-center justify-center font-bold text-indigo-400 text-xl shrink-0">💊</div>`;
+
+        return `
+          <div class="glass-panel glass-card-hover rounded-3xl p-4 flex flex-col justify-between shadow-xl">
+            <div>
+              <div class="flex items-start gap-3 mb-2">
+                ${imgTag}
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-start justify-between gap-1">
+                    <h4 class="font-bold text-white text-sm hover:text-indigo-300 transition leading-snug line-clamp-2">${p.name}</h4>
+                    <span class="text-[10px] font-mono bg-[#050814] text-indigo-300 px-2 py-0.5 rounded-lg border border-white/10 shrink-0">${p.code}</span>
+                  </div>
+                  ${p.name_ar && p.name_ar !== p.name ? `<p class="text-[11px] text-cyan-400 font-medium truncate mt-0.5">${p.name_ar}</p>` : ''}
+                  ${p.form ? `<span class="inline-block text-[10px] bg-slate-800/80 text-slate-300 px-2 py-0.5 rounded-md mt-1">${p.form}</span>` : ''}
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2 mt-2 text-xs">
+                <div class="bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-1 rounded-xl">
+                  <span class="text-[10px] text-emerald-400 block font-semibold">سعر العلبة</span>
+                  <span class="font-bold text-emerald-300 text-sm">${p.price} ج.م</span>
+                </div>
+                ${p.unit_no > 1 ? `
+                  <div class="bg-cyan-950/40 border border-cyan-500/30 px-2.5 py-1 rounded-xl">
+                    <span class="text-[10px] text-cyan-300 block font-semibold">الشريط (${p.unit_no} شريط)</span>
+                    <span class="font-bold text-cyan-200 text-sm">${p.strip_price} ج.م</span>
+                  </div>
+                ` : ''}
+                <div class="bg-slate-900/80 px-2.5 py-1 rounded-xl mr-auto border border-white/5">
+                  <span class="text-[10px] text-slate-400 block">التكلفة</span>
+                  <span class="text-slate-300 font-medium">${p.cost} ج.م</span>
+                </div>
+              </div>
+
+              <div class="mt-2.5 flex items-center justify-between text-xs text-slate-400 bg-[#050814]/80 p-2 rounded-2xl border border-white/5">
+                <div>
+                  <span>الرصيد: </span>
+                  <strong class="${p.stock_boxes <= 2 ? 'text-amber-400 font-bold' : 'text-slate-200'}">${p.stock_boxes} علبة</strong>
+                  ${p.stock_strips > 0 ? `<span class="text-cyan-400 font-semibold">+ ${p.stock_strips} شريط</span>` : ''}
+                </div>
+                <div class="flex items-center gap-1">
+                  <button onclick="openGenericsModal('${p.code}')" class="text-xs text-cyan-300 hover:text-cyan-200 bg-cyan-950/60 border border-cyan-600/30 px-2 py-1 rounded-xl" title="البدائل والمثائل المتاحة">
+                    🔄 بدائل
+                  </button>
+                  <button onclick="openBarcodeLabelModal('${p.code}')" class="text-xs text-indigo-300 hover:text-indigo-200 bg-indigo-950/60 border border-indigo-600/30 px-2 py-1 rounded-xl" title="طباعة استيكر باركود للرف">
+                    🏷️ استيكر
+                  </button>
+                  <button onclick="addToShortages('${p.code}')" class="text-xs text-amber-300 hover:text-amber-200 bg-amber-950/50 border border-amber-600/30 px-2 py-1 rounded-xl">
+                    + نواقص
+                  </button>
+                  <button onclick="openEdit('${p.code}')" class="text-xs text-emerald-300 hover:text-emerald-200 bg-emerald-950/50 border border-emerald-600/30 px-2 py-1 rounded-xl">
+                    ✏️ تعديل
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-white/10">
+              <button onclick="addToCart('${p.code}', 'box')" class="btn-gradient-emerald text-white py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1 shadow-md shadow-emerald-500/20 active:scale-95">
+                ➕ بيع علبة
+              </button>
+              ${p.unit_no > 1 ? `
+                <button onclick="addToCart('${p.code}', 'strip')" class="bg-[#0f172a] hover:bg-slate-700 text-cyan-300 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1 border border-cyan-500/30 active:scale-95">
+                  🔄 بيع شريط
+                </button>
+              ` : `
+                <button disabled class="bg-slate-900/40 text-slate-600 py-2 rounded-xl text-xs font-medium cursor-not-allowed">علبة فقط</button>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ==========================================
+    // ADVANCED AUTO-COMPLETE SEARCH ENGINE
+    // ==========================================
+    const searchInput = document.getElementById('searchInput');
+    const dropdown = document.getElementById('autocompleteDropdown');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    let currentPredictions = [];
+
+    function highlightMatch(text, query) {
+      if (!text || !query) return text || '';
+      const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+      return text.replace(regex, '<span class="text-amber-300 font-extrabold bg-amber-500/20 px-0.5 rounded">$1</span>');
+    }
+
+    searchInput.addEventListener('input', async (e) => {
+      const val = e.target.value.trim();
+      highlightedIndex = -1;
+
+      if (val.length > 0) clearBtn.classList.remove('hidden');
+      else clearBtn.classList.add('hidden');
+
+      if (val.startsWith('PATIENT_QR:') || val.startsWith('PATIENT_ID:') || val.startsWith('PATIENT:')) {
+        handlePatientQRScanned(val);
+        searchInput.value = '';
+        clearBtn.classList.add('hidden');
+        dropdown.classList.add('hidden');
+        return;
+      }
+
+      if (val.length < 2) {
+        dropdown.classList.add('hidden');
+        loadProducts(val);
+        return;
+      }
+
+      const res = await fetch(`/api/inventory?q=${encodeURIComponent(val)}&limit=8`);
+      const data = await res.json();
+      currentPredictions = data.items || [];
+
+      if (currentPredictions.length === 0) {
+        dropdown.innerHTML = `
+          <div class="p-4 text-center text-slate-400 text-xs">
+            لا توجد أدوية مطابقة لـ "<span class="text-white">${val}</span>"
+          </div>
+        `;
+        dropdown.classList.remove('hidden');
+        loadProducts(val);
+        return;
+      }
+
+      dropdown.innerHTML = currentPredictions.map((item, idx) => `
+        <div id="autocomplete-row-${idx}" class="autocomplete-item p-3 hover:bg-indigo-600/20 cursor-pointer flex items-center justify-between gap-3 transition" onclick="selectAutocompleteItem(${idx})">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="w-8 h-8 rounded-xl bg-slate-800/80 border border-white/10 flex items-center justify-center text-sm shrink-0">💊</span>
+            <div class="min-w-0">
+              <div class="font-bold text-white text-xs truncate">
+                ${highlightMatch(item.name, val)}
+              </div>
+              <div class="flex items-center gap-2 mt-0.5 text-[11px]">
+                ${item.name_ar ? `<span class="text-cyan-400 truncate">${highlightMatch(item.name_ar, val)}</span>` : ''}
+                <span class="text-slate-400 font-mono text-[10px]">#${item.code}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 shrink-0">
+            <div class="text-left font-mono">
+              <span class="font-bold text-emerald-400 text-xs">${item.price} ج.م</span>
+              <span class="text-[10px] block ${item.stock_boxes <= 2 ? 'text-amber-400 font-bold' : 'text-slate-400'}">
+                ${item.stock_boxes} علبة
+              </span>
+            </div>
+            
+            <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+              <button onclick="addToCart('${item.code}', 'box')" class="bg-emerald-600/40 hover:bg-emerald-600 text-emerald-200 hover:text-white px-2 py-1 rounded-lg text-[10px] font-bold border border-emerald-500/40 transition">
+                + علبة
+              </button>
+              ${item.unit_no > 1 ? `
+                <button onclick="addToCart('${item.code}', 'strip')" class="bg-cyan-600/40 hover:bg-cyan-600 text-cyan-200 hover:text-white px-2 py-1 rounded-lg text-[10px] font-bold border border-cyan-500/40 transition">
+                  + شريط
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      dropdown.classList.remove('hidden');
+      loadProducts(val);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+      const items = dropdown.querySelectorAll('.autocomplete-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        highlightedIndex = (highlightedIndex + 1) % items.length;
+        updateAutocompleteHighlight(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (items.length === 0) return;
+        highlightedIndex = (highlightedIndex - 1 + items.length) % items.length;
+        updateAutocompleteHighlight(items);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!dropdown.classList.contains('hidden') && highlightedIndex >= 0 && highlightedIndex < currentPredictions.length) {
+          selectAutocompleteItem(highlightedIndex);
+        } else if (!dropdown.classList.contains('hidden') && currentPredictions.length > 0) {
+          selectAutocompleteItem(0);
+        } else {
+          if (cart.length > 0) checkoutInvoice();
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    function updateAutocompleteHighlight(items) {
+      items.forEach((it, idx) => {
+        if (idx === highlightedIndex) {
+          it.classList.add('active');
+          it.scrollIntoView({ block: 'nearest' });
+        } else {
+          it.classList.remove('active');
+        }
+      });
+    }
+
+    function selectAutocompleteItem(idx) {
+      dropdown.classList.add('hidden');
+      const item = currentPredictions[idx];
+      if (item) {
+        addToCart(item.code, 'box');
+        playBeep(980, 'sine', 0.06);
+        searchInput.value = '';
+        clearBtn.classList.add('hidden');
+        loadProducts('');
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
+
+    // ==========================================
+    // CLINICAL DRUG INTERACTIONS ENGINE
+    // ==========================================
+    const clinicalInteractions = [
+      {
+        drugs: ['aspirin', 'plavix', 'clopidogrel', 'clexane', 'warfarin', 'rivaroxaban', 'eliquis'],
+        withDrugs: ['cataflam', 'voltaren', 'brufen', 'ibuprofen', 'ketofan', 'diclofenac', 'ketolac', 'antiflam'],
+        title: '⚠️ خطر نزيف معوي حاد (Severe GI Bleeding Risk)',
+        desc: 'الجمع بين مسكنات مضادات الالتهاب (NSAIDs) ومسيلات الدم يزيد خطر قرحة ونزيف المعدة بمقدار 4 أضعاف. يُفضل استبدال المسكن بـ الباراسيتامول (بانادول) أو إضافة دواء واقي للمعدة (مثل أوميبرازول).'
+      },
+      {
+        drugs: ['viagra', 'sildenafil', 'cialis', 'tadalafil', 'levitra'],
+        withDrugs: ['nitromak', 'angised', 'nitrate', 'isordil', 'monoket', 'effox'],
+        title: '🚨 خطر هبوط حاد وقاتل في ضغط الدم (Fatal Hypotension)',
+        desc: 'ممنوع تماماً تناول أدوية الضعف الجنسي مع أدوية النترات لمرضى الذبحة الصدرية لتفادي الهبوط المميت في الدورة الدموية.'
+      },
+      {
+        drugs: ['cataflam', 'voltaren', 'diclofenac'],
+        withDrugs: ['brufen', 'ibuprofen', 'ketofan', 'ketoprofen', 'meloxicam', 'feldene'],
+        title: '⚠️ ازدواجية علاجية وإجهاد كلوي (Duplicate NSAIDs)',
+        desc: 'تناول مسكنين من نفس العائلة يزيد من الإجهاد الكلوي وقرحة المعدة دون أي فائدة تسكينية إضافية. يُكتفى بمسكن واحد فقط.'
+      },
+      {
+        drugs: ['ciprocin', 'ciprofloxacin', 'tavanic', 'levofloxacin', 'tarivid'],
+        withDrugs: ['maalox', 'epicogel', 'mucogel', 'antacid', 'calcium', 'iron', 'ferrotron'],
+        title: 'ℹ️ تثبيط امتصاص المضاد الحيوي (Reduced Absorption)',
+        desc: 'أدوية الحموضة والحديد ترتبط مع المضاد الحيوي وتمنع امتصاصه في المعدة. يجب الفصل بينهما بساعتين على الأقل.'
+      },
+      {
+        drugs: ['concor', 'bisoprolol', 'betaloc', 'atenolol', 'inderal'],
+        withDrugs: ['ventolin', 'salbutamol', 'farcolin', 'airfast'],
+        title: '⚠️ تعارض مع موسعات الشعب الهوائية (Bronchospasm Risk)',
+        desc: 'مغلقات بيتا قد تعاكس مفعول موسعات الشعب الهوائية وتسبب ضيق تنفس لمرضى حساسية الصدر والربو.'
+      }
+    ];
+
+    function checkDrugInteractions(currentCart) {
+      const alertBox = document.getElementById('drugInteractionsAlert');
+      const titleEl = document.getElementById('interactionTitle');
+      const descEl = document.getElementById('interactionDesc');
+
+      if (currentCart.length < 2) {
+        alertBox.classList.add('hidden');
+        return;
+      }
+
+      const cartNames = currentCart.map(c => (c.product.name + ' ' + (c.product.name_ar || '')).toLowerCase());
+
+      for (const rule of clinicalInteractions) {
+        const hasDrug1 = cartNames.some(name => rule.drugs.some(d => name.includes(d)));
+        const hasDrug2 = cartNames.some(name => rule.withDrugs.some(d => name.includes(d)));
+
+        if (hasDrug1 && hasDrug2) {
+          titleEl.innerText = rule.title;
+          descEl.innerText = rule.desc;
+          alertBox.classList.remove('hidden');
+          playBeep(450, 'sawtooth', 0.15);
+          return;
+        }
+      }
+
+      alertBox.classList.add('hidden');
+    }
+
+    // ==========================================
+    // CART OPERATIONS
+    // ==========================================
+    function addToCart(code, unit) {
+      let p = products.find(x => x.code === code) || currentPredictions.find(x => x.code === code);
+      if (!p) return;
+
+      const existing = cart.find(x => x.code === code && x.unit === unit);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({ code, product: p, unit, qty: 1 });
+      }
+      playBeep(880, 'sine', 0.05);
+      renderCart();
+    }
+
+    function updateCartQty(code, unit, delta) {
+      const idx = cart.findIndex(x => x.code === code && x.unit === unit);
+      if (idx !== -1) {
+        cart[idx].qty += delta;
+        if (cart[idx].qty <= 0) cart.splice(idx, 1);
+        playBeep(750, 'sine', 0.04);
+      }
+      renderCart();
+    }
+
+    function clearCart() {
+      if (cart.length === 0) return;
+      if (confirm('هل أنت متأكد من تفريغ الفاتورة بالكامل؟')) {
+        cart = [];
+        renderCart();
+      }
+    }
+
+    function renderCart() {
+      const list = document.getElementById('cartItemsList');
+      const badge = document.getElementById('cartCountBadge');
+      const subtotal = document.getElementById('cartSubtotal');
+      const total = document.getElementById('cartTotal');
+
+      badge.innerText = `${cart.length} أصناف`;
+      checkDrugInteractions(cart);
+
+      if (cart.length === 0) {
+        list.innerHTML = `
+          <div class="flex flex-col items-center justify-center h-full text-slate-500 text-center py-6">
+            <span class="text-3xl mb-2 opacity-30">💊</span>
+            <p class="text-sm">الفاتورة فارغة حالياً</p>
+            <p class="text-xs text-slate-600 mt-1">اختر من القائمة أو امسح الباركود</p>
+          </div>
+        `;
+        subtotal.innerText = '0.00 ج.م';
+        total.innerText = '0.00 ج.م';
+        return;
+      }
+
+      let sum = 0;
+      list.innerHTML = cart.map(item => {
+        const itemPrice = item.unit === 'box' ? item.product.price : item.product.strip_price;
+        const lineTotal = itemPrice * item.qty;
+        sum += lineTotal;
+
+        return `
+          <div class="bg-[#050814] p-3 rounded-2xl border border-white/10 flex flex-col gap-2 shadow">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-semibold text-slate-200 text-xs leading-snug">${item.product.name}</div>
+                <span class="text-[10px] text-cyan-400 font-mono">${item.unit === 'box' ? '📦 علبة كاملة' : '💊 شريط واحد'}</span>
+              </div>
+              <span class="font-bold text-emerald-400 text-sm">${lineTotal.toFixed(2)} ج.م</span>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-white/5 text-xs">
+              <span class="text-slate-500">${itemPrice} × ${item.qty}</span>
+              <div class="flex items-center gap-2">
+                <button onclick="updateCartQty('${item.code}', '${item.unit}', -1)" class="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300">-</button>
+                <span class="font-bold text-white px-1">${item.qty}</span>
+                <button onclick="updateCartQty('${item.code}', '${item.unit}', 1)" class="w-6 h-6 rounded-lg bg-indigo-600 hover:bg-indigo-500 flex items-center justify-center text-white">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      subtotal.innerText = `${sum.toFixed(2)} ج.م`;
+      total.innerText = `${sum.toFixed(2)} ج.م`;
+    }
+
+    // ==========================================
+    // THERMAL RECEIPT & INVOICE MANAGEMENT
+    // ==========================================
+    function prepareThermalReceiptData() {
+      if (cart.length === 0) return null;
+
+      let totalAmount = 0;
+      let totalCost = 0;
+      const printRows = [];
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('ar-EG', { year: 'numeric', month: '2-digit', day: '2-digit' });
+      const timeStr = now.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      const invNo = `#INV-${now.getFullYear().toString().slice(-2)}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      cart.forEach(it => {
+        const p = it.unit === 'box' ? it.product.price : it.product.strip_price;
+        const c = it.unit === 'box' ? it.product.cost : (it.product.cost / (it.product.unit_no || 1));
+        const line = p * it.qty;
+        totalAmount += line;
+        totalCost += (c * it.qty);
+        printRows.push({
+          code: it.code,
+          name: it.product.name,
+          unitText: it.unit === 'box' ? 'علبة' : 'شريط',
+          qty: it.qty,
+          price: p,
+          cost: c,
+          lineTotal: line
+        });
+      });
+
+      return {
+        invNo,
+        dateStr,
+        timeStr,
+        dateTimeFull: `${dateStr} - ${timeStr}`,
+        totalAmount,
+        totalCost,
+        paymentMethod: activePayment.toUpperCase(),
+        items: printRows
+      };
+    }
+
+    function checkoutInvoice() {
+      if (cart.length === 0) {
+        alert('الفاتورة فارغة حالياً!');
+        return;
+      }
+
+      const receipt = prepareThermalReceiptData();
+      if (!receipt) return;
+
+      // Handle Later/Debt Checkout
+      if (activePayment === 'later') {
+        const debtorName = prompt('يرجى إدخال اسم العميل لتسجيل الفاتورة على حسابه الآجل:');
+        if (!debtorName) return;
+
+        let debtor = debts.find(d => d.name.includes(debtorName.trim()));
+        if (!debtor) {
+          debtor = {
+            id: Date.now(),
+            name: debtorName.trim(),
+            phone: '01xxxxxxxxx',
+            limit: 1000,
+            balance: 0,
+            lastTransaction: new Date().toISOString().split('T')[0]
+          };
+          debts.unshift(debtor);
+        }
+        debtor.balance += receipt.totalAmount;
+        debtor.lastTransaction = new Date().toISOString().split('T')[0];
+        localStorage.setItem('pharmacy_debts', JSON.stringify(debts));
+        updateDebtsBadge();
+        alert(`تم تسجيل مبلغ ${receipt.totalAmount.toFixed(2)} ج.م على حساب العميل (${debtor.name}). رصيده المدين الحالي: ${debtor.balance.toFixed(2)} ج.م.`);
+      }
+
+      // Populate Thermal DOM Elements
+      document.getElementById('receiptDateTime').innerText = `التاريخ: ${receipt.dateTimeFull}`;
+      document.getElementById('receiptInvNo').innerText = `فاتورة مبيعات: ${receipt.invNo}`;
+      document.getElementById('receiptTotalAmount').innerText = `${receipt.totalAmount.toFixed(2)} ج.م`;
+      document.getElementById('receiptPaymentMethod').innerText = receipt.paymentMethod;
+
+      document.getElementById('receiptItemsBody').innerHTML = receipt.items.map(it => `
+        <tr>
+          <td style="padding: 2px 0;">${it.name} (${it.unitText})</td>
+          <td style="text-align: center; padding: 2px 0;">${it.qty}</td>
+          <td style="text-align: left; padding: 2px 0;">${it.lineTotal.toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      const qrPayload = `BAHBAH_RX|${receipt.invNo}|TOTAL:${receipt.totalAmount}|TIME:${receipt.dateStr} ${receipt.timeStr}`;
+      const qrCanvas = document.getElementById('receiptQRCodeCanvas');
+      if (window.QRCode) {
+        QRCode.toCanvas(qrCanvas, qrPayload, { width: 90, margin: 1 });
+      }
+
+      invoices.unshift({
+        invNo: receipt.invNo,
+        dateTime: receipt.dateTimeFull,
+        timestamp: Date.now(),
+        items: receipt.items,
+        totalAmount: receipt.totalAmount,
+        totalCost: receipt.totalCost,
+        paymentMethod: receipt.paymentMethod,
+        status: 'paid'
+      });
+      localStorage.setItem('pharmacy_invoices', JSON.stringify(invoices));
+      updateInvoicesBadge();
+
+      if (activePayment === 'cash') shift.cash += receipt.totalAmount;
+      else if (activePayment === 'instapay') shift.instapay += receipt.totalAmount;
+      else if (activePayment === 'visa') shift.visa += receipt.totalAmount;
+      localStorage.setItem('pharmacy_shift', JSON.stringify(shift));
+
+      playSuccessChime();
+
+      const printArea = document.getElementById('thermalReceiptPrintArea');
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+
+      cart = [];
+      renderCart();
+      updateShiftUI();
+    }
+
+    function previewThermalReceipt() {
+      if (cart.length === 0) {
+        alert('يرجى إضافة أصناف إلى الفاتورة أولاً لمعاينة الإيصال!');
+        return;
+      }
+
+      const receipt = prepareThermalReceiptData();
+      const content = document.getElementById('previewSlipContent');
+      content.innerHTML = `
+        <div class="text-center border-b border-dashed border-gray-400 pb-2 mb-2">
+          <h4 class="font-black text-sm">صيدلية بحبح</h4>
+          <p class="text-[10px] text-gray-600">خدمة 24 ساعة • ديلفري سريع: 01000000000</p>
+          <div class="font-bold text-[10px] mt-1">${receipt.invNo}</div>
+          <div class="text-[10px] text-gray-500">${receipt.dateTimeFull}</div>
+          <div class="text-[9px] text-gray-400">الكاشير: د/ الصيدلي المسؤول</div>
+        </div>
+
+        <table class="w-full text-right my-2">
+          <thead>
+            <tr class="border-b border-black">
+              <th>الصنف</th>
+              <th class="text-center">العدد</th>
+              <th class="text-left">السعر</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${receipt.items.map(it => `
+              <tr>
+                <td class="py-1">${it.name} (${it.unitText})</td>
+                <td class="text-center">${it.qty}</td>
+                <td class="text-left font-bold">${it.lineTotal.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <div class="border-t border-dashed border-gray-400 pt-2 mb-2 font-bold text-xs flex justify-between">
+          <span>المطلوب دفعه:</span>
+          <span>${receipt.totalAmount.toFixed(2)} ج.م</span>
+        </div>
+        <div class="text-[10px] flex justify-between text-gray-600">
+          <span>طريقة الدفع:</span>
+          <span class="font-bold text-black">${receipt.paymentMethod}</span>
+        </div>
+
+        <div class="text-center border-t border-dashed border-gray-400 pt-2 mt-2 text-[9px] text-gray-500">
+          مع تمنياتنا لكم بالشفاء العاجل ❤️<br/>
+          ترد البضاعة وتستبدل خلال 14 يوم بالفاتورة
+        </div>
+      `;
+
+      document.getElementById('receiptPreviewModal').classList.remove('hidden');
+    }
+
+    function closeReceiptPreview() {
+      document.getElementById('receiptPreviewModal').classList.add('hidden');
+    }
+
+    function triggerActualPrint() {
+      closeReceiptPreview();
+      checkoutInvoice();
+    }
+
+    // ==========================================
+    // DEBTS & CUSTOMER CREDIT (الآجل والشكك)
+    // ==========================================
+    function updateDebtsBadge() {
+      const b = document.getElementById('debtsBadge');
+      if (b) b.innerText = debts.length;
+    }
+
+    function renderDebtsList() {
+      let sum = 0;
+      debts.forEach(d => sum += d.balance);
+
+      document.getElementById('totalDebtsAmount').innerText = `${sum.toFixed(2)} ج.م`;
+      document.getElementById('totalDebtorsCount').innerText = `${debts.length} عميل`;
+      document.getElementById('avgDebtAmount').innerText = `${(debts.length > 0 ? sum / debts.length : 0).toFixed(2)} ج.م`;
+
+      const tbody = document.getElementById('debtsTableBody');
+      if (debts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-slate-500">لا توجد حسابات ديون مسجلة</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = debts.map((d, idx) => `
+        <tr class="hover:bg-[#0f172a]/50 transition">
+          <td class="p-4 font-bold text-white">${d.name}</td>
+          <td class="p-4 font-mono text-cyan-400">${d.phone}</td>
+          <td class="p-4 text-slate-400 font-mono">${d.limit} ج.م</td>
+          <td class="p-4 font-black ${d.balance > 0 ? 'text-amber-400' : 'text-emerald-400'} font-mono text-sm">${d.balance.toFixed(2)} ج.م</td>
+          <td class="p-4 font-mono text-slate-400 text-[11px]">${d.lastTransaction}</td>
+          <td class="p-4 text-center">
+            <div class="flex items-center justify-center gap-1.5">
+              <button onclick="openPayDebtorModal(${idx})" class="btn-gradient-emerald text-white px-2.5 py-1 rounded-xl text-xs font-bold shadow" title="تسديد دفعة نقدية">
+                💵 تسديد
+              </button>
+              <button onclick="whatsappDebtorStatement(${idx})" class="btn-gradient-cyan text-white px-2.5 py-1 rounded-xl text-xs font-bold shadow" title="إرسال كشف حساب واتساب">
+                💬 واتساب
+              </button>
+              <button onclick="removeDebtor(${idx})" class="text-rose-400 hover:text-rose-300 font-bold px-1" title="حذف الحساب">✕</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openAddDebtorModal() {
+      activePayingDebtorIndex = -1;
+      document.getElementById('debtorModalTitle').innerText = 'تسجيل عميل آجل جديد';
+      document.getElementById('debtorFormFields').classList.remove('hidden');
+      document.getElementById('debtorPaymentFields').classList.add('hidden');
+      document.getElementById('debtorSaveBtn').innerText = 'حفظ الحساب 💾';
+      document.getElementById('debtorModal').classList.remove('hidden');
+    }
+
+    function openPayDebtorModal(idx) {
+      activePayingDebtorIndex = idx;
+      const d = debts[idx];
+      document.getElementById('debtorModalTitle').innerText = 'تسديد دفعة نقدية من الحساب';
+      document.getElementById('debtorFormFields').classList.add('hidden');
+      document.getElementById('debtorPaymentFields').classList.remove('hidden');
+      document.getElementById('payCustomerName').innerText = d.name;
+      document.getElementById('payCustomerBalance').innerText = `${d.balance.toFixed(2)} ج.م`;
+      document.getElementById('payAmountInput').value = d.balance;
+      document.getElementById('debtorSaveBtn').innerText = 'تأكيد استلام النقدية وإيداعها في الدرج 💵';
+      document.getElementById('debtorModal').classList.remove('hidden');
+    }
+
+    function closeDebtorModal() {
+      document.getElementById('debtorModal').classList.add('hidden');
+      activePayingDebtorIndex = -1;
+    }
+
+    function saveDebtor() {
+      if (activePayingDebtorIndex >= 0) {
+        // Process payment
+        const d = debts[activePayingDebtorIndex];
+        const payAmt = parseFloat(document.getElementById('payAmountInput').value);
+        if (!payAmt || payAmt <= 0) {
+          alert('يرجى إدخال مبلغ صحيح');
+          return;
+        }
+
+        d.balance = Math.max(0, d.balance - payAmt);
+        d.lastTransaction = new Date().toISOString().split('T')[0];
+        localStorage.setItem('pharmacy_debts', JSON.stringify(debts));
+
+        // Add to shift cash
+        shift.cash += payAmt;
+        localStorage.setItem('pharmacy_shift', JSON.stringify(shift));
+
+        playSuccessChime();
+        alert(`تم استلام دفعة ${payAmt.toFixed(2)} ج.م من العميل (${d.name}) وإضافتها لنقدية الدرج.`);
+        closeDebtorModal();
+        renderDebtsList();
+        updateShiftUI();
+        return;
+      }
+
+      // Add new debtor
+      const name = document.getElementById('debName').value.trim();
+      const phone = document.getElementById('debPhone').value.trim();
+      const limit = parseFloat(document.getElementById('debLimit').value) || 1000;
+      const initial = parseFloat(document.getElementById('debInitial').value) || 0;
+
+      if (!name) {
+        alert('يرجى إدخال اسم العميل');
+        return;
+      }
+
+      debts.unshift({
+        id: Date.now(),
+        name,
+        phone,
+        limit,
+        balance: initial,
+        lastTransaction: new Date().toISOString().split('T')[0]
+      });
+
+      localStorage.setItem('pharmacy_debts', JSON.stringify(debts));
+      updateDebtsBadge();
+      closeDebtorModal();
+      renderDebtsList();
+      playSuccessChime();
+      alert('تم حفظ حساب العميل الآجل بنجاح!');
+    }
+
+    function removeDebtor(idx) {
+      if (confirm(`هل أنت متأكد من حذف حساب (${debts[idx].name})؟`)) {
+        debts.splice(idx, 1);
+        localStorage.setItem('pharmacy_debts', JSON.stringify(debts));
+        updateDebtsBadge();
+        renderDebtsList();
+      }
+    }
+
+    function whatsappDebtorStatement(idx) {
+      const d = debts[idx];
+      const text = `أهلاً بحضرتك يا ${d.name} 👋\nتحية طيبة من صيدلية بحبح 🏥\nنفيدكم بأن رصيد حسابكم المتبقي طرفنا حتى تاريخ اليوم هو: ${d.balance.toFixed(2)} ج.م.\nشاكرين ومقدرين حسن تعاملكم معنا دائماً! ❤️`;
+      window.open(`https://api.whatsapp.com/send?phone=2${d.phone}&text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    // ==========================================
+    // EXPIRY & NEAR-EXPIRY TRACKER
+    // ==========================================
+    function updateExpiryBadge() {
+      const b = document.getElementById('expiryBadge');
+      if (b) b.innerText = expiryItems.length;
+    }
+
+    function renderExpiryList() {
+      const tbody = document.getElementById('expiryTableBody');
+      if (expiryItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-slate-500">لا توجد أدوية منتهية أو قريبة الانتهاء</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = expiryItems.map((ex, idx) => `
+        <tr class="hover:bg-[#0f172a]/50 transition">
+          <td class="p-4 font-mono text-indigo-300 font-bold">${ex.code}</td>
+          <td class="p-4 font-bold text-white">${ex.name}</td>
+          <td class="p-4 font-mono text-slate-300 text-xs">${ex.batch}</td>
+          <td class="p-4 font-mono font-bold text-rose-300">${ex.expiryDate}</td>
+          <td class="p-4 font-bold text-amber-400 font-mono">${ex.boxes} علبة</td>
+          <td class="p-4 text-slate-300 text-xs">${ex.distributor}</td>
+          <td class="p-4">
+            <span class="bg-rose-950/80 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full text-[11px] font-bold">
+              ${ex.status}
+            </span>
+          </td>
+          <td class="p-4 text-center">
+            <button onclick="returnExpiryItem(${idx})" class="btn-gradient-rose text-white px-3 py-1 rounded-xl text-xs font-bold shadow" title="إرجاع للموزع">
+              ↩️ إرجاع للموزع
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function returnExpiryItem(idx) {
+      const item = expiryItems[idx];
+      if (confirm(`تسجيل إرجاع كمية (${item.boxes} علبة) من الصنف ${item.name} إلى مندوب مخزن (${item.distributor}) قبل انتهاء الصلاحية؟`)) {
+        expiryItems.splice(idx, 1);
+        localStorage.setItem('pharmacy_expiry', JSON.stringify(expiryItems));
+        updateExpiryBadge();
+        renderExpiryList();
+        playSuccessChime();
+        alert('تم تسجيل إرجاع الرواكد للموزع بنجاح وتفادي الخسارة.');
+      }
+    }
+
+    function exportExpiryReport() {
+      let text = "تقرير الأدوية قريبة الانتهاء والرواكد في صيدلية بحبح:\n";
+      expiryItems.forEach(i => {
+        text += `- ${i.name} [انتهاء: ${i.expiryDate}] (كمية: ${i.boxes} علب) [الموزع: ${i.distributor}]\n`;
+      });
+      alert(text);
+    }
+
+    // ==========================================
+    // GENERICS & ALTERNATIVE MEDICINE FINDER
+    // ==========================================
+    async function openGenericsModal(code) {
+      let p = products.find(x => x.code === code);
+      if (!p) {
+        const res = await fetch(`/api/inventory?q=${encodeURIComponent(code)}&limit=1`);
+        const data = await res.json();
+        if (data.items && data.items.length > 0) p = data.items[0];
+      }
+      if (!p) return;
+
+      document.getElementById('genDrugTitle').innerText = p.name;
+      const ingredient = p.active_ingredient || p.form || 'مسكنات ومضادات';
+      document.getElementById('genActiveIngredient').innerText = ingredient;
+
+      // Search for alternatives sharing keywords in title or ingredient
+      const kw = p.name.split(' ')[0];
+      const res = await fetch(`/api/inventory?q=${encodeURIComponent(ingredient || kw)}&limit=10`);
+      const d = await res.json();
+      let alts = d.items || [];
+      alts = alts.filter(x => x.code !== p.code).sort((a,b) => a.price - b.price);
+
+      const listContainer = document.getElementById('genericsResultsList');
+      if (alts.length === 0) {
+        listContainer.innerHTML = '<p class="text-slate-500 text-center py-6 text-xs">لا توجد مثائل متوفرة حالياً في المخزون</p>';
+      } else {
+        listContainer.innerHTML = alts.map(alt => `
+          <div class="p-3 rounded-2xl bg-[#050814] border border-white/5 flex items-center justify-between hover:border-cyan-500/40 transition">
+            <div>
+              <div class="font-bold text-white text-xs">${alt.name}</div>
+              <div class="text-[11px] text-cyan-400 mt-0.5">${alt.name_ar || ''}</div>
+              <span class="text-[10px] text-slate-400 font-mono">الرصيد: ${alt.stock_boxes} علبة</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="font-black text-emerald-400 text-sm font-mono">${alt.price.toFixed(2)} ج.م</span>
+              <button onclick="addToCart('${alt.code}', 'box'); closeGenericsModal();" class="btn-gradient-cyan text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow">
+                ➕ بيع البديل
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('genericsModal').classList.remove('hidden');
+    }
+
+    function closeGenericsModal() {
+      document.getElementById('genericsModal').classList.add('hidden');
+    }
+
+    // ==========================================
+    // DELIVERY & COURIER ORDER
+    // ==========================================
+    function openDeliveryModal() {
+      if (cart.length === 0) {
+        alert('يرجى إضافة أصناف إلى الفاتورة أولاً لتجهيز أوردر الديلفري!');
+        return;
+      }
+      document.getElementById('deliveryModal').classList.remove('hidden');
+    }
+
+    function closeDeliveryModal() {
+      document.getElementById('deliveryModal').classList.add('hidden');
+    }
+
+    function confirmDeliveryOrder() {
+      const name = document.getElementById('delivCustomerName').value.trim() || 'عميل ديلفري';
+      const phone = document.getElementById('delivCustomerPhone').value.trim();
+      const address = document.getElementById('delivCustomerAddress').value.trim();
+      const courier = document.getElementById('delivCourierName').value;
+      const fee = parseFloat(document.getElementById('delivFee').value) || 0;
+
+      // Add Delivery Fee item to cart
+      cart.push({
+        code: "DELIV_FEE",
+        product: { code: "DELIV_FEE", name: `خدمة توصيل ديلفري (${courier})`, price: fee, strip_price: fee, cost: 0, unit_no: 1 },
+        unit: 'box',
+        qty: 1
+      });
+
+      renderCart();
+      closeDeliveryModal();
+      checkoutInvoice();
+      alert(`تم تأكيد وتجهيز أوردر الديلفري للعميل (${name}) مع ${courier}.`);
+    }
+
+    // ==========================================
+    // 1-CLICK BACKUP & EXPORT DATABASE
+    // ==========================================
+    function downloadBackupJSON() {
+      const backupData = {
+        exportedAt: new Date().toISOString(),
+        shift: shift,
+        debts: debts,
+        patients: patients,
+        invoices: invoices,
+        shortages: shortages,
+        expiry: expiryItems
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `pharmacy_bahbah_backup_${new Date().toISOString().split('T')[0]}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      playSuccessChime();
+      alert('تم تنزيل النسخة الاحتياطية لقاعدة بيانات الصيدلية بنجاح!');
+    }
+
+    // ==========================================
+    // INVOICES LOG & RETURN ENGINE
+    // ==========================================
+    function updateInvoicesBadge() {
+      const b = document.getElementById('invoicesBadge');
+      if (b) b.innerText = invoices.length;
+    }
+
+    function renderInvoicesList(filter = '') {
+      const tbody = document.getElementById('invoicesTableBody');
+      const filtered = filter 
+        ? invoices.filter(inv => inv.invNo.toLowerCase().includes(filter.toLowerCase()))
+        : invoices;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-slate-500">لا توجد فواتير مسجلة حتى الآن</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((inv, idx) => `
+        <tr class="hover:bg-[#0f172a]/50 transition">
+          <td class="p-4 font-mono font-bold text-indigo-300">${inv.invNo}</td>
+          <td class="p-4 font-mono text-slate-300 text-[11px]">${inv.dateTime}</td>
+          <td class="p-4">${inv.items.length} أصناف</td>
+          <td class="p-4"><span class="bg-[#050814] text-slate-300 px-2 py-0.5 rounded-lg border border-white/10 font-bold">${inv.paymentMethod}</span></td>
+          <td class="p-4 font-black ${inv.status === 'returned' ? 'text-slate-500 line-through' : 'text-emerald-400'}">${inv.totalAmount.toFixed(2)} ج.م</td>
+          <td class="p-4">
+            <span class="${inv.status === 'returned' ? 'bg-rose-950/80 text-rose-300 border-rose-500/40' : 'bg-emerald-950/80 text-emerald-300 border-emerald-500/40'} border text-[11px] px-2 py-0.5 rounded-full font-bold">
+              ${inv.status === 'returned' ? 'مرتجع ↩️' : 'مدفوعة ✔️'}
+            </span>
+          </td>
+          <td class="p-4 text-center">
+            <div class="flex items-center justify-center gap-1.5">
+              <button onclick="reprintSavedInvoice(${idx})" class="btn-gradient-indigo text-white px-2.5 py-1 rounded-xl text-xs font-bold shadow" title="إعادة طباعة">
+                🖨️ طباعة
+              </button>
+              ${inv.status !== 'returned' ? `
+                <button onclick="returnInvoice(${idx})" class="bg-rose-950/60 hover:bg-rose-900 border border-rose-600/40 text-rose-300 px-2.5 py-1 rounded-xl text-xs font-bold transition" title="استرجاع الفاتورة">
+                  ↩️ مرتجع
+                </button>
+              ` : ''}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function reprintSavedInvoice(idx) {
+      const inv = invoices[idx];
+      document.getElementById('receiptDateTime').innerText = `التاريخ: ${inv.dateTime}`;
+      document.getElementById('receiptInvNo').innerText = `فاتورة مبيعات: ${inv.invNo}`;
+      document.getElementById('receiptTotalAmount').innerText = `${inv.totalAmount.toFixed(2)} ج.م`;
+      document.getElementById('receiptPaymentMethod').innerText = inv.paymentMethod;
+
+      document.getElementById('receiptItemsBody').innerHTML = inv.items.map(it => `
+        <tr>
+          <td style="padding: 2px 0;">${it.name} (${it.unitText})</td>
+          <td style="text-align: center; padding: 2px 0;">${it.qty}</td>
+          <td style="text-align: left; padding: 2px 0;">${it.lineTotal.toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      const qrPayload = `BAHBAH_RX|${inv.invNo}|TOTAL:${inv.totalAmount}|TIME:${inv.dateTime}`;
+      const qrCanvas = document.getElementById('receiptQRCodeCanvas');
+      if (window.QRCode) {
+        QRCode.toCanvas(qrCanvas, qrPayload, { width: 90, margin: 1 });
+      }
+
+      const printArea = document.getElementById('thermalReceiptPrintArea');
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+    }
+
+    async function returnInvoice(idx) {
+      const inv = invoices[idx];
+      if (!confirm(`هل أنت متأكد من استرجاع الفاتورة (${inv.invNo}) ورد قيمة ${inv.totalAmount.toFixed(2)} ج.م للعميل واستعادة الرصيد في المخزون؟`)) {
+        return;
+      }
+
+      inv.status = 'returned';
+      localStorage.setItem('pharmacy_invoices', JSON.stringify(invoices));
+
+      if (inv.paymentMethod === 'CASH') shift.cash = Math.max(0, shift.cash - inv.totalAmount);
+      else if (inv.paymentMethod === 'INSTAPAY') shift.instapay = Math.max(0, shift.instapay - inv.totalAmount);
+      else if (inv.paymentMethod === 'VISA') shift.visa = Math.max(0, shift.visa - inv.totalAmount);
+      localStorage.setItem('pharmacy_shift', JSON.stringify(shift));
+
+      playSuccessChime();
+      alert(`تم استرجاع الفاتورة بنجاح وخصم قيمتها من تقفيل الوردية.`);
+      renderInvoicesList();
+      updateShiftUI();
+    }
+
+    // ==========================================
+    // SHELF BARCODE & PRICE STICKER GENERATOR
+    // ==========================================
+    function openBarcodeLabelModal(code) {
+      const p = products.find(x => x.code === code);
+      if (!p) return;
+      activeStickerProduct = p;
+
+      document.getElementById('lblDrugName').innerText = p.name;
+      document.getElementById('lblDrugAr').innerText = p.name_ar || p.name;
+      document.getElementById('lblDrugPrice').innerText = `${p.price.toFixed(2)} ج.م`;
+      document.getElementById('lblStripPrice').innerText = p.unit_no > 1 ? `الشريط: ${p.strip_price.toFixed(2)} ج.م` : 'علبة كاملة';
+
+      if (window.JsBarcode) {
+        JsBarcode("#barcodeCanvas", p.code, {
+          format: "CODE128",
+          width: 1.4,
+          height: 35,
+          displayValue: true,
+          fontSize: 10,
+          margin: 0
+        });
+      }
+
+      document.getElementById('barcodeLabelModal').classList.remove('hidden');
+    }
+
+    function closeBarcodeLabelModal() {
+      document.getElementById('barcodeLabelModal').classList.add('hidden');
+      activeStickerProduct = null;
+    }
+
+    function printBarcodeLabel() {
+      if (!activeStickerProduct) return;
+      const p = activeStickerProduct;
+
+      document.getElementById('prtDrugName').innerText = p.name;
+      document.getElementById('prtDrugAr').innerText = p.name_ar || p.name;
+      document.getElementById('prtPrice').innerText = `السعر: ${p.price.toFixed(2)} ج.م`;
+      document.getElementById('prtStrip').innerText = p.unit_no > 1 ? `الشريط: ${p.strip_price.toFixed(2)} ج.م` : '';
+
+      if (window.JsBarcode) {
+        JsBarcode("#prtBarcodeSvg", p.code, {
+          format: "CODE128",
+          width: 1.4,
+          height: 35,
+          displayValue: true,
+          fontSize: 10,
+          margin: 0
+        });
+      }
+
+      const printArea = document.getElementById('stickerPrintArea');
+      printArea.classList.remove('hidden');
+      window.print();
+      printArea.classList.add('hidden');
+      closeBarcodeLabelModal();
+    }
+
+    // ==========================================
+    // PEDIATRIC DOSAGE CALCULATOR
+    // ==========================================
+    function openPediatricModal() {
+      calculatePediatricDose();
+      document.getElementById('pediatricModal').classList.remove('hidden');
+    }
+
+    function closePediatricModal() {
+      document.getElementById('pediatricModal').classList.add('hidden');
+    }
+
+    function calculatePediatricDose() {
+      const drug = document.getElementById('pedDrugSelect').value;
+      const weight = parseFloat(document.getElementById('pedWeightInput').value) || 10;
+      const resultDoseEl = document.getElementById('pedResultDose');
+      const adviceEl = document.getElementById('pedAdvice');
+
+      if (drug === 'paracetamol_120') {
+        const ml = ((weight * 15) / 24).toFixed(1);
+        resultDoseEl.innerText = `${ml} سم (مل) كل 4 إلى 6 ساعات عند اللزوم`;
+        adviceEl.innerText = `الحد الأقصى 4 مرات يومياً، لا يُعطى على معدة فارغة في حالة وجود قيء، شرب الكثير من السوائل.`;
+      } else if (drug === 'brufen_100') {
+        const ml = ((weight * 10) / 20).toFixed(1);
+        resultDoseEl.innerText = `${ml} سم (مل) كل 8 ساعات بعد الأكل`;
+        adviceEl.innerText = `مسكن ومضاد للالتهاب وخافض للحرارة، ممنوع للأطفال أقل من 6 شهور، وممنوع على معدة فارغة.`;
+      } else if (drug === 'augmentin_228') {
+        const ml = (((weight * 40) / 45.6) / 2).toFixed(1);
+        resultDoseEl.innerText = `${ml} سم (مل) كل 12 ساعة لمدة 7 أيام`;
+        adviceEl.innerText = `يُحفظ في الثلاجة بعد التحضير، يُرج جيداً قبل الاستعمال، ويؤخذ في أول الوجبة لتفادي اضطراب المعدة.`;
+      } else if (drug === 'augmentin_457') {
+        const ml = (((weight * 40) / 91.4) / 2).toFixed(1);
+        resultDoseEl.innerText = `${ml} سم (مل) كل 12 ساعة لمدة 7 أيام`;
+        adviceEl.innerText = `تركيز عالي، يُحفظ بالثلاجة لمدة أقصاها 7 إلى 10 أيام.`;
+      } else if (drug === 'zyrtec') {
+        const ml = (weight > 10 ? 5 : 2.5);
+        resultDoseEl.innerText = `${ml} سم (مل) مرة واحدة يومياً مساءً`;
+        adviceEl.innerText = `مضاد للحساسية والرشح، قد يسبب بعض النعاس البسيط.`;
+      }
+    }
+
+    // ==========================================
+    // AI VOICE-TO-TEXT SEARCH
+    // ==========================================
+    let voiceRecognition = null;
+    let isListening = false;
+
+    function toggleVoiceSearch() {
+      const btn = document.getElementById('voiceSearchBtn');
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        alert('متصفحك لا يدعم البحث الصوتي المباشر. يرجى استخدام Google Chrome.');
+        return;
+      }
+
+      if (isListening && voiceRecognition) {
+        voiceRecognition.stop();
+        isListening = false;
+        btn.classList.remove('text-rose-400', 'animate-pulse');
+        btn.classList.add('text-slate-400');
+        return;
+      }
+
+      voiceRecognition = new SpeechRecognition();
+      voiceRecognition.lang = 'ar-EG';
+      voiceRecognition.continuous = false;
+      voiceRecognition.interimResults = false;
+
+      voiceRecognition.onstart = () => {
+        isListening = true;
+        btn.classList.remove('text-slate-400');
+        btn.classList.add('text-rose-400', 'animate-pulse');
+        searchInput.placeholder = "تحدث الآن باسم الدواء (مثال: بانادول، أوجمنتين، كونكور)...";
+      };
+
+      voiceRecognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        searchInput.value = transcript;
+        searchInput.dispatchEvent(new Event('input'));
+        playSuccessChime();
+      };
+
+      voiceRecognition.onerror = (event) => {
+        console.error("Speech error:", event);
+        btn.classList.remove('text-rose-400', 'animate-pulse');
+        btn.classList.add('text-slate-400');
+        isListening = false;
+      };
+
+      voiceRecognition.onend = () => {
+        isListening = false;
+        btn.classList.remove('text-rose-400', 'animate-pulse');
+        btn.classList.add('text-slate-400');
+        searchInput.placeholder = "ابحث بالعربي أو الإنجليزي أو امسح الباركود...";
+      };
+
+      voiceRecognition.start();
+    }
+
+    // ==========================================
+    // EXECUTIVE ANALYTICS & PROFIT METRICS
+    // ==========================================
+    function renderAnalyticsDashboard() {
+      let totalSales = 0;
+      let totalCost = 0;
+      let cashTotal = 0;
+      let instapayTotal = 0;
+      let visaTotal = 0;
+      const drugCounts = {};
+
+      invoices.forEach(inv => {
+        if (inv.status !== 'returned') {
+          totalSales += inv.totalAmount;
+          totalCost += (inv.totalCost || (inv.totalAmount * 0.75));
+          if (inv.paymentMethod === 'CASH') cashTotal += inv.totalAmount;
+          else if (inv.paymentMethod === 'INSTAPAY') instapayTotal += inv.totalAmount;
+          else if (inv.paymentMethod === 'VISA') visaTotal += inv.totalAmount;
+
+          inv.items.forEach(it => {
+            drugCounts[it.name] = (drugCounts[it.name] || 0) + it.qty;
+          });
+        }
+      });
+
+      const grossProfit = totalSales - totalCost;
+      const margin = totalSales > 0 ? ((grossProfit / totalSales) * 100).toFixed(1) : '0.0';
+
+      document.getElementById('metricTotalSales').innerText = `${totalSales.toFixed(2)} ج.م`;
+      document.getElementById('metricGrossProfit').innerText = `${grossProfit.toFixed(2)} ج.م`;
+      document.getElementById('metricProfitMargin').innerText = `${margin}%`;
+      document.getElementById('metricInvoicesCount').innerText = invoices.filter(i => i.status !== 'returned').length;
+
+      const topEntries = Object.entries(drugCounts).sort((a,b) => b[1] - a[1]).slice(0, 5);
+      const topContainer = document.getElementById('topSellersList');
+      if (topEntries.length > 0) {
+        topContainer.innerHTML = topEntries.map(([name, count], idx) => `
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-[#050814] border border-white/5">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 font-bold text-center leading-5 text-[10px]">${idx + 1}</span>
+              <span class="font-bold text-white text-xs">${name}</span>
+            </div>
+            <span class="font-bold text-emerald-400 font-mono">${count} وحدة مباعة</span>
+          </div>
+        `).join('');
+      } else {
+        topContainer.innerHTML = '<p class="text-slate-500 text-center py-10">لا توجد مبيعات مسجلة حتى الآن</p>';
+      }
+
+      const ctx = document.getElementById('paymentMethodsChart');
+      if (ctx && window.Chart) {
+        if (paymentChartInstance) paymentChartInstance.destroy();
+        paymentChartInstance = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: ['كاش 💵', 'InstaPay ⚡', 'فيزا 💳'],
+            datasets: [{
+              data: [cashTotal || 1, instapayTotal || 0, visaTotal || 0],
+              backgroundColor: ['#10b981', '#06b6d4', '#6366f1'],
+              borderWidth: 2,
+              borderColor: '#0b1329'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: { color: '#cbd5e1', font: { family: 'Cairo' } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // ==========================================
+    // CHRONIC PATIENT QR RECOGNITION
+    // ==========================================
+    function handlePatientQRScanned(qrRaw) {
+      playSuccessChime();
+      let patientFound = null;
+
+      try {
+        if (qrRaw.startsWith('PATIENT_QR:')) {
+          const jsonStr = qrRaw.replace('PATIENT_QR:', '');
+          const parsed = JSON.parse(jsonStr);
+          patientFound = patients.find(p => p.id === parsed.id) || parsed;
+        } else if (qrRaw.includes('PATIENT_ID:')) {
+          const match = qrRaw.match(/PATIENT_ID:(\d+)/);
+          if (match) {
+            const pid = parseInt(match[1]);
+            patientFound = patients.find(p => p.id === pid);
+          }
+        }
+      } catch (e) {
+        console.error('Error parsing QR:', e);
+      }
+
+      if (!patientFound) {
+        patientFound = patients[0];
+      }
+
+      if (patientFound) {
+        currentlyRecognizedPatient = patientFound;
+        document.getElementById('recPatientName').innerText = patientFound.name;
+        document.getElementById('recPatientPhone').innerText = patientFound.phone;
+        document.getElementById('recPatientDisease').innerText = patientFound.disease;
+        document.getElementById('recPatientDay').innerText = `موعد الصرف: يوم ${patientFound.day} شهرياً`;
+
+        const medsContainer = document.getElementById('recPatientMedsList');
+        if (patientFound.items && patientFound.items.length > 0) {
+          medsContainer.innerHTML = patientFound.items.map(it => `
+            <div class="flex items-center justify-between py-1 border-b border-white/5">
+              <span>💊 ${it.name} (${it.unit === 'box' ? 'علبة' : 'شريط'})</span>
+              <strong class="font-bold text-white">${it.qty} × ${it.price} ج.م</strong>
+            </div>
+          `).join('');
+        } else {
+          medsContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans text-xs text-emerald-300">${patientFound.meds || 'لا توجد أدوية مسجلة'}</pre>`;
+        }
+
+        document.getElementById('patientRecognizedModal').classList.remove('hidden');
+      }
+    }
+
+    function closePatientRecognizedModal() {
+      document.getElementById('patientRecognizedModal').classList.add('hidden');
+      currentlyRecognizedPatient = null;
+    }
+
+    async function applyPatientMedsToCart() {
+      if (!currentlyRecognizedPatient) return;
+      const pt = currentlyRecognizedPatient;
+
+      if (pt.items && pt.items.length > 0) {
+        for (const it of pt.items) {
+          let p = products.find(x => x.code === it.code);
+          if (!p) {
+            const res = await fetch(`/api/inventory?q=${encodeURIComponent(it.code)}&limit=1`);
+            const d = await res.json();
+            if (d.items && d.items.length > 0) p = d.items[0];
+          }
+          if (p) {
+            const existing = cart.find(x => x.code === p.code && x.unit === it.unit);
+            if (existing) existing.qty += it.qty;
+            else cart.push({ code: p.code, product: p, unit: it.unit, qty: it.qty });
+          }
+        }
+      }
+
+      pt.lastDispensed = new Date().toISOString().split('T')[0];
+      localStorage.setItem('pharmacy_patients', JSON.stringify(patients));
+
+      closePatientRecognizedModal();
+      switchTab('pos');
+      renderCart();
+      playSuccessChime();
+      alert(`تم تنزيل الأدوية الشهرية لـ (${pt.name}) في الفاتورة بنجاح!`);
+    }
+
+    function openAddPatientModal() {
+      document.getElementById('patientModal').classList.remove('hidden');
+    }
+    function closeAddPatientModal() {
+      document.getElementById('patientModal').classList.add('hidden');
+    }
+
+    function savePatient() {
+      const name = document.getElementById('patientName').value.trim();
+      const phone = document.getElementById('patientPhone').value.trim();
+      const disease = document.getElementById('patientDisease').value.trim() || 'أمراض مزمنة';
+      const day = parseInt(document.getElementById('patientDay').value) || 1;
+      const meds = document.getElementById('patientMeds').value.trim();
+
+      if (!name || !phone) {
+        alert('يرجى كتابة اسم المريض ورقم الهاتف');
+        return;
+      }
+
+      const newId = Date.now();
+      patients.push({
+        id: newId,
+        name,
+        phone,
+        disease,
+        day,
+        meds,
+        items: [],
+        lastDispensed: new Date().toISOString().split('T')[0]
+      });
+
+      localStorage.setItem('pharmacy_patients', JSON.stringify(patients));
+      closeAddPatientModal();
+      document.getElementById('patientName').value = '';
+      document.getElementById('patientPhone').value = '';
+      document.getElementById('patientMeds').value = '';
+      updateChronicBadge();
+      renderPatients();
+      playSuccessChime();
+      alert('تم حفظ ملف المريض وإصدار كارت الـ QR الذكي بنجاح!');
+    }
+
+    function updateChronicBadge() {
+      document.getElementById('chronicBadge').innerText = patients.length;
+    }
+
+    function renderPatients() {
+      const grid = document.getElementById('chronicPatientsGrid');
+      if (patients.length === 0) {
+        grid.innerHTML = '<div class="col-span-3 text-center py-16 text-slate-500">لا يوجد مرضى شهريين مسجلين</div>';
+        return;
+      }
+
+      grid.innerHTML = patients.map((pt, idx) => `
+        <div class="glass-panel rounded-3xl p-5 shadow-xl flex flex-col justify-between glass-card-hover">
+          <div>
+            <div class="flex items-start justify-between border-b border-white/10 pb-3 mb-2">
+              <div>
+                <h4 class="font-bold text-white text-base">${pt.name}</h4>
+                <span class="text-xs text-cyan-400 font-mono">${pt.phone}</span>
+              </div>
+              <span class="bg-cyan-950/80 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold px-2.5 py-1 rounded-full">
+                يوم ${pt.day} في الشهر
+              </span>
+            </div>
+
+            <div class="text-xs text-slate-400 mb-2">
+              <strong class="text-slate-300">التشخيص:</strong> ${pt.disease}
+            </div>
+
+            <div class="bg-[#050814] p-3 rounded-2xl border border-white/10 mb-3">
+              <span class="text-[11px] text-slate-500 block mb-1">الروشتة الشهرية:</span>
+              <pre class="text-xs text-emerald-300 font-sans whitespace-pre-wrap leading-relaxed">${pt.meds || 'لا توجد أدوية مسجلة'}</pre>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-white/10">
+            <button onclick="openPatientQRModal(${idx})" class="btn-gradient-indigo text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow">
+              <span>🪪</span> كارت QR
+            </button>
+            <button onclick="whatsappPatient('${pt.phone}', '${pt.name}', '${encodeURIComponent(pt.meds)}')" class="btn-gradient-emerald text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow">
+              <span>💬</span> واتساب
+            </button>
+            <button onclick="simulateScanPatient(${idx})" class="btn-gradient-cyan text-white font-bold py-2 rounded-xl text-xs flex items-center justify-center gap-1 shadow">
+              <span>⚡</span> صرف الروشتة
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    let activeModalPatientIndex = 0;
+    function openPatientQRModal(idx) {
+      activeModalPatientIndex = idx;
+      const pt = patients[idx];
+      document.getElementById('qrCardPatientName').innerText = pt.name;
+      document.getElementById('qrCardPatientDisease').innerText = `الحالة: ${pt.disease}`;
+      document.getElementById('qrCardPatientDay').innerText = `موعد الصرف: يوم ${pt.day} شهرياً`;
+      document.getElementById('qrCardPatientPhone').innerText = pt.phone;
+
+      const payloadObj = {
+        id: pt.id,
+        name: pt.name,
+        phone: pt.phone,
+        disease: pt.disease,
+        day: pt.day,
+        items: pt.items || []
+      };
+      const payload = `PATIENT_QR:${JSON.stringify(payloadObj)}`;
+
+      const canvas = document.getElementById('patientQRCodeCanvas');
+      if (window.QRCode) {
+        QRCode.toCanvas(canvas, payload, { width: 170, margin: 1 });
+      }
+
+      document.getElementById('patientQRModal').classList.remove('hidden');
+    }
+
+    function closePatientQRModal() {
+      document.getElementById('patientQRModal').classList.add('hidden');
+    }
+
+    function printPatientCardOnly() {
+      window.print();
+    }
+
+    function sharePatientCardWhatsapp() {
+      const pt = patients[activeModalPatientIndex];
+      const text = `أهلاً بحضرتك يا ${pt.name} 👋\nصيدلية بحبح تُهديك كارت المريض الذكي VIP.\nروشتتك الشهرية مسجلة وجاهزة للصرف شهرياً في موعدها:\n${pt.meds}\nتشرفنا في أي وقت!`;
+      window.open(`https://api.whatsapp.com/send?phone=2${pt.phone}&text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    function simulateScanPatient(idx) {
+      const pt = patients[idx];
+      const payloadObj = {
+        id: pt.id,
+        name: pt.name,
+        phone: pt.phone,
+        disease: pt.disease,
+        day: pt.day,
+        items: pt.items || []
+      };
+      handlePatientQRScanned(`PATIENT_QR:${JSON.stringify(payloadObj)}`);
+    }
+
+    function whatsappPatient(phone, name, medsEncoded) {
+      const meds = decodeURIComponent(medsEncoded);
+      const text = `أهلاً بحضرتك يا ${name} 👋\nنفيدك بأن روشتتك الشهرية في صيدلية بحبح جاهزة ومحضرة لحضرتك:\n${meds}\nتشرفنا في أي وقت أو نقوم بتوصيلها ديلفري لعنوانك! 🛵`;
+      window.open(`https://api.whatsapp.com/send?phone=2${phone}&text=${encodeURIComponent(text)}`, '_blank');
+    }
+
+    // ==========================================
+    // CAMERA SCANNER
+    // ==========================================
+    function toggleCameraScanner() {
+      const container = document.getElementById('cameraScannerContainer');
+      if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        startCameraScanner();
+      } else {
+        stopCameraScanner();
+        container.classList.add('hidden');
+      }
+    }
+
+    function startCameraScanner() {
+      if (!window.Html5Qrcode) {
+        alert('مكتبة الكاميرا جاري تحميلها...');
+        return;
+      }
+      cameraScannerInstance = new Html5Qrcode("cameraReader");
+      cameraScannerInstance.start(
+        { facingMode: "environment" },
+        { fps: 15, qrbox: { width: 250, height: 250 } },
+        (decodedText) => {
+          stopCameraScanner();
+          document.getElementById('cameraScannerContainer').classList.add('hidden');
+
+          if (decodedText.startsWith('PATIENT_QR:') || decodedText.startsWith('PATIENT:')) {
+            handlePatientQRScanned(decodedText);
+          } else {
+            playBeep(980, 'sine', 0.08);
+            searchInput.value = decodedText;
+            loadProducts(decodedText);
+          }
+        },
+        () => {}
+      ).catch(err => {
+        console.error("Camera error:", err);
+      });
+    }
+
+    function stopCameraScanner() {
+      if (cameraScannerInstance) {
+        cameraScannerInstance.stop().then(() => {
+          cameraScannerInstance.clear();
+          cameraScannerInstance = null;
+        }).catch(() => {});
+      }
+    }
+
+    // ==========================================
+    // SHORTAGES MODULE
+    // ==========================================
+    function addToShortages(code) {
+      const p = products.find(x => x.code === code);
+      if (!p) return;
+      if (!shortages.find(s => s.code === code)) {
+        shortages.push({
+          code: p.code,
+          name: p.name,
+          stock: p.stock_boxes,
+          qty: 5,
+          distributor: 'ابن سينا',
+          priority: 'عاجل'
+        });
+        localStorage.setItem('pharmacy_shortages', JSON.stringify(shortages));
+        updateShortagesBadge();
+        playBeep(650, 'sine', 0.08);
+        alert(`تمت إضافة ${p.name} إلى كشكول النواقص`);
+      }
+    }
+
+    function updateShortagesBadge() {
+      document.getElementById('shortagesBadge').innerText = shortages.length;
+    }
+
+    function renderShortages() {
+      const tbody = document.getElementById('shortagesTableBody');
+      if (shortages.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center text-slate-500">لا توجد نواقص مسجلة حالياً</td></tr>';
+        return;
+      }
+      tbody.innerHTML = shortages.map((s, idx) => `
+        <tr class="hover:bg-[#0f172a]/40 transition">
+          <td class="p-4 font-mono text-indigo-300">${s.code}</td>
+          <td class="p-4 font-bold text-white">${s.name}</td>
+          <td class="p-4 text-amber-400 font-bold">${s.stock} علبة</td>
+          <td class="p-4">
+            <input type="number" value="${s.qty}" onchange="updateShortageQty(${idx}, this.value)" class="w-16 bg-[#050814] border border-white/10 rounded-xl px-2 py-1 text-center text-white" />
+          </td>
+          <td class="p-4">
+            <select onchange="updateShortageDist(${idx}, this.value)" class="bg-[#050814] border border-white/10 rounded-xl px-2 py-1 text-white text-xs">
+              <option ${s.distributor === 'ابن سينا' ? 'selected' : ''}>ابن سينا</option>
+              <option ${s.distributor === 'فارما أوفرسيز' ? 'selected' : ''}>فارما أوفرسيز</option>
+              <option ${s.distributor === 'المتحدة' ? 'selected' : ''}>المتحدة</option>
+            </select>
+          </td>
+          <td class="p-4"><span class="btn-gradient-amber text-white px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow">${s.priority}</span></td>
+          <td class="p-4 text-center">
+            <button onclick="removeShortage(${idx})" class="text-rose-400 hover:text-rose-300 font-bold">حذف ✕</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateShortageQty(idx, val) {
+      shortages[idx].qty = parseInt(val) || 1;
+      localStorage.setItem('pharmacy_shortages', JSON.stringify(shortages));
+    }
+
+    function updateShortageDist(idx, val) {
+      shortages[idx].distributor = val;
+      localStorage.setItem('pharmacy_shortages', JSON.stringify(shortages));
+    }
+
+    function removeShortage(idx) {
+      shortages.splice(idx, 1);
+      localStorage.setItem('pharmacy_shortages', JSON.stringify(shortages));
+      updateShortagesBadge();
+      renderShortages();
+    }
+
+    function clearShortages() {
+      if (confirm('هل أنت متأكد من مسح جميع النواقص المكتملة؟')) {
+        shortages = [];
+        localStorage.setItem('pharmacy_shortages', JSON.stringify(shortages));
+        updateShortagesBadge();
+        renderShortages();
+      }
+    }
+
+    function exportShortagesWhatsApp() {
+      if (shortages.length === 0) {
+        alert('كشكول النواقص فارغ');
+        return;
+      }
+      let text = "طلبية نواقص صيدلية بحبح:\n";
+      shortages.forEach(s => {
+        text += `- ${s.name} (عدد: ${s.qty} علب) [المخزن: ${s.distributor}]\n`;
+      });
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+
+    // ==========================================
+    // SHIFT & CASH REGISTER
+    // ==========================================
+    function updateShiftUI() {
+      document.getElementById('shiftStartingCash').innerText = `${shift.startingCash.toFixed(2)} ج.م`;
+      document.getElementById('shiftCashTotal').innerText = `${shift.cash.toFixed(2)} ج.م`;
+      document.getElementById('shiftInstaPayTotal').innerText = `${shift.instapay.toFixed(2)} ج.م`;
+      document.getElementById('shiftVisaTotal').innerText = `${shift.visa.toFixed(2)} ج.م`;
+
+      const expectedInDrawer = shift.startingCash + shift.cash - (shift.expenses || 0);
+      document.getElementById('shiftExpectedInDrawer').innerText = `${expectedInDrawer.toFixed(2)} ج.م`;
+    }
+
+    function addExpense() {
+      const amt = parseFloat(document.getElementById('expenseAmount').value);
+      const reason = document.getElementById('expenseReason').value;
+      if (!amt || amt <= 0) return;
+      shift.expenses = (shift.expenses || 0) + amt;
+      localStorage.setItem('pharmacy_shift', JSON.stringify(shift));
+      document.getElementById('expenseAmount').value = '';
+      document.getElementById('expenseReason').value = '';
+      alert(`تم تسجيل خصم ${amt} ج.م من الدرج (${reason})`);
+      updateShiftUI();
+    }
+
+    function closeCurrentShift() {
+      const totalSales = shift.cash + shift.instapay + shift.visa;
+      const netDrawer = shift.startingCash + shift.cash - (shift.expenses || 0);
+      if (confirm(`تقفيل الوردية:\n- إجمالي المبيعات: ${totalSales.toFixed(2)} ج.م\n- النقدية المطلوب تسليمها من الدرج: ${netDrawer.toFixed(2)} ج.م\nهل تريد إنهاء الوردية وبدء شيفت جديد؟`)) {
+        shift = { startingCash: 500, cash: 0, instapay: 0, visa: 0, expenses: 0 };
+        localStorage.setItem('pharmacy_shift', JSON.stringify(shift));
+        updateShiftUI();
+        alert('تم إغلاق الوردية وبدء شيفت جديد بنجاح.');
+      }
+    }
+
+    // ==========================================
+    // MOBILE QR CONNECT MODAL
+    // ==========================================
+    function openMobileQRModal() {
+      const modal = document.getElementById('qrModal');
+      const canvas = document.getElementById('qrCanvas');
+      const link = document.getElementById('mobileLinkAnchor');
+
+      link.href = mobileDirectUrl;
+      link.innerText = mobileDirectUrl;
+
+      if (window.QRCode) {
+        QRCode.toCanvas(canvas, mobileDirectUrl, { width: 180, margin: 1 });
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeMobileQRModal() {
+      document.getElementById('qrModal').classList.add('hidden');
+    }
+
+    function copyMobileLink() {
+      navigator.clipboard.writeText(mobileDirectUrl);
+      alert('تم نسخ الرابط بنجاح! يمكنك فتحه الآن من الموبايل.');
+    }
+
+    // ==========================================
+    // EDIT PRODUCT MODAL
+    // ==========================================
+    function openEdit(code) {
+      const p = products.find(x => x.code === code);
+      if (!p) return;
+      document.getElementById('editCode').value = p.code;
+      document.getElementById('editItemName').innerText = p.name;
+      document.getElementById('editPrice').value = p.price;
+      document.getElementById('editCost').value = p.cost;
+      document.getElementById('editBoxes').value = p.stock_boxes;
+      document.getElementById('editStrips').value = p.stock_strips;
+      document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+    }
+
+    async function saveEdit() {
+      const code = document.getElementById('editCode').value;
+      const price = document.getElementById('editPrice').value;
+      const cost = document.getElementById('editCost').value;
+      const stock_boxes = document.getElementById('editBoxes').value;
+      const stock_strips = document.getElementById('editStrips').value;
+
+      await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_price', code, price, cost })
+      });
+
+      await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_stock', code, stock_boxes, stock_strips })
+      });
+
+      closeEditModal();
+      loadProducts(document.getElementById('searchInput').value);
+      playSuccessChime();
+    }
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'F1') { e.preventDefault(); switchTab('pos'); }
+      else if (e.key === 'F2') { e.preventDefault(); switchTab('chronic'); }
+      else if (e.key === 'F3') { e.preventDefault(); switchTab('debts'); }
+      else if (e.key === 'F4') { e.preventDefault(); switchTab('invoices'); }
+      else if (e.key === 'F5') { e.preventDefault(); switchTab('expiry'); }
+      else if (e.key === 'F6') { e.preventDefault(); switchTab('shortages'); }
+      else if (e.key === 'F7') { e.preventDefault(); switchTab('shift'); }
+      else if (e.key === 'F8') { e.preventDefault(); switchTab('analytics'); }
+      else if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
+
+    // Initial Boots
+    updateShortagesBadge();
+    updateChronicBadge();
+    updateInvoicesBadge();
+    updateDebtsBadge();
+    updateExpiryBadge();
+    loadProducts('');
+  </script>
+</body>
+</html>

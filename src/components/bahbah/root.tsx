@@ -28,6 +28,7 @@ import PharmacistPortal from "./pharmacist";
 import { fmtPrice } from "./product-card";
 import { Button } from "@/components/ui/button";
 import { IconCartBagDuo, IconPhone } from "./icons";
+import { initSupabaseSync } from "@/lib/bahbah/supabase-sync";
 
 /* hydration gate without setState-in-effect */
 const emptySubscribe = () => () => {};
@@ -134,6 +135,14 @@ export default function BahbahApp() {
     }
   }, []);
 
+  /* live Supabase cloud sync & realtime events */
+  useEffect(() => {
+    const cleanup = initSupabaseSync();
+    return () => {
+      if (typeof cleanup === "function") cleanup();
+    };
+  }, []);
+
   /* re-apply persisted accessibility flags after rehydration */
   const bigText = useBahbah((s) => s.bigText);
   useEffect(() => {
@@ -156,7 +165,7 @@ export default function BahbahApp() {
             alt="Bahbah Pharmacy"
             width={72}
             height={72}
-            className="animate-pulse rounded-full"
+            className="animate-pulse rounded-full bg-white p-1 shadow-md ring-2 ring-border"
           />
           <div className="h-1.5 w-28 overflow-hidden rounded-full bg-muted">
             <div className="h-full w-1/2 animate-pulse rounded-full bg-[#F09428]" />

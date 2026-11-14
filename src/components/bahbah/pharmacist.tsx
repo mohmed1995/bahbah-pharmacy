@@ -45,7 +45,7 @@ export default function PharmacistPortal() {
 
   const [q, setQ] = useState("");
 
-  const orders = adminOrders ?? adminDemoOrders;
+  const orders = adminOrders ?? [];
   const pending = orders.filter((o) => o.status === "pending");
   const lowStock = allProducts.filter((p) => p.stock > 0 && p.stock < 30);
   const outStock = allProducts.filter((p) => p.stock === 0);

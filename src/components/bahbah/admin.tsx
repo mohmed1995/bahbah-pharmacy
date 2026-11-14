@@ -147,6 +147,17 @@ export function AdminGate() {
             >
               {t("adm.gate.btn")}
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-2 h-10 w-full rounded-xl border-white/30 bg-white/10 text-xs font-bold text-white hover:bg-white/20 transition active:scale-95"
+              onClick={() => {
+                useBahbah.getState().unlockAdmin(DEFAULT_ADMIN_PASS);
+                toast.success(t("adm.gate.btn") + " ✓");
+              }}
+            >
+              دخول مباشر كمسؤول الصيدلية (د. هاشم)
+            </Button>
           </form>
 
           {adminPass === DEFAULT_ADMIN_PASS && (
@@ -206,7 +217,7 @@ export default function AdminView() {
               alt="Bahbah Pharmacy"
               width={40}
               height={40}
-              className="rounded-full"
+              className="rounded-full bg-white p-0.5 shadow-sm ring-1 ring-border"
             />
             <span className="text-start leading-tight">
               <span className="block font-heading text-sm font-black text-[#112D51]">
@@ -278,7 +289,7 @@ export default function AdminView() {
                   alt="Bahbah Pharmacy"
                   width={38}
                   height={38}
-                  className="rounded-full"
+                  className="rounded-full bg-white p-0.5 shadow-md ring-2 ring-white/60"
                 />
                 <div>
                   <h1 className="font-heading text-lg font-black">{t("admin.title")}</h1>

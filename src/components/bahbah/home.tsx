@@ -1439,7 +1439,6 @@ export default function HomeView() {
       <AdCarousel />
       <TrustStrip />
       <Categories />
-      <GymZone />
       <OffersSection />
       <CareSection />
       <BestSellers />

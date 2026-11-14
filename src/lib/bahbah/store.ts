@@ -28,6 +28,14 @@ import {
   type Role,
   demoCareSubs,
 } from "./data";
+import {
+  insertOrderToSupabase,
+  updateOrderStatusInSupabase,
+  insertRxRequestToSupabase,
+  updateRxStatusInSupabase,
+  insertCareSubToSupabase,
+  updateCareSubStatusInSupabase,
+} from "@/lib/supabase";
 
 /** next occurrence of a day-of-month (1-28) strictly after `fromIso` */
 export function nextDeliveryFor(dayPref: number, fromIso: string): string {
@@ -421,7 +429,7 @@ export const useBahbah = create<BahbahState>()(
       cart: [],
       favorites: [],
       user: null,
-      myOrders: [seedOrder],
+      myOrders: [],
       lastOrderId: null,
       trackOrderId: null,
       accountTab: "orders",
@@ -449,18 +457,18 @@ export const useBahbah = create<BahbahState>()(
       zoneEdits: {},
 
       adminSection: "overview",
-      adminOrders: null,
+      adminOrders: [],
       customProducts: [],
       stockAdj: {},
       priceOverride: {},
       driverStatus: {},
       zoneDisabled: [],
       settings: DEFAULT_SETTINGS,
-      rxQueue: demoRxQueue,
+      rxQueue: [],
       coupons: demoCoupons,
       couponOff: [],
       adsOff: [],
-      careSubs: demoCareSubs,
+      careSubs: [],
 
       setLang: (l) => set({ lang: l }),
       toggleLang: () => set({ lang: get().lang === "ar" ? "en" : "ar" }),
@@ -600,7 +608,7 @@ export const useBahbah = create<BahbahState>()(
             fee,
           },
         };
-        const adminList = state.adminOrders ?? adminDemoOrders;
+        const adminList = state.adminOrders ?? [];
         /* المخزون مربوط بالطلب — كل صنف يخصم من المخزن فورًا */
         const nextStockAdj = { ...state.stockAdj };
         items.forEach((i) => {
@@ -619,6 +627,7 @@ export const useBahbah = create<BahbahState>()(
             ? state.coupons.map((c) => (c.code === coupon?.code ? { ...c, uses: c.uses + 1 } : c))
             : state.coupons,
         });
+        insertOrderToSupabase(order, subtotal);
         return id;
       },
 
@@ -635,12 +644,15 @@ export const useBahbah = create<BahbahState>()(
           noteAr: noteAr || "—",
           noteEn: noteEn || "—",
         };
+        insertRxRequestToSupabase(rx);
         set({ rxQueue: [rx, ...get().rxQueue] });
       },
-      adminSetRx: (id, status) =>
+      adminSetRx: (id, status) => {
+        updateRxStatusInSupabase(id, status);
         set({
           rxQueue: get().rxQueue.map((r) => (r.id === id ? { ...r, status } : r)),
-        }),
+        });
+      },
 
       reorder: (orderId) => {
         const order = get().myOrders.find((o) => o.id === orderId);
@@ -711,10 +723,22 @@ export const useBahbah = create<BahbahState>()(
           status: "active",
         };
         set({ careSub: sub, careSubs: [entry, ...get().careSubs], careWizardPlan: null });
+        insertCareSubToSupabase({
+          memberNo: entry.id,
+          planId,
+          name: entry.nameAr,
+          phone: entry.phone,
+          address: sub.address,
+          status: "active",
+        });
       },
       pauseCare: () => {
         const sub = get().careSub;
         if (!sub || sub.status === "paused") return;
+        const matching = get().careSubs.find(
+          (s) => s.phone === sub.phone && s.planId === sub.planId
+        );
+        if (matching) updateCareSubStatusInSupabase(matching.id, "paused");
         set({
           careSub: { ...sub, status: "paused" },
           careSubs: get().careSubs.map((s) =>
@@ -727,6 +751,10 @@ export const useBahbah = create<BahbahState>()(
       resumeCare: () => {
         const sub = get().careSub;
         if (!sub) return;
+        const matching = get().careSubs.find(
+          (s) => s.phone === sub.phone && s.planId === sub.planId
+        );
+        if (matching) updateCareSubStatusInSupabase(matching.id, "active");
         const today = new Date().toISOString().slice(0, 10);
         set({
           careSub: { ...sub, status: "active", next: nextDeliveryFor(sub.dayPref, today) },
@@ -740,6 +768,10 @@ export const useBahbah = create<BahbahState>()(
       cancelCare: () => {
         const sub = get().careSub;
         if (!sub) return;
+        const matching = get().careSubs.find(
+          (s) => s.phone === sub.phone && s.planId === sub.planId
+        );
+        if (matching) updateCareSubStatusInSupabase(matching.id, "cancelled");
         set({
           careSub: null,
           careSubs: get().careSubs.map((s) =>
@@ -786,8 +818,16 @@ export const useBahbah = create<BahbahState>()(
 
       adminAdvance: (orderId) => {
         const next = { pending: "shipping", shipping: "delivered" } as const;
+        const currentOrder = (get().adminOrders ?? []).find((o) => o.id === orderId);
+        if (currentOrder && currentOrder.status in next) {
+          const nextStatus = next[currentOrder.status as keyof typeof next];
+          updateOrderStatusInSupabase(orderId, {
+            status: nextStatus,
+            ...(nextStatus === "delivered" ? { payment_status: "paid" } : {}),
+          });
+        }
         set({
-          adminOrders: (get().adminOrders ?? adminDemoOrders).map((o) =>
+          adminOrders: (get().adminOrders ?? []).map((o) =>
             o.id === orderId && o.status in next
               ? { ...o, status: next[o.status as keyof typeof next] }
               : o
@@ -795,15 +835,17 @@ export const useBahbah = create<BahbahState>()(
         });
       },
       adminCancel: (orderId) => {
+        updateOrderStatusInSupabase(orderId, { status: "cancelled" });
         set({
-          adminOrders: (get().adminOrders ?? adminDemoOrders).map((o) =>
+          adminOrders: (get().adminOrders ?? []).map((o) =>
             o.id === orderId ? { ...o, status: "cancelled" } : o
           ),
         });
       },
       adminAssignDriver: (orderId, driverId) => {
+        updateOrderStatusInSupabase(orderId, { courier_id: driverId });
         set({
-          adminOrders: (get().adminOrders ?? adminDemoOrders).map((o) =>
+          adminOrders: (get().adminOrders ?? []).map((o) =>
             o.id === orderId
               ? { ...o, delivery: { type: "delivery" as const, ...o.delivery, driverId } }
               : o
@@ -813,18 +855,20 @@ export const useBahbah = create<BahbahState>()(
 
       /* ---- staff portals ---- */
       courierPickup: (orderId) => {
+        updateOrderStatusInSupabase(orderId, { status: "shipping" });
         const patch = (list: Order[]) =>
           list.map((o) => (o.id === orderId && o.status === "pending" ? { ...o, status: "shipping" as const } : o));
         set({
-          adminOrders: patch(get().adminOrders ?? adminDemoOrders),
+          adminOrders: patch(get().adminOrders ?? []),
           myOrders: patch(get().myOrders),
         });
       },
       courierDeliver: (orderId) => {
+        updateOrderStatusInSupabase(orderId, { status: "delivered", payment_status: "paid" });
         const patch = (list: Order[]) =>
           list.map((o) => (o.id === orderId && o.status === "shipping" ? { ...o, status: "delivered" as const } : o));
         set({
-          adminOrders: patch(get().adminOrders ?? adminDemoOrders),
+          adminOrders: patch(get().adminOrders ?? []),
           myOrders: patch(get().myOrders),
         });
       },
@@ -833,7 +877,7 @@ export const useBahbah = create<BahbahState>()(
         const patch = (list: Order[]) =>
           list.map((o) => (o.id === orderId && o.status === "pending" ? { ...o, status: "shipping" as const } : o));
         set({
-          adminOrders: patch(get().adminOrders ?? adminDemoOrders),
+          adminOrders: patch(get().adminOrders ?? []),
           myOrders: patch(get().myOrders),
         });
       },
@@ -874,14 +918,20 @@ export const useBahbah = create<BahbahState>()(
           adsOff: off.includes(adId) ? off.filter((a) => a !== adId) : [...off, adId],
         });
       },
-      toggleCareSubStatus: (id) =>
+      toggleCareSubStatus: (id) => {
+        const item = get().careSubs.find((s) => s.id === id);
+        if (item) {
+          const nextStatus = item.status === "active" ? "paused" : "active";
+          updateCareSubStatusInSupabase(id, nextStatus);
+        }
         set({
           careSubs: get().careSubs.map((s) =>
             s.id === id
               ? { ...s, status: s.status === "active" ? ("paused" as const) : ("active" as const) }
               : s
           ),
-        }),
+        });
+      },
 
       /* ---- admin password gate & CMS editors ---- */
       unlockAdmin: (pass) => {
@@ -900,24 +950,24 @@ export const useBahbah = create<BahbahState>()(
         set({ zoneEdits: { ...get().zoneEdits, [id]: { ...get().zoneEdits[id], ...patch } } }),
       resetAdminDemo: () =>
         set({
-          adminOrders: null,
+          adminOrders: [],
           customProducts: [],
           stockAdj: {},
           priceOverride: {},
           driverStatus: {},
           zoneDisabled: [],
           settings: DEFAULT_SETTINGS,
-          rxQueue: demoRxQueue,
+          rxQueue: [],
           coupons: demoCoupons,
           couponOff: [],
           adsOff: [],
-          careSubs: demoCareSubs,
+          careSubs: [],
         }),
     }),
     {
       name: "bahbah-store",
-      version: 3,
-      /* v2 → v3: boxes era — old free-delivery threshold 500 resets to the new 300 goal */
+      version: 4,
+      /* v3 → v4: production launch — purge all demo orders, demo rx, and demo subscriptions */
       migrate: (persisted: unknown) => {
         const p = (persisted ?? {}) as Record<string, unknown>;
         const old = p.careSub as
@@ -943,7 +993,13 @@ export const useBahbah = create<BahbahState>()(
         }
         const st = p.settings as { freeThreshold?: number } | undefined;
         if (st && st.freeThreshold === 500) st.freeThreshold = 300;
-        return p as unknown as BahbahState;
+        return {
+          ...p,
+          myOrders: [],
+          adminOrders: [],
+          rxQueue: [],
+          careSubs: [],
+        } as unknown as BahbahState;
       },
       partialize: (s) => ({
         lang: s.lang,

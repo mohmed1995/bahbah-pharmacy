@@ -1,31 +1,35 @@
 {
-  "name": "صيدلية بحبح",
+  "name": "صيدلية بحبح — Bahbah Pharmacy",
   "short_name": "بحبح",
-  "description": "صيدلية بحبح في ديروط — أدوية وعناية شخصية وتوصيل سريع",
-  "lang": "ar",
-  "dir": "rtl",
+  "description": "صيدلية بحبح ديروط — أدوية أصلية، شحن سريع، واصلي، ورعاية شهرية لأدويتك المزمنة",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#123B73",
+  "orientation": "portrait",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#F6F8FB",
+  "theme_color": "#112D51",
+  "categories": ["medical", "health", "shopping"],
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "images/pwa-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "./icon-512.png",
+      "src": "images/pwa-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "./icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "images/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

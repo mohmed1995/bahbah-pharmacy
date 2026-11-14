@@ -1,0 +1,13 @@
+[
+{"id":1,"name":"بانادول إكسترا","generic":"باراسيتامول 500 مجم + كافيين","price":42,"stock":20,"cat":"drug"},
+{"id":2,"name":"أوجمنتين 1 جم","generic":"أموكسيسيلين + كلافيولانيك","price":114,"stock":0,"cat":"drug","restricted":true,"equivalents":[{"id":21,"name":"هايبيوتك 1 جم","price":89}]},
+{"id":4,"name":"شامبو ضد القشرة","generic":"كيتوكونازول 2%","price":95,"stock":12,"cat":"hair","tags":["dandruff"]},
+{"id":5,"name":"سيروم تقوية الشعر","generic":"بيوتين + كافيين","price":180,"stock":3,"cat":"hair","tags":["loss"]},
+{"id":6,"name":"ماسك زيت الأرجان","generic":"للشعر الجاف والمصبوغ","price":130,"stock":9,"cat":"hair","tags":["dry"]},
+{"id":7,"name":"شامبو للشعر الدهني","generic":"منظّم إفراز الدهون","price":85,"stock":8,"cat":"hair","tags":["oily"]},
+{"id":8,"name":"توكة ستان فاخرة","generic":"طقم 3 قطع","price":35,"stock":30,"cat":"acc","tags":["hairacc"]},
+{"id":9,"name":"فرشاة شعر فك التشابك","generic":"ناعمة على الفروة","price":75,"stock":14,"cat":"acc","tags":["hairacc"]},
+{"id":10,"name":"مقص أظافر ستانلس","generic":"عناية شخصية","price":45,"stock":25,"cat":"acc","tags":["care"]},
+{"id":11,"name":"بوكس هدية عناية","generic":"كريم + مرطب شفايف + لوشن","price":220,"stock":4,"cat":"acc","tags":["gift"]},
+{"id":12,"name":"لبّاسة رضاعة","generic":"سيليكون طبي","price":55,"stock":18,"cat":"kids"}
+]

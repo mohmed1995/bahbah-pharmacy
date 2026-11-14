@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لا يوجد اتصال | صيدلية بحبح — No connection | Bahbah Pharmacy</title>
+  <link rel="icon" href="/images/bahbah-badge.png" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #112d51 0%, #1e4e8f 60%, #163a6b 100%);
+      color: #fff; text-align: center; padding: 24px;
+    }
+    .card {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 28px; padding: 44px 34px; max-width: 430px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 24px 60px rgba(0,0,0,.35);
+    }
+    img { width: 96px; height: 96px; border-radius: 50%; margin-bottom: 20px; }
+    h1 { font-size: 24px; font-weight: 900; margin-bottom: 10px; }
+    p { font-size: 15px; line-height: 1.8; color: rgba(255,255,255,.78); margin-bottom: 8px; }
+    .en { direction: ltr; }
+    button {
+      margin-top: 22px; border: 0; cursor: pointer;
+      background: #f09428; color: #fff;
+      font-size: 17px; font-weight: 900;
+      padding: 15px 44px; border-radius: 999px;
+      box-shadow: 0 10px 26px rgba(240,148,40,.4);
+    }
+    button:active { transform: scale(.97); }
+    .tel {
+      display: inline-block; margin-top: 16px; color: #7fe0b4;
+      font-weight: 800; font-size: 15px; text-decoration: none; direction: ltr;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="/images/bahbah-badge.png" alt="صيدلية بحبح" />
+    <h1>مفيش اتصال بالإنترنت</h1>
+    <p>اتأكد من الشبكة و جرّب تاني — طلباتك وسلتك محفوظة و مش هتضيع.</p>
+    <p class="en">You are offline. Your cart and orders are saved — reconnect and try again.</p>
+    <button onclick="location.reload()">إعادة المحاولة ↻</button>
+    <br />
+    <a class="tel" href="tel:+201011500166">+20 101 150 0166</a>
+  </main>
+</body>
+</html>

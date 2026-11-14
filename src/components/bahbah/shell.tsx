@@ -112,7 +112,7 @@ export function Header() {
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#10B981] opacity-75" />
                 <span className="relative inline-flex size-2 rounded-full bg-[#10B981]" />
               </span>
-              {lang === "ar" ? "خدمة واصلي: توصيل خلال 30 دقيقة في ديروط" : "Wasly: 30-min express delivery in Deirout"}
+              {lang === "ar" ? "خدمة واصلي: توصيل سريع في ديروط" : "Wasly: Fast Express Delivery in Dairut"}
             </span>
             <span className="hidden text-white/30 md:inline">|</span>
             <span className="hidden items-center gap-1.5 text-white/80 md:flex">
@@ -129,24 +129,24 @@ export function Header() {
         </div>
       </div>
 
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 md:h-[72px] md:px-6">
+      <div className="mx-auto flex h-20 max-w-7xl items-center gap-3 px-4 md:h-24 md:px-6">
         {/* brand */}
-        <button className="flex items-center gap-2.5 transition-transform hover:scale-[1.02] active:scale-95" onClick={() => go("home")}>
-          <div className="relative">
+        <button className="flex items-center gap-3 transition-transform hover:scale-[1.02] active:scale-95" onClick={() => go("home")}>
+          <div className="relative size-16 shrink-0 md:size-20">
             <Image
               src="/images/bahbah-badge.png"
               alt="Bahbah Pharmacy"
-              width={46}
-              height={46}
-              className="rounded-full bg-white shadow-md ring-2 ring-border/50"
+              width={80}
+              height={80}
+              className="size-full rounded-full bg-white p-1 shadow-md ring-2 ring-border/50 object-contain"
               priority
             />
           </div>
           <div className="text-start leading-tight">
-            <div className="font-heading text-[17.5px] font-black text-[#0B1E38]">
+            <div className="font-heading text-xl font-black text-[#D97706] md:text-3xl">
               {t("brand.name")}
             </div>
-            <div className="hidden text-[10px] font-black tracking-widest text-[#D97706] sm:block">
+            <div className="hidden text-xs font-black tracking-widest text-[#184C8A] sm:block">
               BAHBAH PHARMACY
             </div>
           </div>
@@ -995,8 +995,8 @@ export function Footer() {
                 className="rounded-full bg-white p-1 shadow-md"
               />
               <div className="leading-tight">
-                <div className="font-heading text-lg font-black">{t("brand.name")}</div>
-                <div className="text-[10px] font-bold tracking-widest text-[#F59E0B]">
+                <div className="font-heading text-lg font-black text-[#F59E0B]">{t("brand.name")}</div>
+                <div className="text-[10px] font-bold tracking-widest text-white/90">
                   BAHBAH PHARMACY
                 </div>
               </div>

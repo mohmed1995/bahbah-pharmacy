@@ -39,7 +39,7 @@ export default function CourierPortal() {
 
   const myDriverId = user?.driverId ?? "dr-1";
   const driver = driverById(myDriverId);
-  const orders = adminOrders ?? adminDemoOrders;
+  const orders = adminOrders ?? [];
 
   const mine = useMemo(
     () => orders.filter((o) => o.delivery?.driverId === myDriverId && o.status !== "cancelled"),

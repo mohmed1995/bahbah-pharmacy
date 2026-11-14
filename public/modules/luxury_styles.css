@@ -1,0 +1,452 @@
+/**
+ * ============================================================================
+ * BAHBAH LUXURY PHARMACY OS - OBSIDIAN LUXURY DESIGN SYSTEM
+ * Stylesheet: luxury_styles.css
+ * Chief Digital Architect: Eng. Ziad Tarek
+ * ============================================================================
+ */
+
+:root {
+  /* Obsidian Core Surfaces */
+  --lx-obsidian-0: #020611;
+  --lx-obsidian-1: #070d1e;
+  --lx-obsidian-2: #0c1633;
+  --lx-obsidian-3: #12214a;
+  
+  /* Glassmorphism Substrates */
+  --lx-glass-base: rgba(7, 13, 30, 0.78);
+  --lx-glass-elevated: rgba(12, 22, 51, 0.88);
+  --lx-glass-top: rgba(16, 28, 64, 0.95);
+  
+  /* Precision Crystal Borders */
+  --lx-crystal-border-subtle: rgba(255, 255, 255, 0.08);
+  --lx-crystal-border-specular: rgba(255, 255, 255, 0.16);
+  --lx-crystal-border-hover: rgba(99, 102, 241, 0.45);
+  
+  /* Hydraulic Neon Lighting System */
+  --lx-gold-primary: #f59e0b;
+  --lx-gold-bright: #fbbf24;
+  --lx-gold-glow: 0 0 25px rgba(245, 158, 11, 0.35);
+  --lx-gold-gradient: linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #fbbf24 100%);
+  --lx-gold-card-bg: linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(180, 83, 9, 0.06) 45%, rgba(251, 191, 36, 0.12) 100%);
+  
+  --lx-emerald-primary: #10b981;
+  --lx-emerald-bright: #34d399;
+  --lx-emerald-glow: 0 0 25px rgba(16, 185, 129, 0.35);
+  --lx-emerald-gradient: linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%);
+  
+  --lx-cyan-primary: #06b6d4;
+  --lx-cyan-bright: #22d3ee;
+  --lx-cyan-glow: 0 0 25px rgba(6, 182, 212, 0.35);
+  --lx-cyan-gradient: linear-gradient(135deg, #0891b2 0%, #06b6d4 50%, #22d3ee 100%);
+  
+  --lx-purple-primary: #8b5cf6;
+  --lx-purple-bright: #a855f7;
+  --lx-purple-glow: 0 0 25px rgba(139, 92, 246, 0.35);
+  --lx-purple-gradient: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 50%, #a855f7 100%);
+
+  --lx-rose-primary: #f43f5e;
+  --lx-rose-glow: 0 0 25px rgba(244, 63, 94, 0.35);
+
+  /* Physics Springs */
+  --lx-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --lx-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ============================================================================
+   1. OBSIDIAN GLASSMORPHISM & ELEVATION
+   ============================================================================ */
+
+.lx-glass-panel {
+  background: var(--lx-glass-base);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid var(--lx-crystal-border-subtle);
+  box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.55),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.12);
+  border-radius: 1.25rem;
+}
+
+.lx-glass-elevated {
+  background: var(--lx-glass-elevated);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid var(--lx-crystal-border-specular);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.75),
+              0 0 30px rgba(99, 102, 241, 0.18),
+              inset 0 1px 0 0 rgba(255, 255, 255, 0.18);
+  border-radius: 1.5rem;
+}
+
+/* Hydraulic Buttons with Spring Physics */
+.lx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: inherit;
+  font-weight: 700;
+  border-radius: 0.875rem;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.22s var(--lx-smooth);
+  user-select: none;
+  text-decoration: none;
+}
+
+.lx-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.12);
+}
+
+.lx-btn:active {
+  transform: translateY(1px) scale(0.97);
+}
+
+.lx-btn-gold {
+  background: var(--lx-gold-gradient);
+  color: #1a0f00;
+  box-shadow: var(--lx-gold-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: rgba(251, 191, 36, 0.5);
+}
+
+.lx-btn-emerald {
+  background: var(--lx-emerald-gradient);
+  color: #011d13;
+  box-shadow: var(--lx-emerald-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: rgba(52, 211, 153, 0.5);
+}
+
+.lx-btn-cyan {
+  background: var(--lx-cyan-gradient);
+  color: #03232c;
+  box-shadow: var(--lx-cyan-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: rgba(34, 211, 238, 0.5);
+}
+
+.lx-btn-purple {
+  background: var(--lx-purple-gradient);
+  color: #ffffff;
+  box-shadow: var(--lx-purple-glow), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+.lx-btn-ghost {
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.lx-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================================================
+   2. VIP GOLD PATIENT CARD & PULSING RADAR BADGES
+   ============================================================================ */
+
+.lx-vip-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--lx-gold-card-bg);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 1.5rem;
+  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7),
+              0 0 35px rgba(245, 158, 11, 0.2),
+              inset 0 1px 0 rgba(254, 240, 138, 0.35);
+  backdrop-filter: blur(24px);
+}
+
+/* Golden Holographic Foil Sheen */
+.lx-vip-card::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.15) 0%, transparent 65%);
+  transform: rotate(25deg);
+  pointer-events: none;
+  animation: lxHoloShift 8s ease-in-out infinite alternate;
+}
+
+@keyframes lxHoloShift {
+  0% { transform: translateY(-10%) rotate(25deg); opacity: 0.6; }
+  100% { transform: translateY(15%) rotate(35deg); opacity: 1; }
+}
+
+/* EMV Gold Chip Representation */
+.lx-gold-chip {
+  width: 44px;
+  height: 34px;
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 40%, #fef08a 70%, #a16207 100%);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.6), 0 2px 6px rgba(0, 0, 0, 0.3);
+  position: relative;
+}
+
+.lx-gold-chip::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed rgba(66, 32, 6, 0.6);
+  border-radius: 3px;
+}
+
+/* Pulsing Badges */
+.lx-badge-pulse-gold {
+  position: relative;
+}
+
+.lx-badge-pulse-gold::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px solid var(--lx-gold-primary);
+  animation: lxPulseGold 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+@keyframes lxPulseGold {
+  0% { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+.lx-badge-pulse-emerald {
+  position: relative;
+}
+
+.lx-badge-pulse-emerald::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px solid var(--lx-emerald-primary);
+  animation: lxPulseEmerald 2s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+}
+
+@keyframes lxPulseEmerald {
+  0% { transform: scale(0.95); opacity: 1; }
+  100% { transform: scale(1.4); opacity: 0; }
+}
+
+/* ============================================================================
+   3. FLOATING AUTOCOMPLETE DROPDOWN
+   ============================================================================ */
+
+.lx-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 1000;
+  background: var(--lx-glass-top);
+  border: 1px solid var(--lx-crystal-border-specular);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  box-shadow: 0 30px 70px -15px rgba(0, 0, 0, 0.85),
+              0 0 35px rgba(99, 102, 241, 0.22),
+              inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  animation: lxSlideDown 0.24s var(--lx-spring);
+}
+
+@keyframes lxSlideDown {
+  from { opacity: 0; transform: translateY(-8px) scale(0.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.lx-autocomplete-list {
+  overflow-y: auto;
+  max-height: 380px;
+  padding: 0.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+.lx-autocomplete-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.lx-autocomplete-list::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 9999px;
+}
+
+.lx-autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 0.875rem;
+  margin-bottom: 0.25rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.lx-autocomplete-item:hover,
+.lx-autocomplete-item.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.22);
+  transform: translateX(-3px);
+}
+
+.lx-autocomplete-item.active {
+  border-right: 4px solid #6366f1;
+}
+
+/* Luxury Hotkeys Bar */
+.lx-hotkeys-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: rgba(3, 7, 18, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.lx-kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.45rem;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 0.375rem;
+  font-family: monospace;
+  font-weight: 700;
+  color: #f1f5f9;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  margin-left: 0.25rem;
+}
+
+/* ============================================================================
+   4. MODALS & HUD OVERLAYS
+   ============================================================================ */
+
+.lx-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(2, 6, 17, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  animation: lxFadeIn 0.2s ease;
+}
+
+@keyframes lxFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.lx-modal-container {
+  width: 100%;
+  max-width: 650px;
+  background: var(--lx-glass-elevated);
+  border: 1px solid var(--lx-crystal-border-specular);
+  border-radius: 1.5rem;
+  box-shadow: 0 30px 80px -15px rgba(0, 0, 0, 0.9),
+              0 0 45px rgba(99, 102, 241, 0.25);
+  overflow: hidden;
+  animation: lxModalPop 0.3s var(--lx-spring);
+}
+
+@keyframes lxModalPop {
+  from { opacity: 0; transform: scale(0.92) translateY(15px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ============================================================================
+   5. THERMAL BARCODE LABEL (38x25 mm) & PRINT MEDIA ENGINE
+   ============================================================================ */
+
+/* Realistic On-Screen Thermal Sticker Preview */
+.lx-thermal-label-preview {
+  width: 380px; /* Scaled 10x for ultra-sharp UI visualization */
+  height: 250px;
+  background: #ffffff;
+  color: #000000;
+  border-radius: 8px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto;
+}
+
+/* Thermal Sticker Peel Notch Effect */
+.lx-thermal-label-preview::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  border-width: 0 16px 16px 0;
+  border-style: solid;
+  border-color: #e2e8f0 #0b132b #e2e8f0 #0b132b;
+  box-shadow: -1px 1px 2px rgba(0,0,0,0.15);
+}
+
+/* Thermal Print Exact Target (38mm x 25mm) */
+#lxPrintBarcodeTarget {
+  display: none;
+}
+
+@media print {
+  /* Hide all app surfaces */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Show only our dedicated barcode target */
+  #lxPrintBarcodeTarget,
+  #lxPrintBarcodeTarget * {
+    visibility: visible !important;
+  }
+
+  #lxPrintBarcodeTarget {
+    display: block !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 38mm !important;
+    height: 25mm !important;
+    max-width: 38mm !important;
+    max-height: 25mm !important;
+    padding: 1.5mm 2mm !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 7pt !important;
+    line-height: 1.1 !important;
+    overflow: hidden !important;
+    page-break-after: always !important;
+  }
+
+  @page {
+    size: 38mm 25mm !important;
+    margin: 0 !important;
+  }
+}

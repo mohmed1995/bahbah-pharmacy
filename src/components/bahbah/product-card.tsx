@@ -583,13 +583,15 @@ export function SectionHead({
 
 export function BahbahLogo({ size = 40 }: { size?: number }) {
   return (
-    <Image
-      src="/images/bahbah-badge.png"
-      alt="Bahbah Pharmacy logo"
-      width={size}
-      height={size}
-      className="rounded-full"
-      priority
-    />
+    <div className="relative inline-flex items-center justify-center overflow-hidden rounded-full bg-white p-1 shadow-md ring-2 ring-white/60">
+      <Image
+        src="/images/bahbah-badge.png"
+        alt="Bahbah Pharmacy logo"
+        width={size}
+        height={size}
+        className="rounded-full object-contain"
+        priority
+      />
+    </div>
   );
 }

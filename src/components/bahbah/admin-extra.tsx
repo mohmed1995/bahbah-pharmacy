@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useBahbah, useT } from "@/lib/bahbah/store";
+import { useBahbah, useT, useAdminProducts } from "@/lib/bahbah/store";
 import { adSlides, carePlans, planById, getProduct } from "@/lib/bahbah/data";
 import { AdminCard, SectionTitle, KpiCard, TableWrap, TH, TD } from "./admin-ui";
 import { fmtPrice } from "./product-card";
@@ -483,10 +483,11 @@ export function CareAdminSection() {
 export function MaintenanceSection() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
-  const products = useBahbah((s) => s.products);
+  const products = useAdminProducts();
   const setPrice = useBahbah((s) => s.setPrice);
   const restock = useBahbah((s) => s.restock);
-  const orders = useBahbah((s) => s.orders);
+  const adminOrders = useBahbah((s) => s.adminOrders);
+  const orders = adminOrders ?? [];
   
   const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
