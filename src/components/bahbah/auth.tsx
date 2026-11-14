@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBahbah, useT, useCarePlans, matchStaff, roleHome, type AccountTab } from "@/lib/bahbah/store";
 import { getProduct, STAFF_ACCOUNTS, DEFAULT_STAFF_PASSWORD, PHARMACY, ROLE_META, type Role } from "@/lib/bahbah/data";
+import { signInWithSupabase, signUpWithSupabase } from "@/lib/supabase";
 import { fmtPrice, ProductCard } from "./product-card";
 import CareMembershipCard, { DayPicker } from "./care-card";
 import { IconRefill } from "./icons";
@@ -63,12 +64,49 @@ export function LoginView() {
     go(roleHome(user.role));
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!valid) {
       toast.error(t("auth.invalid"));
       return;
     }
-    /* staff roles must match fixed credentials; patients sign in freely */
+
+    /* Signup: Register customer in Supabase Auth */
+    if (mode === "signup") {
+      try {
+        await signUpWithSupabase(email, password, {
+          name: name.trim() || email.split("@")[0],
+          phone: phone.trim() || undefined,
+          role: "patient",
+        });
+      } catch (err) {
+        console.warn("Supabase signup error:", err);
+      }
+      finish(
+        { name: name.trim() || email.split("@")[0], email: email.trim(), phone: phone.trim() || undefined, role: "patient" },
+        name.trim() || email.split("@")[0]
+      );
+      return;
+    }
+
+    /* Login: Authenticate with Supabase Auth */
+    try {
+      const { data, error } = await signInWithSupabase(email, password);
+      if (!error && data?.user) {
+        const meta = data.user.user_metadata || {};
+        const userRole = (meta.role as Role) || role;
+        const userName = meta.name || email.split("@")[0];
+        const driverId = meta.driverId;
+        finish(
+          { name: userName, email: data.user.email || email.trim(), phone: meta.phone || phone.trim() || undefined, role: userRole, driverId },
+          userName.split(" — ")[0]
+        );
+        return;
+      }
+    } catch (err) {
+      console.warn("Supabase auth error:", err);
+    }
+
+    /* Fallback for staff accounts or offline mode */
     if (role !== "patient") {
       const staff = matchStaff(email, password);
       if (!staff || staff.role !== role) {

@@ -201,6 +201,34 @@ export async function updateOrderStatusInSupabase(
   }
 }
 
+// Upload Rx Prescription Image to Supabase Storage
+export async function uploadRxPrescriptionImage(file: File): Promise<string | null> {
+  try {
+    const ext = file.name.split(".").pop() || "jpg";
+    const filePath = `rx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { data, error } = await supabase.storage
+      .from("rx-prescriptions")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (error) {
+      console.warn("Supabase storage upload error:", error.message);
+      return null;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from("rx-prescriptions")
+      .getPublicUrl(data.path);
+
+    return urlData.publicUrl;
+  } catch (err) {
+    console.warn("Supabase storage upload failed:", err);
+    return null;
+  }
+}
+
 // Insert Rx Request
 export async function insertRxRequestToSupabase(rx: RxRequest) {
   try {
@@ -308,3 +336,77 @@ export async function fetchCareSubsFromSupabase(): Promise<CareSubscriber[]> {
     return [];
   }
 }
+
+// -------------------------------------------------------------
+// Admin Settings & Realtime Store Sync
+// -------------------------------------------------------------
+export async function syncAdminSettingsToSupabase(patch: Record<string, unknown>) {
+  try {
+    const { error } = await supabase
+      .from("admin_settings")
+      .update({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", "global");
+
+    if (error) {
+      console.warn("[Supabase Sync] Admin settings update error:", error.message);
+    } else {
+      console.log("⚡ [Bahbah Supabase Sync] Admin settings updated in Supabase:", Object.keys(patch));
+    }
+  } catch (err) {
+    console.warn("[Supabase Sync] Failed to update admin settings:", err);
+  }
+}
+
+export async function fetchAdminSettingsFromSupabase() {
+  try {
+    const { data, error } = await supabase
+      .from("admin_settings")
+      .select("*")
+      .eq("id", "global")
+      .single();
+    if (error) {
+      console.warn("[Supabase Sync] fetchAdminSettings error:", error.message);
+      return null;
+    }
+    return data;
+  } catch (err) {
+    console.warn("[Supabase Sync] fetchAdminSettings failed:", err);
+    return null;
+  }
+}
+
+// -------------------------------------------------------------
+// Supabase Auth Helpers
+// -------------------------------------------------------------
+export async function signInWithSupabase(email: string, pass: string) {
+  return await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password: pass,
+  });
+}
+
+export async function signUpWithSupabase(
+  email: string,
+  pass: string,
+  metadata: { name: string; phone?: string; role?: string; driverId?: string }
+) {
+  return await supabase.auth.signUp({
+    email: email.trim(),
+    password: pass,
+    options: {
+      data: metadata,
+    },
+  });
+}
+
+export async function signOutFromSupabase() {
+  try {
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.warn("[Supabase Auth] signOut error:", err);
+  }
+}
+

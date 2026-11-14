@@ -8,9 +8,78 @@ import {
   type DbCareSubscription,
 } from "../supabase";
 import { useBahbah } from "./store";
-import type { Order, RxRequest, CareSubscriber } from "./data";
+import type { Order, RxRequest, CareSubscriber, Role, Product, Coupon } from "./data";
+import type { SiteEdits, AdEdit, CareEdit, ZoneEdit } from "./store";
 
 let isInitialized = false;
+
+export interface DbAdminSettings {
+  id: string;
+  admin_pass?: string;
+  site_edits?: SiteEdits;
+  ad_edits?: Record<string, AdEdit>;
+  care_edits?: Record<string, CareEdit>;
+  zone_edits?: Record<string, ZoneEdit>;
+  ads_off?: string[];
+  stock_adj?: Record<string, number>;
+  price_override?: Record<string, number>;
+  custom_products?: Product[];
+  coupons?: Coupon[];
+  updated_at?: string;
+}
+
+/** Sync any admin configuration changes directly to Supabase */
+export async function syncAdminSettingsToSupabase(patch: Partial<DbAdminSettings>) {
+  try {
+    const { error } = await supabase
+      .from("admin_settings")
+      .update({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", "global");
+
+    if (error) {
+      console.warn("[Supabase Sync] Admin settings update error:", error.message);
+    } else {
+      console.log("⚡ [Bahbah Supabase Sync] Admin settings saved to Supabase:", Object.keys(patch));
+    }
+  } catch (err) {
+    console.warn("[Supabase Sync] Failed to update admin settings:", err);
+  }
+}
+
+/** Supabase Auth: Sign In */
+export async function signInWithSupabase(email: string, pass: string) {
+  return await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password: pass,
+  });
+}
+
+/** Supabase Auth: Sign Up */
+export async function signUpWithSupabase(
+  email: string,
+  pass: string,
+  metadata: { name: string; phone?: string; role?: Role }
+) {
+  return await supabase.auth.signUp({
+    email: email.trim(),
+    password: pass,
+    options: {
+      data: metadata,
+    },
+  });
+}
+
+/** Supabase Auth: Sign Out */
+export async function signOutFromSupabase() {
+  try {
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.warn("[Supabase Auth] Sign out error:", err);
+  }
+}
 
 export function initSupabaseSync() {
   if (typeof window === "undefined") return () => {};
@@ -34,7 +103,6 @@ export function initSupabaseSync() {
       }
       if (data) {
         const remoteOrders = (data as DbOrder[]).map(mapDbOrderToOrder);
-        // Direct sync with Supabase as single source of truth
         useBahbah.setState({ adminOrders: remoteOrders });
         console.log(`⚡ [Bahbah Supabase Sync] Synced ${remoteOrders.length} orders from Supabase.`);
       }
@@ -89,7 +157,44 @@ export function initSupabaseSync() {
     }
   })();
 
-  // 4. Real-time Subscription: Orders
+  // 4. Initial Data Fetch: Admin Settings (Live CMS & Access Control)
+  (async () => {
+    try {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("*")
+        .eq("id", "global")
+        .single();
+
+      if (error) {
+        console.warn("[Supabase Sync] Admin settings fetch error:", error.message);
+        return;
+      }
+      if (data) {
+        const s = data as DbAdminSettings;
+        const updates: Record<string, unknown> = {};
+        if (s.admin_pass) updates.adminPass = s.admin_pass;
+        if (s.site_edits && Object.keys(s.site_edits).length > 0) updates.siteEdits = s.site_edits;
+        if (s.ad_edits && Object.keys(s.ad_edits).length > 0) updates.adEdits = s.ad_edits;
+        if (s.care_edits && Object.keys(s.care_edits).length > 0) updates.careEdits = s.care_edits;
+        if (s.zone_edits && Object.keys(s.zone_edits).length > 0) updates.zoneEdits = s.zone_edits;
+        if (Array.isArray(s.ads_off)) updates.adsOff = s.ads_off;
+        if (s.stock_adj && Object.keys(s.stock_adj).length > 0) updates.stockAdj = s.stock_adj;
+        if (s.price_override && Object.keys(s.price_override).length > 0) updates.priceOverride = s.price_override;
+        if (Array.isArray(s.custom_products) && s.custom_products.length > 0) updates.customProducts = s.custom_products;
+        if (Array.isArray(s.coupons) && s.coupons.length > 0) updates.coupons = s.coupons;
+
+        if (Object.keys(updates).length > 0) {
+          useBahbah.setState(updates);
+          console.log("⚡ [Bahbah Supabase Sync] Synced admin settings from Supabase.");
+        }
+      }
+    } catch (err) {
+      console.warn("[Supabase Sync] Admin settings fetch failed:", err);
+    }
+  })();
+
+  // 5. Real-time Subscription: Orders
   const ordersChannel = supabase
     .channel("bahbah-realtime-orders")
     .on(
@@ -130,7 +235,7 @@ export function initSupabaseSync() {
     )
     .subscribe();
 
-  // 5. Real-time Subscription: Prescriptions (rx_requests)
+  // 6. Real-time Subscription: Prescriptions (rx_requests)
   const rxChannel = supabase
     .channel("bahbah-realtime-rx")
     .on(
@@ -154,7 +259,7 @@ export function initSupabaseSync() {
     )
     .subscribe();
 
-  // 6. Real-time Subscription: Care Subscriptions
+  // 7. Real-time Subscription: Care Subscriptions
   const careChannel = supabase
     .channel("bahbah-realtime-care")
     .on(
@@ -178,9 +283,64 @@ export function initSupabaseSync() {
     )
     .subscribe();
 
+  // 8. Real-time Subscription: Admin Settings
+  const settingsChannel = supabase
+    .channel("bahbah-realtime-settings")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "admin_settings" },
+      (payload) => {
+        console.log("⚡ [Supabase Realtime] Settings event:", payload.eventType, payload.new);
+        if (payload.new) {
+          const s = payload.new as DbAdminSettings;
+          const updates: Record<string, unknown> = {};
+          if (s.admin_pass) updates.adminPass = s.admin_pass;
+          if (s.site_edits) updates.siteEdits = s.site_edits;
+          if (s.ad_edits) updates.adEdits = s.ad_edits;
+          if (s.care_edits) updates.careEdits = s.care_edits;
+          if (s.zone_edits) updates.zoneEdits = s.zone_edits;
+          if (Array.isArray(s.ads_off)) updates.adsOff = s.ads_off;
+          if (s.stock_adj) updates.stockAdj = s.stock_adj;
+          if (s.price_override) updates.priceOverride = s.price_override;
+          if (Array.isArray(s.custom_products)) updates.customProducts = s.custom_products;
+          if (Array.isArray(s.coupons)) updates.coupons = s.coupons;
+
+          if (Object.keys(updates).length > 0) {
+            useBahbah.setState(updates);
+            console.log("⚡ [Bahbah Supabase Sync] Realtime applied admin settings update.");
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  // 9. Auth State Listener
+  const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    console.log("⚡ [Supabase Auth Event]:", event, session?.user?.email);
+    if (event === "SIGNED_OUT") {
+      useBahbah.setState({ user: null, adminUnlocked: false });
+    } else if (event === "SIGNED_IN" && session?.user) {
+      const meta = session.user.user_metadata || {};
+      const role: Role = (meta.role as Role) || "patient";
+      const name = meta.name || session.user.email?.split("@")[0] || "User";
+      useBahbah.setState({
+        user: {
+          name,
+          email: session.user.email || "",
+          phone: meta.phone || undefined,
+          role,
+          driverId: meta.driverId,
+        },
+        adminUnlocked: role === "admin",
+      });
+    }
+  });
+
   return () => {
     supabase.removeChannel(ordersChannel);
     supabase.removeChannel(rxChannel);
     supabase.removeChannel(careChannel);
+    supabase.removeChannel(settingsChannel);
+    authListener?.subscription.unsubscribe();
   };
 }

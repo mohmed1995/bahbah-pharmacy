@@ -35,6 +35,8 @@ import {
   updateRxStatusInSupabase,
   insertCareSubToSupabase,
   updateCareSubStatusInSupabase,
+  syncAdminSettingsToSupabase,
+  signOutFromSupabase,
 } from "@/lib/supabase";
 
 /** next occurrence of a day-of-month (1-28) strictly after `fromIso` */
@@ -529,7 +531,10 @@ export const useBahbah = create<BahbahState>()(
       },
 
       login: (user) => set({ user }),
-      logout: () => set({ user: null, view: "home" }),
+      logout: () => {
+        set({ user: null, adminUnlocked: false, view: "home" });
+        signOutFromSupabase();
+      },
 
       placeOrder: ({ address, phone, payment, name, city, deliveryType, zoneId, slotId }) => {
         const state = get();
@@ -884,11 +889,20 @@ export const useBahbah = create<BahbahState>()(
 
       restock: (productId, qty) => {
         const cur = get().stockAdj[productId] ?? 0;
-        set({ stockAdj: { ...get().stockAdj, [productId]: cur + qty } });
+        const next = { ...get().stockAdj, [productId]: cur + qty };
+        set({ stockAdj: next });
+        syncAdminSettingsToSupabase({ stock_adj: next });
       },
-      setPrice: (productId, price) =>
-        set({ priceOverride: { ...get().priceOverride, [productId]: price } }),
-      addAdminProduct: (p) => set({ customProducts: [p, ...get().customProducts] }),
+      setPrice: (productId, price) => {
+        const next = { ...get().priceOverride, [productId]: price };
+        set({ priceOverride: next });
+        syncAdminSettingsToSupabase({ price_override: next });
+      },
+      addAdminProduct: (p) => {
+        const next = [p, ...get().customProducts];
+        set({ customProducts: next });
+        syncAdminSettingsToSupabase({ custom_products: next });
+      },
 
       cycleDriverStatus: (driverId) => {
         const order: DriverStatus[] = ["available", "busy", "offline"];
@@ -905,18 +919,23 @@ export const useBahbah = create<BahbahState>()(
         });
       },
       updateSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
-      toggleCouponActive: (code) =>
-        set({
-          coupons: get().coupons.map((c) =>
-            c.code === code ? { ...c, active: !c.active } : c
-          ),
-        }),
-      addCoupon: (c) => set({ coupons: [c, ...get().coupons] }),
+      toggleCouponActive: (code) => {
+        const next = get().coupons.map((c) =>
+          c.code === code ? { ...c, active: !c.active } : c
+        );
+        set({ coupons: next });
+        syncAdminSettingsToSupabase({ coupons: next });
+      },
+      addCoupon: (c) => {
+        const next = [c, ...get().coupons];
+        set({ coupons: next });
+        syncAdminSettingsToSupabase({ coupons: next });
+      },
       toggleAd: (adId) => {
         const off = get().adsOff;
-        set({
-          adsOff: off.includes(adId) ? off.filter((a) => a !== adId) : [...off, adId],
-        });
+        const next = off.includes(adId) ? off.filter((a) => a !== adId) : [...off, adId];
+        set({ adsOff: next });
+        syncAdminSettingsToSupabase({ ads_off: next });
       },
       toggleCareSubStatus: (id) => {
         const item = get().careSubs.find((s) => s.id === id);
@@ -939,15 +958,35 @@ export const useBahbah = create<BahbahState>()(
         if (ok) set({ adminUnlocked: true });
         return ok;
       },
-      lockAdmin: () => set({ adminUnlocked: false }),
-      setAdminPass: (p) => set({ adminPass: p.trim() || DEFAULT_ADMIN_PASS }),
-      updateSiteEdits: (patch) => set({ siteEdits: { ...get().siteEdits, ...patch } }),
-      updateAdEdit: (id, patch) =>
-        set({ adEdits: { ...get().adEdits, [id]: { ...get().adEdits[id], ...patch } } }),
-      updateCareEdit: (id, patch) =>
-        set({ careEdits: { ...get().careEdits, [id]: { ...get().careEdits[id], ...patch } } }),
-      updateZoneEdit: (id, patch) =>
-        set({ zoneEdits: { ...get().zoneEdits, [id]: { ...get().zoneEdits[id], ...patch } } }),
+      lockAdmin: () => {
+        set({ adminUnlocked: false });
+        signOutFromSupabase();
+      },
+      setAdminPass: (p) => {
+        const next = p.trim() || DEFAULT_ADMIN_PASS;
+        set({ adminPass: next });
+        syncAdminSettingsToSupabase({ admin_pass: next });
+      },
+      updateSiteEdits: (patch) => {
+        const next = { ...get().siteEdits, ...patch };
+        set({ siteEdits: next });
+        syncAdminSettingsToSupabase({ site_edits: next });
+      },
+      updateAdEdit: (id, patch) => {
+        const next = { ...get().adEdits, [id]: { ...get().adEdits[id], ...patch } };
+        set({ adEdits: next });
+        syncAdminSettingsToSupabase({ ad_edits: next });
+      },
+      updateCareEdit: (id, patch) => {
+        const next = { ...get().careEdits, [id]: { ...get().careEdits[id], ...patch } };
+        set({ careEdits: next });
+        syncAdminSettingsToSupabase({ care_edits: next });
+      },
+      updateZoneEdit: (id, patch) => {
+        const next = { ...get().zoneEdits, [id]: { ...get().zoneEdits[id], ...patch } };
+        set({ zoneEdits: next });
+        syncAdminSettingsToSupabase({ zone_edits: next });
+      },
       resetAdminDemo: () =>
         set({
           adminOrders: [],
