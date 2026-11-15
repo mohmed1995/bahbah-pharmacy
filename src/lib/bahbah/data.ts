@@ -2239,6 +2239,84 @@ export interface CareSubscriber {
 export const demoCareSubs: CareSubscriber[] = [];
 
 /* ------------------------------------------------------------------ */
+/* قياسات المريض — السكر والضغط والوزن ومتابعة الحالة الصحية          */
+/* ------------------------------------------------------------------ */
+
+export type SugarMealTiming = "fasting" | "random" | "postprandial" | "bedtime";
+
+export interface PatientMeasurement {
+  id: string;
+  patientCode: string;
+  patientName: string;
+  patientPhone: string;
+  recordedAt: string;
+  bloodSugar?: number;
+  sugarTiming?: SugarMealTiming;
+  systolic?: number;
+  diastolic?: number;
+  pulse?: number;
+  weight?: number;
+  height?: number;
+  bmi?: number;
+  pharmacistNotes?: string;
+  recordedBy?: string;
+}
+
+export const demoMeasurements: PatientMeasurement[] = [
+  {
+    id: "MEAS-101",
+    patientCode: "BB-C-101",
+    patientName: "الحاج أحمد عبد الرحمن",
+    patientPhone: "01011500166",
+    recordedAt: "2026-11-10T11:30:00Z",
+    bloodSugar: 128,
+    sugarTiming: "fasting",
+    systolic: 125,
+    diastolic: 82,
+    pulse: 74,
+    weight: 84.5,
+    height: 172,
+    bmi: 28.6,
+    pharmacistNotes: "القياسات مستقرة وممتازة. الاستمرار على علاج الضغط والسكر بعد وجبة الإفطار والمشي 20 دقيقة يومياً.",
+    recordedBy: "د. بحبح — صيدلية بحبح",
+  },
+  {
+    id: "MEAS-102",
+    patientCode: "BB-C-101",
+    patientName: "الحاج أحمد عبد الرحمن",
+    patientPhone: "01011500166",
+    recordedAt: "2026-11-03T10:15:00Z",
+    bloodSugar: 142,
+    sugarTiming: "random",
+    systolic: 135,
+    diastolic: 88,
+    pulse: 80,
+    weight: 85.2,
+    height: 172,
+    bmi: 28.8,
+    pharmacistNotes: "ضغط الدم مرتفع قليلاً عن المعدل المثالي، تم التنبيه بتقليل الملح والالتزام بمواعيد العلاج.",
+    recordedBy: "د. أحمد — صيدلية بحبح",
+  },
+  {
+    id: "MEAS-103",
+    patientCode: "BB-C-102",
+    patientName: "أم محمد الشريف",
+    patientPhone: "01552533484",
+    recordedAt: "2026-11-12T17:45:00Z",
+    bloodSugar: 110,
+    sugarTiming: "postprandial",
+    systolic: 118,
+    diastolic: 76,
+    pulse: 72,
+    weight: 68.0,
+    height: 160,
+    bmi: 26.6,
+    pharmacistNotes: "سكر طبيعي وضغط مثالي جداً، ونزول ممتاز في الوزن مقارنة بالشهر السابق.",
+    recordedBy: "د. بحبح — صيدلية بحبح",
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /* Coupons engine (BAHBAH10 / BAHBAH20 ...)                            */
 /* ------------------------------------------------------------------ */
 

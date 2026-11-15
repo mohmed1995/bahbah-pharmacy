@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Order, RxRequest, CareSubscriber } from "./bahbah/data";
+import type { Order, RxRequest, CareSubscriber, PatientMeasurement } from "./bahbah/data";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.invalid";
@@ -62,6 +62,24 @@ export interface DbCareSubscription {
   day_pref?: number | null;
   status: string | null;
   created_at: string;
+}
+
+export interface DbPatientMeasurement {
+  id: string;
+  patient_code: string;
+  patient_name: string;
+  patient_phone: string;
+  recorded_at: string;
+  blood_sugar?: number | null;
+  sugar_timing?: string | null;
+  systolic?: number | null;
+  diastolic?: number | null;
+  pulse?: number | null;
+  weight?: number | null;
+  height?: number | null;
+  bmi?: number | null;
+  pharmacist_notes?: string | null;
+  recorded_by?: string | null;
 }
 
 /* Mapper helpers */
