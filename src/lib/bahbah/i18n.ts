@@ -243,15 +243,15 @@ export const dict = {
     "cart.couponOk": "تم تطبيق الكود — خصم {p}٪",
     "cart.couponBad": "الكود غير صحيح أو مش مفعّل",
     "cart.savings": "وفّرت",
-    "cart.suggest": "عملاء بحبح بشّروا بيهم",
+    "cart.suggest": "منتجات مقترحة",
 
     /* بوابة كلمة سر الإدارة */
     "adm.gate.title": "لوحة إدارة صيدلية بحبح",
-    "adm.gate.sub": "الصفحة دي لطاقم الصيدلية فقط — دخول بكلمة سر",
-    "adm.gate.ph": "كلمة السر",
-    "adm.gate.btn": "دخول اللوحة",
-    "adm.gate.wrong": "كلمة السر غير صحيحة — حاول تاني",
-    "adm.gate.hint": "الكلمة الافتراضية: 2026 — غيّرها من الإعدادات",
+    "adm.gate.sub": "الصفحة دي لطاقم الصيدلية فقط — يلزم حساب موثق",
+    "adm.gate.ph": "حساب الإدارة",
+    "adm.gate.btn": "تسجيل الدخول",
+    "adm.gate.wrong": "بيانات الحساب غير صحيحة — حاول تاني",
+    "adm.gate.hint": "يلزم حساب إدارة موثق من الخادم",
     "adm.gate.locked": "تم قفل اللوحة",
     "adm.lock": "قفل اللوحة",
     "adm.pass.title": "كلمة سر لوحة الإدارة",
@@ -795,8 +795,8 @@ export const dict = {
     "adm.couponAdded": "تم إضافة الكوبون ونشط من دلوقتي",
 
     /* ---- Admin: ads manager ---- */
-    "adm.ads": "الإعلانات والبنرات",
-    "adm.adsD": "تحكم كامل في البنرات اللي بتظهر في الصفحة الرئيسية",
+    "adm.ads": "الإعلانات والعروض",
+    "adm.adsD": "تحكم كامل في إعلانات الرئيسية وعروض وخصومات الأسبوع ورفع الصور",
     "adm.ad.on": "ظاهرة",
     "adm.ad.off": "مخفية",
     "adm.ad.clicks": "نقرة اليوم",
@@ -1124,11 +1124,11 @@ export const dict = {
 
     /* admin password gate */
     "adm.gate.title": "Bahbah Pharmacy Admin",
-    "adm.gate.sub": "Staff only — sign in with the panel password",
-    "adm.gate.ph": "Password",
-    "adm.gate.btn": "Enter panel",
-    "adm.gate.wrong": "Wrong password — try again",
-    "adm.gate.hint": "Default password: 2026 — change it from Settings",
+    "adm.gate.sub": "Staff only — use a verified server-side account",
+    "adm.gate.ph": "Admin account",
+    "adm.gate.btn": "Sign in",
+    "adm.gate.wrong": "Invalid account details — try again",
+    "adm.gate.hint": "A verified server-side admin account is required",
     "adm.gate.locked": "Panel locked",
     "adm.lock": "Lock panel",
     "adm.pass.title": "Admin panel password",
@@ -1672,8 +1672,8 @@ export const dict = {
     "adm.couponAdded": "Coupon added and active",
 
     /* ---- Admin: ads manager ---- */
-    "adm.ads": "Ads & Banners",
-    "adm.adsD": "Full control over the banners shown on the homepage",
+    "adm.ads": "Ads & Offers",
+    "adm.adsD": "Full control over homepage banners, weekly deals, and promo images",
     "adm.ad.on": "Visible",
     "adm.ad.off": "Hidden",
     "adm.ad.clicks": "clicks today",

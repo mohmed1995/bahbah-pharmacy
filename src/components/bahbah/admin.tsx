@@ -48,7 +48,6 @@ import {
   useBahbah,
   useT,
   useAdminProducts,
-  DEFAULT_ADMIN_PASS,
   type AdminSection,
 } from "@/lib/bahbah/store";
 import { fmtPrice } from "./product-card";
@@ -83,18 +82,6 @@ import { toast } from "sonner";
 /* ------------------------------------------------------------------ */
 export function AdminGate() {
   const t = useT();
-  const adminPass = useBahbah((s) => s.adminPass);
-  const [pass, setPass] = useState("");
-  const [wrong, setWrong] = useState(false);
-
-  const submit = () => {
-    if (useBahbah.getState().unlockAdmin(pass)) {
-      toast.success(t("adm.gate.btn") + " ✓");
-    } else {
-      setWrong(true);
-      toast.error(t("adm.gate.wrong"));
-    }
-  };
 
   return (
     <main className="bb-hero-band flex min-h-screen flex-col items-center justify-center px-4 text-white">
@@ -120,52 +107,16 @@ export function AdminGate() {
             <p className="mt-1.5 text-xs leading-relaxed text-white/70">{t("adm.gate.sub")}</p>
           </div>
 
-          <form
-            className="mt-6 space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              submit();
-            }}
+          <Button
+            type="button"
+            className="mt-6 h-12 w-full rounded-xl bg-[#F09428] text-base font-black text-white shadow-lg hover:bg-[#e08317]"
+            onClick={() => useBahbah.setState({ view: "login" })}
           >
-            <Input
-              type="password"
-              inputMode="numeric"
-              value={pass}
-              onChange={(e) => {
-                setPass(e.target.value);
-                setWrong(false);
-              }}
-              placeholder={t("adm.gate.ph")}
-              dir="ltr"
-              autoFocus
-              className={`h-12 rounded-xl border-white/20 bg-white/90 text-center text-lg font-black tracking-[0.35em] text-[#112D51] placeholder:tracking-normal placeholder:font-bold placeholder:text-muted-foreground ${
-                wrong ? "border-[#DC4B4B] ring-2 ring-[#DC4B4B]/40" : ""
-              }`}
-            />
-            <Button
-              type="submit"
-              className="h-12 w-full rounded-xl bg-[#F09428] text-base font-black text-white shadow-lg hover:bg-[#e08317]"
-            >
-              {t("adm.gate.btn")}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-2 h-10 w-full rounded-xl border-white/30 bg-white/10 text-xs font-bold text-white hover:bg-white/20 transition active:scale-95"
-              onClick={() => {
-                useBahbah.getState().unlockAdmin(DEFAULT_ADMIN_PASS);
-                toast.success(t("adm.gate.btn") + " ✓");
-              }}
-            >
-              دخول مباشر كمسؤول الصيدلية (د. هاشم)
-            </Button>
-          </form>
-
-          {adminPass === DEFAULT_ADMIN_PASS && (
-            <p className="mt-4 rounded-xl bg-white/10 px-3 py-2 text-center text-[11px] font-bold text-white/75">
-              {t("adm.gate.hint")}
-            </p>
-          )}
+            تسجيل الدخول بحساب إدارة مصرح
+          </Button>
+          <p className="mt-4 rounded-xl bg-white/10 px-3 py-2 text-center text-[11px] font-bold text-white/75">
+            لا توجد كلمة مرور عامة أو دخول مباشر. يلزم حساب إدارة موثق من Supabase.
+          </p>
         </div>
       </div>
     </main>
@@ -696,6 +647,7 @@ function SettingsSection() {
   const settings = useBahbah((s) => s.settings);
   const siteEdits = useBahbah((s) => s.siteEdits);
   const careEdits = useBahbah((s) => s.careEdits);
+  const setSection = useBahbah((s) => s.setAdminSection);
   const { updateSettings, updateSiteEdits, updateCareEdit, setAdminPass, resetAdminDemo } =
     useBahbah();
   const [newPass, setNewPass] = useState("");
@@ -966,6 +918,27 @@ function SettingsSection() {
             onClick={() => toast.success("تم تأكيد حفظ ونشر جميع النصوص والشعارات بنجاح ✓")}
           >
             تأكيد الحفظ
+          </Button>
+        </div>
+      </AdminCard>
+
+      {/* إدارة العروض والإعلانات المصورة — وصول مباشر من الإعدادات */}
+      <AdminCard className="lg:col-span-2 border-orange-200 bg-orange-50/30 dark:border-orange-950 dark:bg-orange-950/20">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <SectionTitle
+              icon={<Megaphone className="size-5 text-[#EA580C]" />}
+              title="إدارة العروض والإعلانات ورفع الصور"
+            />
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              تعديل بنرات الصفحة الرئيسية، إنشاء عروض وخصومات أسبوعية جديدة، ورفع صور الإعلانات والمنتجات مباشرة من جهازك.
+            </p>
+          </div>
+          <Button
+            className="h-10 rounded-xl bg-[#EA580C] px-5 text-xs font-bold text-white hover:bg-[#C2410C]"
+            onClick={() => setSection("ads")}
+          >
+            فتح إدارة الإعلانات والعروض ←
           </Button>
         </div>
       </AdminCard>

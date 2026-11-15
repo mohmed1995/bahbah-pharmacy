@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { offers, discountPct, type Product } from "@/lib/bahbah/data";
-import { useBahbah, useT } from "@/lib/bahbah/store";
+import { discountPct, type Product } from "@/lib/bahbah/data";
+import { useBahbah, useT, useOffers } from "@/lib/bahbah/store";
 import { ProductCard, SectionHead, fmtPrice } from "./product-card";
 import { toast } from "sonner";
 
@@ -325,7 +325,7 @@ type Filter = "all" | "f20" | "f30" | "f40";
 export default function OffersView() {
   const t = useT();
   const [filter, setFilter] = useState<Filter>("all");
-  const list = offers();
+  const list = useOffers();
   const maxPct = list.reduce((mx, p) => Math.max(mx, discountPct(p)), 0);
   const deal = useMemo(
     () => [...list].sort((a, b) => discountPct(b) - discountPct(a))[0],

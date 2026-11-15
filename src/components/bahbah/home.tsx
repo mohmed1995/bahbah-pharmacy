@@ -16,7 +16,7 @@ import {
   WASLY,
   type AdSlide,
 } from "@/lib/bahbah/data";
-import { useBahbah, useT, useAdSlides, effStock } from "@/lib/bahbah/store";
+import { useBahbah, useT, useAdSlides, useOffers, effStock } from "@/lib/bahbah/store";
 import { ProductCard, SectionHead, BahbahLogo } from "./product-card";
 import {
   IconShieldCheck,
@@ -227,7 +227,7 @@ function AdCarousel() {
             touchX.current = null;
           }}
         >
-          <div className="relative h-52 sm:h-64 md:h-80 lg:h-[400px]">
+          <div className="relative h-52 overflow-hidden sm:h-64 md:h-80 lg:h-[400px]">
             {/* track */}
             <div
               className="flex h-full transition-transform duration-700 ease-out"
@@ -801,7 +801,7 @@ function Categories() {
 function OffersSection() {
   const t = useT();
   const go = useBahbah((s) => s.go);
-  const list = offers();
+  const list = useOffers();
 
   return (
     <section className="pt-14 md:pt-16">
@@ -1058,16 +1058,16 @@ function CareSection() {
 function ToolsRow() {
   const t = useT();
   const elderMode = useBahbah((s) => s.elderMode);
-  const { setIcOpen, setSearchOpen, toggleElderMode } = useBahbah();
+  const { setRxOpen, setSearchOpen, toggleElderMode } = useBahbah();
 
   const items = [
     {
-      icon: IconCapsuleDuo,
+      icon: IconRxClipboardDuo,
       tint: "bg-[#EAF1F9]",
       color: "text-[#1E4E8F]",
-      title: "tools.checkerT",
-      desc: "tools.checkerD",
-      onClick: () => setIcOpen(true),
+      title: "services.uploadT",
+      desc: "services.uploadD",
+      onClick: () => setRxOpen(true),
     },
     {
       icon: IconMic,

@@ -12,7 +12,6 @@ import {
   slotById,
   drivers as demoDrivers,
   demoCoupons,
-  STAFF_ACCOUNTS,
   PHARMACY,
   carePlans,
   careAddons,
@@ -157,7 +156,7 @@ export interface AdminSettings {
 }
 
 /* ---- editable-from-admin content (CMS layers over the base data) ---- */
-export const DEFAULT_ADMIN_PASS = "2026";
+export const DEFAULT_ADMIN_PASS = "";
 
 /** contact info & site marketing copy the owner can change from the dashboard */
 export interface SiteEdits {
@@ -186,6 +185,17 @@ export interface AdEdit {
   badgeEn?: string;
   ctaAr?: string;
   ctaEn?: string;
+  img?: string;
+}
+
+/** weekly-deal & special-offer overrides */
+export interface OfferEdit {
+  price?: number;
+  oldPrice?: number;
+  badgeAr?: string;
+  badgeEn?: string;
+  img?: string;
+  active?: boolean;
 }
 
 /** monthly-care plan tweaks the owner can make from the dashboard */
@@ -260,6 +270,7 @@ interface BahbahState {
   /* ---- CMS layers edited from the dashboard ---- */
   siteEdits: SiteEdits;
   adEdits: Record<string, AdEdit>;
+  offerEdits: Record<string, OfferEdit>;
   careEdits: Record<string, CareEdit>;
   zoneEdits: Record<string, ZoneEdit>;
 
@@ -357,11 +368,11 @@ interface BahbahState {
   resetAdminDemo: () => void;
 
   /* ---- admin password gate & CMS editors ---- */
-  unlockAdmin: (pass: string) => boolean;
   lockAdmin: () => void;
   setAdminPass: (p: string) => void;
   updateSiteEdits: (patch: SiteEdits) => void;
   updateAdEdit: (id: string, patch: AdEdit) => void;
+  updateOfferEdit: (id: string, patch: OfferEdit) => void;
   updateCareEdit: (id: string, patch: CareEdit) => void;
   updateZoneEdit: (id: string, patch: ZoneEdit) => void;
   submitRx: (r: { fileName: string; phone: string; noteAr: string; noteEn: string }) => void;
@@ -374,20 +385,6 @@ export interface AppUser {
   phone?: string;
   role: Role;
   driverId?: string; // set for courier accounts
-}
-
-/** staff login result — null if credentials don't match a staff account */
-export function matchStaff(email: string, password: string): AppUser | null {
-  const acc = STAFF_ACCOUNTS.find(
-    (a) => a.email === email.trim().toLowerCase() && a.password === password
-  );
-  if (!acc) return null;
-  return {
-    name: acc.nameAr,
-    email: acc.email,
-    role: acc.role,
-    driverId: acc.driverId,
-  };
 }
 
 /** where each role lands right after login */
@@ -468,9 +465,10 @@ export const useBahbah = create<BahbahState>()(
       filters: DEFAULT_FILTERS,
 
       adminUnlocked: false,
-      adminPass: DEFAULT_ADMIN_PASS,
+      adminPass: "",
       siteEdits: {},
       adEdits: {},
+      offerEdits: {},
       careEdits: {},
       zoneEdits: {},
 
@@ -1038,17 +1036,12 @@ export const useBahbah = create<BahbahState>()(
       },
 
       /* ---- admin password gate & CMS editors ---- */
-      unlockAdmin: (pass) => {
-        const ok = pass.trim() === get().adminPass;
-        if (ok) set({ adminUnlocked: true });
-        return ok;
-      },
       lockAdmin: () => {
         set({ adminUnlocked: false });
         signOutFromSupabase();
       },
       setAdminPass: (p) => {
-        const next = p.trim() || DEFAULT_ADMIN_PASS;
+        const next = p.trim();
         set({ adminPass: next });
         syncAdminSettingsToSupabase({ admin_pass: next });
       },
@@ -1061,6 +1054,10 @@ export const useBahbah = create<BahbahState>()(
         const next = { ...get().adEdits, [id]: { ...get().adEdits[id], ...patch } };
         set({ adEdits: next });
         syncAdminSettingsToSupabase({ ad_edits: next });
+      },
+      updateOfferEdit: (id, patch) => {
+        const next = { ...get().offerEdits, [id]: { ...get().offerEdits[id], ...patch } };
+        set({ offerEdits: next });
       },
       updateCareEdit: (id, patch) => {
         const next = { ...get().careEdits, [id]: { ...get().careEdits[id], ...patch } };
@@ -1228,6 +1225,7 @@ export function applyAdEdits(
       const e = adEdits[s.id] ?? {};
       return {
         ...s,
+        img: e.img?.trim() || s.img,
         titleKeyAr: e.titleAr?.trim() || s.titleKeyAr,
         titleKeyEn: e.titleEn?.trim() || s.titleKeyEn,
         subKeyAr: e.subAr?.trim() || s.subKeyAr,
@@ -1243,6 +1241,32 @@ export const useAdSlides = () => {
   const adsOff = useBahbah((s) => s.adsOff);
   const adEdits = useBahbah((s) => s.adEdits);
   return applyAdEdits(adsOff, adEdits);
+};
+
+export const useOffers = () => {
+  const allProducts = useAdminProducts();
+  const offerEdits = useBahbah((s) => s.offerEdits) || {};
+
+  return allProducts
+    .map((p) => {
+      const e = offerEdits[p.id];
+      if (!e) return p;
+      return {
+        ...p,
+        price: e.price ?? p.price,
+        oldPrice: e.oldPrice ?? p.oldPrice,
+        img: e.img?.trim() || p.img,
+        tags: e.active === false
+          ? (p.tags.filter((t) => t !== "offer") as any)
+          : (p.tags.includes("offer") ? p.tags : [...p.tags, "offer"] as any),
+      };
+    })
+    .filter((p) => {
+      const e = offerEdits[p.id];
+      if (e?.active === false) return false;
+      if (e?.active === true) return true;
+      return p.tags.includes("offer") && !!p.oldPrice;
+    });
 };
 
 /** live delivery zones = base zones with dashboard pricing edits */

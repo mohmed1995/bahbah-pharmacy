@@ -8,12 +8,20 @@ const clinicalEngine = require('./clinical_engine');
 
 const PORT = process.env.PORT || 5050;
 const PUBLIC_DIR = path.join(__dirname, '..');
+const API_AUTH_TOKEN = process.env.API_AUTH_TOKEN;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:3000';
+
+function isAuthorized(req) {
+  const header = req.headers.authorization || '';
+  return Boolean(API_AUTH_TOKEN) && header === `Bearer ${API_AUTH_TOKEN}`;
+}
 
 // Helper for JSON responses
 function sendJSON(res, statusCode, data) {
   res.writeHead(statusCode, {
     'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': CORS_ORIGIN,
+    'Vary': 'Origin',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type'
   });
@@ -56,12 +64,18 @@ const server = http.createServer(async (req, res) => {
   // Handle CORS Preflight
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': CORS_ORIGIN,
+      'Vary': 'Origin',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type'
     });
     res.end();
     return;
+  }
+
+  // All operational APIs require an explicit server-side token. Health remains public.
+  if (pathname !== '/api/health' && pathname.startsWith('/api/') && !isAuthorized(req)) {
+    return sendJSON(res, 401, { error: 'Unauthorized' });
   }
 
   try {

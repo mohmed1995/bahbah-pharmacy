@@ -200,51 +200,6 @@ export function CartView() {
               </div>
             </Reveal>
           ))}
-
-          {/* suggested add-ons */}
-          {suggestions.length > 0 && (
-            <Reveal>
-              <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-                <p className="flex items-center gap-1.5 font-heading text-sm font-black">
-                  <Sparkles className="size-4 text-[#F09428]" />
-                  {t("cart.suggest")}
-                </p>
-                <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-1">
-                  {suggestions.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex w-36 shrink-0 flex-col items-center gap-2 rounded-2xl border border-border/60 bg-background/60 p-2.5 text-center"
-                    >
-                      <button
-                        onClick={() => openProduct(p.id)}
-                        className="relative grid size-16 w-full place-items-center overflow-hidden rounded-xl bg-white ring-1 ring-black/5"
-                      >
-                        {p.img ? (
-                          <Image src={p.img} alt={p.nameEn} fill sizes="144px" className="object-contain p-1" />
-                        ) : (
-                          <p.icon className="size-7 text-[#1E4E8F]" strokeWidth={1.6} />
-                        )}
-                      </button>
-                      <p className="line-clamp-2 min-h-8 text-[11px] font-bold leading-tight">
-                        {lang === "ar" ? p.nameAr : p.nameEn}
-                      </p>
-                      <Button
-                        size="sm"
-                        className="h-8 w-full rounded-full bg-[#112D51] px-2 text-[11px] font-black hover:bg-[#0d2340]"
-                        onClick={() => {
-                          addToCart(p.id);
-                          toast.success(`${lang === "ar" ? p.nameAr : p.nameEn} — ${t("product.added")}`);
-                        }}
-                      >
-                        <IconPlus className="size-3.5" />
-                        {fmtPrice(p.price, t)}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
-          )}
         </div>
 
         {/* summary */}

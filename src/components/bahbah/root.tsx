@@ -12,7 +12,6 @@ import {
   SearchDialog,
   RxDialog,
   ConsultDialog,
-  ICDialog,
   InstallAppModal,
 } from "./shell";
 import HomeView from "./home";
@@ -212,7 +211,6 @@ export default function BahbahApp() {
       <SearchDialog />
       <RxDialog />
       <ConsultDialog />
-      <ICDialog />
       <InstallAppModal />
 
       {!staffView && <FloatingCartBar />}

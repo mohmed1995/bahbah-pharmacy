@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap } from "lucide-react";
+import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap, Camera, Upload, Trash2, Tag, Percent, Sparkles, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useBahbah, useT, useAdminProducts } from "@/lib/bahbah/store";
+import { useBahbah, useT, useAdminProducts, useOffers } from "@/lib/bahbah/store";
 import { adSlides, carePlans, planById, getProduct, type CareSubscriber } from "@/lib/bahbah/data";
 import { AdminCard, SectionTitle, KpiCard, TableWrap, TH, TD } from "./admin-ui";
 import { fmtPrice } from "./product-card";
@@ -153,18 +153,149 @@ export function CouponsSection() {
 /* ------------------------------------------------------------------ */
 /* Ads & banners manager — full control of homepage banners            */
 /* ------------------------------------------------------------------ */
+/* Reusable Image Uploader with Client Compression                     */
 /* ------------------------------------------------------------------ */
-/* Ads & banners manager — full control of homepage banners            */
+function ImageUploader({
+  value,
+  onChange,
+  label = "صورة الإعلان / العرض",
+}: {
+  value: string;
+  onChange: (url: string) => void;
+  label?: string;
+}) {
+  const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLoading(true);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (!dataUrl) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const img = new window.Image();
+        img.onload = () => {
+          const maxDim = 800;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx?.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL("image/jpeg", 0.82);
+          onChange(compressed);
+          setLoading(false);
+          toast.success("تم اختيار وضغط الصورة بنجاح ✓");
+        };
+        img.onerror = () => {
+          onChange(dataUrl);
+          setLoading(false);
+        };
+        img.src = dataUrl;
+      } catch {
+        onChange(dataUrl);
+        setLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-[11px] font-bold text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap items-center gap-3">
+        {value ? (
+          <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-black/5 ring-1 ring-black/5">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={value} alt="Preview" className="size-full object-cover" />
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="absolute top-1 end-1 grid size-5 place-items-center rounded-full bg-black/60 text-white hover:bg-black"
+              title="حذف الصورة"
+            >
+              <Trash2 className="size-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="grid size-16 shrink-0 place-items-center rounded-xl border-2 border-dashed border-border/80 bg-muted/40 text-muted-foreground">
+            <Camera className="size-5 opacity-60" />
+          </div>
+        )}
+
+        <div className="flex-1 space-y-1.5 min-w-[200px]">
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFile}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={loading}
+              onClick={() => fileInputRef.current?.click()}
+              className="h-8 rounded-lg gap-1.5 text-xs font-bold"
+            >
+              <Upload className="size-3.5 text-[#1E4E8F]" />
+              {loading ? "جاري المعالجة..." : "رفع صورة من جهازك"}
+            </Button>
+            <span className="text-[10px] text-muted-foreground">أو ضع رابطاً:</span>
+          </div>
+          <Input
+            value={value.startsWith("data:") ? "(صورة تم رفعها بنجاح)" : value}
+            onChange={(e) => {
+              if (!e.target.value.startsWith("(صورة")) {
+                onChange(e.target.value);
+              }
+            }}
+            placeholder="/images/ads/ad-gym.png أو رابط مباشر"
+            className="h-8 rounded-lg text-xs"
+            dir="ltr"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Ads & Offers Manager — homepage banners & weekly deals             */
 /* ------------------------------------------------------------------ */
 export function AdsSection() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const adsOff = useBahbah((s) => s.adsOff) || [];
   const adEdits = useBahbah((s) => s.adEdits) || {};
-  const { toggleAd, updateAdEdit } = useBahbah();
-  const [editing, setEditing] = useState<string | null>(null);
+  const offerEdits = useBahbah((s) => s.offerEdits) || {};
+  const allProducts = useAdminProducts();
+  const offersList = useOffers();
+  const { toggleAd, updateAdEdit, updateOfferEdit } = useBahbah();
 
-  /* Add Custom Banner Form State */
+  const [activeTab, setActiveTab] = useState<"ads" | "offers">("ads");
+  const [editingAd, setEditingAd] = useState<string | null>(null);
+
+  /* Add Custom Banner State */
   const [showAddBanner, setShowAddBanner] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newSub, setNewSub] = useState("");
@@ -172,9 +303,18 @@ export function AdsSection() {
   const [newBadge, setNewBadge] = useState("عرض خاص");
   const [newCta, setNewCta] = useState("اطلب الآن");
 
+  /* Add / Edit Offer State */
+  const [showAddOffer, setShowAddOffer] = useState(false);
+  const [offerProdId, setOfferProdId] = useState("");
+  const [offerPrice, setOfferPrice] = useState<number>(0);
+  const [offerOldPrice, setOfferOldPrice] = useState<number>(0);
+  const [offerBadge, setOfferBadge] = useState("عرض الأسبوع");
+  const [offerImg, setOfferImg] = useState("");
+  const [offerSearch, setOfferSearch] = useState("");
+
   const clicks = [1240, 980, 640, 520, 410];
 
-  const handleToggle = (id: string, currentOn: boolean) => {
+  const handleToggleAd = (id: string, currentOn: boolean) => {
     toggleAd(id);
     toast.success(
       currentOn
@@ -183,266 +323,558 @@ export function AdsSection() {
     );
   };
 
-  const handleSaveEdit = (id: string) => {
-    toast.success(lang === "ar" ? "تم حفظ نصوص الإعلان ومزامنتها بنجاح ✓" : "Banner copy saved and synced ✓");
-    setEditing(null);
+  const handleSelectProductForOffer = (productId: string) => {
+    setOfferProdId(productId);
+    const p = allProducts.find((item) => item.id === productId);
+    if (p) {
+      setOfferOldPrice(p.oldPrice || p.price);
+      setOfferPrice(Math.round(p.price * 0.8)); // default 20% discount
+      setOfferImg(p.img || "");
+    }
   };
+
+  const handleSaveOffer = () => {
+    if (!offerProdId) {
+      toast.error("برجاء اختيار الصنف المراد إضافته للعروض");
+      return;
+    }
+    if (!offerPrice || offerPrice <= 0) {
+      toast.error("برجاء كتابة سعر العرض المخفض");
+      return;
+    }
+
+    updateOfferEdit(offerProdId, {
+      price: Number(offerPrice),
+      oldPrice: Number(offerOldPrice) || Number(offerPrice) * 1.25,
+      badgeAr: offerBadge || "عرض خاص",
+      badgeEn: "Special Offer",
+      img: offerImg,
+      active: true,
+    });
+
+    toast.success("تم تفعيل ونشر العرض في شاشات العملاء بنجاح ✓");
+    setShowAddOffer(false);
+    setOfferProdId("");
+  };
+
+  const candidateProducts = useMemo(() => {
+    const q = offerSearch.trim().toLowerCase();
+    if (!q) return allProducts.slice(0, 15);
+    return allProducts
+      .filter((p) => p.nameAr.toLowerCase().includes(q) || p.nameEn.toLowerCase().includes(q))
+      .slice(0, 25);
+  }, [allProducts, offerSearch]);
 
   return (
     <div className="space-y-5">
+      {/* Top Header & Tab Navigation */}
       <AdminCard>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <SectionTitle icon={<Megaphone className="size-5 text-[#F09428]" />} title={t("adm.adsD")} />
+            <SectionTitle icon={<Megaphone className="size-5 text-[#F09428]" />} title="إدارة الإعلانات وعروض الصيدلية" />
             <p className="mt-1 text-xs font-semibold text-muted-foreground">
               {lang === "ar"
-                ? "تحكم في تفعيل أو إيقاف إعلانات وبنرات الصفحة الرئيسية وتعديل نصوصها بحرية تامة"
-                : "Manage homepage banners, toggle visibility, and edit headlines live."}
+                ? "تعديل إعلانات وبنرات الرئيسية، إنشاء عروض أسبوعية جديدة، وتغيير أو رفع صور المنتجات والإعلانات مباشرة."
+                : "Manage homepage banners, weekly deals, pricing discounts, and upload promo images."}
             </p>
           </div>
-          <Button
-            className="h-10 rounded-xl bg-[#1E4E8F] px-4 text-xs font-bold text-white hover:bg-[#112D51]"
-            onClick={() => setShowAddBanner(!showAddBanner)}
-          >
-            <Plus className="size-4" />
-            {lang === "ar" ? "إضافة إعلان جديد" : "Add New Banner"}
-          </Button>
-        </div>
 
-        {/* Add Banner Form */}
-        {showAddBanner && (
-          <div className="mt-4 rounded-2xl border border-border/80 bg-muted/40 p-4 space-y-3">
-            <p className="font-heading text-sm font-black text-[#1E4E8F]">
-              {lang === "ar" ? "إضافة بنر إعلاني جديد للرئيسية:" : "Add New Homepage Banner:"}
-            </p>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground">عنوان الإعلان *</span>
-                <Input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="مثال: خصم 20% على منتجات العناية بالبشرة"
-                  className="h-9 rounded-lg text-xs"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground">الوصف المختصر</span>
-                <Input
-                  value={newSub}
-                  onChange={(e) => setNewSub(e.target.value)}
-                  placeholder="مثال: توصيل 24 ساعة وشحن سريع لجميع المحافظات"
-                  className="h-9 rounded-lg text-xs"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground">شريط التميز (Badge)</span>
-                <Input
-                  value={newBadge}
-                  onChange={(e) => setNewBadge(e.target.value)}
-                  placeholder="مثال: عرض اليوم"
-                  className="h-9 rounded-lg text-xs"
-                />
-              </label>
-              <label className="block space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground">نص زر الإعلان (CTA)</span>
-                <Input
-                  value={newCta}
-                  onChange={(e) => setNewCta(e.target.value)}
-                  placeholder="مثال: تسوق العرض الآن"
-                  className="h-9 rounded-lg text-xs"
-                />
-              </label>
-              <label className="block space-y-1 sm:col-span-2">
-                <span className="text-[11px] font-bold text-muted-foreground">رابط صورة البنر (Image URL)</span>
-                <Input
-                  value={newImg}
-                  onChange={(e) => setNewImg(e.target.value)}
-                  placeholder="/images/ads/ad-gym.png"
-                  className="h-9 rounded-lg text-xs"
-                  dir="ltr"
-                />
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-lg text-xs"
-                onClick={() => setShowAddBanner(false)}
-              >
-                إلغاء
-              </Button>
-              <Button
-                size="sm"
-                className="h-8 rounded-lg bg-[#2E9E6B] text-xs font-bold text-white hover:bg-[#238156]"
-                onClick={() => {
-                  if (!newTitle.trim()) {
-                    toast.error("برجاء كتابة عنوان الإعلان");
-                    return;
-                  }
-                  // Apply to first slide edit or custom ad
-                  updateAdEdit("ad-gym", {
-                    titleAr: newTitle,
-                    subAr: newSub,
-                    badgeAr: newBadge,
-                    ctaAr: newCta,
-                  });
-                  toast.success("تم تفعيل وتحديث الإعلان في الصفحة الرئيسية بنجاح!");
-                  setShowAddBanner(false);
-                }}
-              >
-                حفظ ونشر الإعلان
-              </Button>
-            </div>
-          </div>
-        )}
-      </AdminCard>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        {adSlides.map((s, i) => {
-          const on = !adsOff.includes(s.id);
-          const e = adEdits[s.id] ?? {};
-          const open = editing === s.id;
-          return (
-            <div
-              key={s.id}
-              className={`overflow-hidden rounded-2xl border bg-card shadow-sm transition ${
-                on ? "border-border/70" : "border-border/40 opacity-70"
+          {/* Navigation Pill Buttons */}
+          <div className="flex items-center gap-2 rounded-xl bg-muted/80 p-1">
+            <button
+              onClick={() => setActiveTab("ads")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+                activeTab === "ads"
+                  ? "bg-[#1E4E8F] text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <div className="relative h-32 md:h-40">
-                <Image src={s.img} alt={s.titleKeyAr} fill sizes="400px" className="object-cover" />
-                {!on && <div className="absolute inset-0 bg-black/50" />}
-                <Badge
-                  className={`absolute top-2.5 end-2.5 rounded-full px-3 py-1 font-bold ${
-                    on ? "bg-[#2E9E6B] text-white" : "bg-[#DC4B4B] text-white"
-                  } hover:bg-inherit`}
+              <Megaphone className="size-3.5" />
+              إعلانات الرئيسية ({adSlides.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("offers")}
+              className={`flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-bold transition ${
+                activeTab === "offers"
+                  ? "bg-[#EA580C] text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Percent className="size-3.5" />
+              عروض وخصومات الأسبوع ({offersList.length})
+            </button>
+          </div>
+        </div>
+      </AdminCard>
+
+      {/* ================= TAB 1: إعلانات وبنرات الرئيسية ================= */}
+      {activeTab === "ads" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-muted-foreground">
+              بنرات وإعلانات السلايدر في الصفحة الرئيسية:
+            </p>
+            <Button
+              className="h-9 rounded-xl bg-[#1E4E8F] px-4 text-xs font-bold text-white hover:bg-[#112D51]"
+              onClick={() => setShowAddBanner(!showAddBanner)}
+            >
+              <Plus className="size-4 me-1" />
+              {showAddBanner ? "إغلاق النموذج" : "إضافة إعلان جديد"}
+            </Button>
+          </div>
+
+          {/* Add Banner Form with Image Upload */}
+          {showAddBanner && (
+            <div className="rounded-2xl border border-border/80 bg-muted/40 p-4 space-y-3">
+              <p className="font-heading text-sm font-black text-[#1E4E8F]">
+                إضافة بنر إعلاني جديد للرئيسية:
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-muted-foreground">عنوان الإعلان *</span>
+                  <Input
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    placeholder="مثال: خصم 20% على منتجات العناية بالبشرة"
+                    className="h-9 rounded-lg text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-muted-foreground">الوصف المختصر</span>
+                  <Input
+                    value={newSub}
+                    onChange={(e) => setNewSub(e.target.value)}
+                    placeholder="مثال: توصيل 24 ساعة وشحن سريع لجميع المحافظات"
+                    className="h-9 rounded-lg text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-muted-foreground">شريط التميز (Badge)</span>
+                  <Input
+                    value={newBadge}
+                    onChange={(e) => setNewBadge(e.target.value)}
+                    placeholder="مثال: عرض اليوم"
+                    className="h-9 rounded-lg text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-muted-foreground">نص زر الإعلان (CTA)</span>
+                  <Input
+                    value={newCta}
+                    onChange={(e) => setNewCta(e.target.value)}
+                    placeholder="مثال: تسوق العرض الآن"
+                    className="h-9 rounded-lg text-xs"
+                  />
+                </label>
+
+                {/* Direct Image Uploader */}
+                <div className="sm:col-span-2">
+                  <ImageUploader
+                    value={newImg}
+                    onChange={setNewImg}
+                    label="صورة البنر الإعلاني (رفع من الجهاز أو رابط)"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg text-xs"
+                  onClick={() => setShowAddBanner(false)}
                 >
-                  {on ? "● معروض في الرئيسية" : "✕ متوقف عن العرض"}
-                </Badge>
-                <span className="absolute top-2.5 start-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-black text-white">
-                  إعلان #{i + 1}
-                </span>
+                  إلغاء
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8 rounded-lg bg-[#2E9E6B] text-xs font-bold text-white hover:bg-[#238156]"
+                  onClick={() => {
+                    if (!newTitle.trim()) {
+                      toast.error("برجاء كتابة عنوان الإعلان");
+                      return;
+                    }
+                    updateAdEdit("ad-gym", {
+                      titleAr: newTitle,
+                      subAr: newSub,
+                      badgeAr: newBadge,
+                      ctaAr: newCta,
+                      img: newImg,
+                    });
+                    toast.success("تم حفظ وتحديث الإعلان في الصفحة الرئيسية بنجاح!");
+                    setShowAddBanner(false);
+                  }}
+                >
+                  حفظ ونشر الإعلان
+                </Button>
               </div>
-              <div className="flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="truncate font-heading text-sm font-black">
-                    {lang === "ar" ? e.titleAr || s.titleKeyAr : e.titleEn || s.titleKeyEn}
-                  </p>
-                  <p className="truncate text-[11px] font-bold text-muted-foreground">
-                    {lang === "ar" ? e.subAr || s.subKeyAr : e.subEn || s.subKeyEn}
-                  </p>
-                  <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
-                    {clicks[i % clicks.length].toLocaleString("en-US")} {t("adm.ad.clicks")}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 rounded-full px-3 text-[11px] font-black"
-                    onClick={() => setEditing(open ? null : s.id)}
-                  >
-                    {open ? "إغلاق" : t("misc.edit")}
-                  </Button>
+            </div>
+          )}
 
-                  <Button
-                    size="sm"
-                    className={`h-8 rounded-full px-3 text-[11px] font-black ${
-                      on
-                        ? "bg-[#DC4B4B]/10 text-[#DC4B4B] hover:bg-[#DC4B4B]/20"
-                        : "bg-[#2E9E6B] text-white hover:bg-[#238156]"
-                    }`}
-                    onClick={() => handleToggle(s.id, on)}
-                  >
-                    {on ? "إيقاف" : "تفعيل"}
-                  </Button>
-                </div>
-              </div>
+          {/* Existing Banners Grid */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {adSlides.map((s, i) => {
+              const on = !adsOff.includes(s.id);
+              const e = adEdits[s.id] ?? {};
+              const open = editingAd === s.id;
+              const bannerImg = e.img || s.img;
 
-              {/* inline copy editor — rewrites the banner text live */}
-              {open && (
-                <div className="space-y-3 border-t border-border/60 bg-muted/40 p-4">
-                  <div className="grid gap-2.5 sm:grid-cols-2">
-                    <label className="block space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.titleAr")}</span>
-                      <Input
-                        value={e.titleAr ?? ""}
-                        onChange={(ev) => updateAdEdit(s.id, { titleAr: ev.target.value })}
-                        placeholder={s.titleKeyAr}
-                        className="h-9 rounded-lg text-xs"
-                      />
-                    </label>
-                    <label className="block space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.titleEn")}</span>
-                      <Input
-                        value={e.titleEn ?? ""}
-                        onChange={(ev) => updateAdEdit(s.id, { titleEn: ev.target.value })}
-                        placeholder={s.titleKeyEn}
-                        className="h-9 rounded-lg text-xs"
-                        dir="ltr"
-                      />
-                    </label>
-                    <label className="block space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.subAr")}</span>
-                      <Input
-                        value={e.subAr ?? ""}
-                        onChange={(ev) => updateAdEdit(s.id, { subAr: ev.target.value })}
-                        placeholder={s.subKeyAr}
-                        className="h-9 rounded-lg text-xs"
-                      />
-                    </label>
-                    <label className="block space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.subEn")}</span>
-                      <Input
-                        value={e.subEn ?? ""}
-                        onChange={(ev) => updateAdEdit(s.id, { subEn: ev.target.value })}
-                        placeholder={s.subKeyEn}
-                        className="h-9 rounded-lg text-xs"
-                        dir="ltr"
-                      />
-                    </label>
-                    <label className="block space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.badge")}</span>
-                      <Input
-                        value={lang === "ar" ? e.badgeAr ?? "" : e.badgeEn ?? ""}
-                        onChange={(ev) =>
-                          updateAdEdit(s.id, lang === "ar" ? { badgeAr: ev.target.value } : { badgeEn: ev.target.value })
-                        }
-                        placeholder={lang === "ar" ? s.badgeAr : s.badgeEn}
-                        className="h-9 rounded-lg text-xs"
-                      />
-                    </label>
-                    <label className="block space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.cta")}</span>
-                      <Input
-                        value={lang === "ar" ? e.ctaAr ?? "" : e.ctaEn ?? ""}
-                        onChange={(ev) =>
-                          updateAdEdit(s.id, lang === "ar" ? { ctaAr: ev.target.value } : { ctaEn: ev.target.value })
-                        }
-                        placeholder={lang === "ar" ? s.ctaKeyAr : s.ctaKeyEn}
-                        className="h-9 rounded-lg text-xs"
-                      />
-                    </label>
-                  </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <p className="text-[11px] font-bold text-[#2E9E6B]">
-                      {t("misc.saved")} ✓ — تظهر في الرئيسية فوراً
-                    </p>
-                    <Button
-                      size="sm"
-                      className="h-8 rounded-lg bg-[#1E4E8F] px-4 text-xs font-bold text-white hover:bg-[#112D51]"
-                      onClick={() => handleSaveEdit(s.id)}
+              return (
+                <div
+                  key={s.id}
+                  className={`overflow-hidden rounded-2xl border bg-card shadow-sm transition ${
+                    on ? "border-border/70" : "border-border/40 opacity-70"
+                  }`}
+                >
+                  <div className="relative h-32 md:h-40 bg-black/10">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={bannerImg} alt={s.titleKeyAr} className="size-full object-cover" />
+                    {!on && <div className="absolute inset-0 bg-black/50" />}
+                    <Badge
+                      className={`absolute top-2.5 end-2.5 rounded-full px-3 py-1 font-bold ${
+                        on ? "bg-[#2E9E6B] text-white" : "bg-[#DC4B4B] text-white"
+                      } hover:bg-inherit`}
                     >
-                      حفظ التعديلات
+                      {on ? "● معروض في الرئيسية" : "✕ متوقف عن العرض"}
+                    </Badge>
+                    <span className="absolute top-2.5 start-2.5 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-black text-white">
+                      إعلان #{i + 1}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-3 p-4">
+                    <div className="min-w-0">
+                      <p className="truncate font-heading text-sm font-black">
+                        {lang === "ar" ? e.titleAr || s.titleKeyAr : e.titleEn || s.titleKeyEn}
+                      </p>
+                      <p className="truncate text-[11px] font-bold text-muted-foreground">
+                        {lang === "ar" ? e.subAr || s.subKeyAr : e.subEn || s.subKeyEn}
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
+                        {clicks[i % clicks.length].toLocaleString("en-US")} {t("adm.ad.clicks")}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-full px-3 text-[11px] font-black"
+                        onClick={() => setEditingAd(open ? null : s.id)}
+                      >
+                        {open ? "إغلاق" : t("misc.edit")}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        className={`h-8 rounded-full px-3 text-[11px] font-black ${
+                          on
+                            ? "bg-[#DC4B4B]/10 text-[#DC4B4B] hover:bg-[#DC4B4B]/20"
+                            : "bg-[#2E9E6B] text-white hover:bg-[#238156]"
+                        }`}
+                        onClick={() => handleToggleAd(s.id, on)}
+                      >
+                        {on ? "إيقاف" : "تفعيل"}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Inline Editor with Live Image Upload */}
+                  {open && (
+                    <div className="space-y-3 border-t border-border/60 bg-muted/40 p-4">
+                      <div className="grid gap-2.5 sm:grid-cols-2">
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.titleAr")}</span>
+                          <Input
+                            value={e.titleAr ?? ""}
+                            onChange={(ev) => updateAdEdit(s.id, { titleAr: ev.target.value })}
+                            placeholder={s.titleKeyAr}
+                            className="h-9 rounded-lg text-xs"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.titleEn")}</span>
+                          <Input
+                            value={e.titleEn ?? ""}
+                            onChange={(ev) => updateAdEdit(s.id, { titleEn: ev.target.value })}
+                            placeholder={s.titleKeyEn}
+                            className="h-9 rounded-lg text-xs"
+                            dir="ltr"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.subAr")}</span>
+                          <Input
+                            value={e.subAr ?? ""}
+                            onChange={(ev) => updateAdEdit(s.id, { subAr: ev.target.value })}
+                            placeholder={s.subKeyAr}
+                            className="h-9 rounded-lg text-xs"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.subEn")}</span>
+                          <Input
+                            value={e.subEn ?? ""}
+                            onChange={(ev) => updateAdEdit(s.id, { subEn: ev.target.value })}
+                            placeholder={s.subKeyEn}
+                            className="h-9 rounded-lg text-xs"
+                            dir="ltr"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.badge")}</span>
+                          <Input
+                            value={e.badgeAr ?? ""}
+                            onChange={(ev) => updateAdEdit(s.id, { badgeAr: ev.target.value })}
+                            placeholder={s.badgeAr}
+                            className="h-9 rounded-lg text-xs"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">{t("adm.ads.cta")}</span>
+                          <Input
+                            value={e.ctaAr ?? ""}
+                            onChange={(ev) => updateAdEdit(s.id, { ctaAr: ev.target.value })}
+                            placeholder={s.ctaKeyAr}
+                            className="h-9 rounded-lg text-xs"
+                          />
+                        </label>
+
+                        {/* Image Uploader for this specific banner */}
+                        <div className="sm:col-span-2 pt-1 border-t border-border/40">
+                          <ImageUploader
+                            value={e.img || s.img}
+                            onChange={(imgUrl) => updateAdEdit(s.id, { img: imgUrl })}
+                            label="تغيير أو رفع صورة هذا البنر:"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1">
+                        <p className="text-[11px] font-bold text-[#2E9E6B]">
+                          {t("misc.saved")} ✓ — يسمع في الرئيسية فوراً
+                        </p>
+                        <Button
+                          size="sm"
+                          className="h-8 rounded-lg bg-[#1E4E8F] px-4 text-xs font-bold text-white hover:bg-[#112D51]"
+                          onClick={() => {
+                            toast.success("تم حفظ وتحديث الإعلان بنجاح ✓");
+                            setEditingAd(null);
+                          }}
+                        >
+                          تم الحفظ
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ================= TAB 2: عروض وخصومات الأسبوع ================= */}
+      {activeTab === "offers" && (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold text-muted-foreground">
+                الأصناف المدرجة في قسم العروض وصفحة الخصومات الأسبوعية:
+              </p>
+            </div>
+            <Button
+              className="h-9 rounded-xl bg-[#EA580C] px-4 text-xs font-bold text-white hover:bg-[#C2410C]"
+              onClick={() => setShowAddOffer(!showAddOffer)}
+            >
+              <Plus className="size-4 me-1" />
+              {showAddOffer ? "إغلاق النموذج" : "إضافة عرض جديد"}
+            </Button>
+          </div>
+
+          {/* Add / Setup New Offer Form */}
+          {showAddOffer && (
+            <div className="rounded-2xl border border-orange-200 bg-orange-50/50 p-4 space-y-3 dark:border-orange-950 dark:bg-orange-950/20">
+              <p className="font-heading text-sm font-black text-[#EA580C]">
+                إضافة صنف لقائمة العروض والخصومات:
+              </p>
+
+              {/* Product picker */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-foreground/80">
+                  ابحث واختر الصنف من الصيدلية:
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    value={offerSearch}
+                    onChange={(e) => setOfferSearch(e.target.value)}
+                    placeholder="اكتب اسم الدواء أو المنتج للبحث..."
+                    className="h-9 rounded-lg text-xs"
+                  />
+                </div>
+
+                <div className="nice-scrollbar max-h-36 overflow-y-auto rounded-xl border border-border/80 bg-background p-1 divide-y divide-border/40">
+                  {candidateProducts.map((p) => {
+                    const sel = p.id === offerProdId;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleSelectProductForOffer(p.id)}
+                        className={`flex w-full items-center justify-between p-2 text-start text-xs transition rounded-lg ${
+                          sel ? "bg-[#EA580C]/15 font-bold text-[#EA580C]" : "hover:bg-muted"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {p.img && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.img} alt="" className="size-7 rounded object-contain bg-white p-0.5 border" />
+                          )}
+                          <span>{p.nameAr} ({p.nameEn})</span>
+                        </div>
+                        <span className="font-bold">{p.price} ج.م</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Price & Badge Setup */}
+              <div className="grid gap-3 sm:grid-cols-3 pt-2">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-muted-foreground">السعر الأصلي قبل الخصم (ج.م)</span>
+                  <Input
+                    type="number"
+                    value={offerOldPrice || ""}
+                    onChange={(e) => setOfferOldPrice(Number(e.target.value))}
+                    className="h-9 rounded-lg text-xs"
+                    dir="ltr"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-muted-foreground">سعر العرض المخفض (ج.م) *</span>
+                  <Input
+                    type="number"
+                    value={offerPrice || ""}
+                    onChange={(e) => setOfferPrice(Number(e.target.value))}
+                    className="h-9 rounded-lg text-xs"
+                    dir="ltr"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-muted-foreground">شارة العرض (Badge)</span>
+                  <Input
+                    value={offerBadge}
+                    onChange={(e) => setOfferBadge(e.target.value)}
+                    placeholder="مثال: خصم 25%، عرض الأسبوع"
+                    className="h-9 rounded-lg text-xs"
+                  />
+                </label>
+
+                {/* Offer Image Uploader */}
+                <div className="sm:col-span-3">
+                  <ImageUploader
+                    value={offerImg}
+                    onChange={setOfferImg}
+                    label="صورة العرض (رفع صورة مخصصة من الجهاز أو الكاميرا)"
+                  />
+                </div>
+              </div>
+
+              {offerOldPrice > 0 && offerPrice > 0 && offerPrice < offerOldPrice && (
+                <div className="rounded-xl bg-orange-100/70 p-2 text-center text-xs font-bold text-[#EA580C] dark:bg-orange-900/30">
+                  نسبة الخصم المحسوبة تلقائياً: {Math.round(((offerOldPrice - offerPrice) / offerOldPrice) * 100)}% خصم حقيقي
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-lg text-xs"
+                  onClick={() => setShowAddOffer(false)}
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  size="sm"
+                  className="h-8 rounded-lg bg-[#EA580C] text-xs font-bold text-white hover:bg-[#C2410C]"
+                  onClick={handleSaveOffer}
+                >
+                  حفظ وتفعيل العرض
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Active Offers List */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {offersList.map((p) => {
+              const e = offerEdits[p.id];
+              const pct = p.oldPrice ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0;
+
+              return (
+                <div
+                  key={p.id}
+                  className="flex flex-col justify-between rounded-2xl border border-border/80 bg-card p-3.5 shadow-sm"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border bg-white p-1">
+                      {p.img ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={p.img} alt={p.nameAr} className="size-full object-contain" />
+                      ) : (
+                        <p.icon className="size-full text-muted-foreground p-2" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <Badge className="bg-[#EA580C] text-white text-[10px] font-black hover:bg-[#EA580C]">
+                          -{pct}%
+                        </Badge>
+                        <span className="text-[10px] font-bold text-muted-foreground truncate">
+                          {e?.badgeAr || "عرض خاص"}
+                        </span>
+                      </div>
+                      <p className="font-heading text-xs font-black truncate mt-1">
+                        {p.nameAr}
+                      </p>
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="font-heading text-sm font-black text-[#EA580C]">
+                          {p.price} ج.م
+                        </span>
+                        {p.oldPrice && (
+                          <span className="text-[11px] text-muted-foreground line-through">
+                            {p.oldPrice} ج.م
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-2.5">
+                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Check className="size-3.5 text-[#2E9E6B]" />
+                      <span>فعال بالمتجر</span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs font-bold text-[#DC4B4B] hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30"
+                      onClick={() => {
+                        updateOfferEdit(p.id, { active: false });
+                        toast.success(`تم حذف ${p.nameAr} من قائمة العروض`);
+                      }}
+                    >
+                      <Trash2 className="size-3.5 me-1" />
+                      إلغاء العرض
                     </Button>
                   </div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

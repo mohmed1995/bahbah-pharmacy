@@ -236,12 +236,9 @@ export const ROLE_META: Record<Role, { ar: string; en: string }> = {
   admin: { ar: "إدارة", en: "Admin" },
 };
 
-export const DEFAULT_STAFF_PASSWORD = "Hashem@Bahbah2026";
-
 /** حسابات الطاقم المعتمدة للصيدلية */
 export const STAFF_ACCOUNTS: {
   email: string;
-  password: string;
   nameAr: string;
   nameEn: string;
   role: Exclude<Role, "patient">;
@@ -249,7 +246,6 @@ export const STAFF_ACCOUNTS: {
 }[] = [
   {
     email: "courier@bahbah.eg",
-    password: DEFAULT_STAFF_PASSWORD,
     nameAr: "محمود سيد — أسطول واصلي",
     nameEn: "Mahmoud Sayed — Wasly Courier Fleet",
     role: "courier",
@@ -257,14 +253,12 @@ export const STAFF_ACCOUNTS: {
   },
   {
     email: "hashem@bahbah.eg",
-    password: DEFAULT_STAFF_PASSWORD,
     nameAr: "د. هاشم بحبح — صاحب الصيدلية ورئيس الصيادلة",
     nameEn: "Dr. Hashem Bahbah — Pharmacy Owner & Head Pharmacist",
     role: "pharmacist",
   },
   {
     email: "admin@bahbah.eg",
-    password: DEFAULT_STAFF_PASSWORD,
     nameAr: "المهندس التقني — إدارة نظم بحبح",
     nameEn: "Systems Engineer — Bahbah Operations Admin",
     role: "admin",

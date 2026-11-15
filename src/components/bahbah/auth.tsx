@@ -28,8 +28,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useBahbah, useT, useCarePlans, matchStaff, roleHome, type AccountTab } from "@/lib/bahbah/store";
-import { getProduct, STAFF_ACCOUNTS, DEFAULT_STAFF_PASSWORD, PHARMACY, ROLE_META, type Role } from "@/lib/bahbah/data";
+import { useBahbah, useT, useCarePlans, roleHome, type AccountTab } from "@/lib/bahbah/store";
+import { getProduct, PHARMACY, ROLE_META, type Role } from "@/lib/bahbah/data";
 import { signInWithSupabase, signUpWithSupabase } from "@/lib/supabase";
 import { fmtPrice, ProductCard } from "./product-card";
 import CareMembershipCard, { DayPicker } from "./care-card";
@@ -58,8 +58,8 @@ export function LoginView() {
   /* Staff Mode */
   const [isStaffMode, setIsStaffMode] = useState(false);
   const [staffRole, setStaffRole] = useState<Role>("pharmacist");
-  const [staffEmail, setStaffEmail] = useState("hashem@bahbah.eg");
-  const [staffPassword, setStaffPassword] = useState("Hashem@Bahbah2026");
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffPassword, setStaffPassword] = useState("");
 
   const finish = (user: { name: string; email: string; phone?: string; role: Role; driverId?: string }, displayName: string) => {
     login(user);
@@ -82,7 +82,7 @@ export function LoginView() {
 
     try {
       // Background Supabase signup/signin without email requirement
-      await signUpWithSupabase(syntheticEmail, "Bahbah@Patient2026", {
+      await signUpWithSupabase(syntheticEmail, `${globalThis.crypto.randomUUID()}-Patient!`, {
         name: dispName,
         phone: cleanPhone,
         role: "patient",
@@ -127,11 +127,6 @@ export function LoginView() {
       // Fallback
     }
 
-    const staff = matchStaff(staffEmail, staffPassword);
-    if (staff) {
-      finish(staff, staff.name.split(" — ")[0]);
-      return;
-    }
     toast.error(lang === "ar" ? "بيانات الدخول غير صحيحة" : "Invalid staff credentials");
   };
 
@@ -246,7 +241,7 @@ export function LoginView() {
                     onClick={() => {
                       setStaffRole(c.role);
                       setStaffEmail(c.email);
-                      setStaffPassword("Hashem@Bahbah2026");
+                      setStaffPassword("");
                     }}
                     className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-[11px] font-black transition ${
                       staffRole === c.role

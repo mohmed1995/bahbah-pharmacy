@@ -2,11 +2,9 @@ import { createClient } from "@supabase/supabase-js";
 import type { Order, RxRequest, CareSubscriber } from "./bahbah/data";
 
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://cldfmqdesbecppqtevzk.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.invalid";
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNsZGZtcWRlc2JlY3BwcXRldnprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ2NTIxOTQsImV4cCI6MjExMDIyODE5NH0.NZptv4sAOYkSz4LUXtm4FpSHA_Z-cmu72J41k-mKeZ0";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "missing-build-key";
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -422,4 +420,3 @@ export async function signOutFromSupabase() {
     console.warn("[Supabase Auth] signOut error:", err);
   }
 }
-

@@ -11,8 +11,13 @@ import {
   MoreVertical,
   CheckCircle2,
   Sparkles,
+  Flame,
+  Camera,
+  CalendarClock,
+  MessageCircle,
+  ArrowUpRight,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useRef, useSyncExternalStore } from "react";
 import Image from "next/image";
 import {
   IconHomeSoft,
@@ -60,11 +65,9 @@ import {
   getProduct,
   SHIPPING_FEE,
   categories,
-  interactionRules,
   WASLY,
   PHARMACY,
   DOCTOR_TECH,
-  type InteractionLevel,
 } from "@/lib/bahbah/data";
 import {
   useBahbah,
@@ -520,79 +523,121 @@ function catColor(categoryId: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Voice search — ar-EG / en-US via Web Speech API (graceful fallback)  */
+/* Egyptian Dialect Voice Engine & Medical Intent Resolver            */
 /* ------------------------------------------------------------------ */
 
 type SpeechRecognitionLike = {
   lang: string;
   interimResults: boolean;
+  maxAlternatives?: number;
   start: () => void;
+  stop: () => void;
+  abort?: () => void;
   onresult: ((e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: any) => void) | null;
 };
 type SpeechRecognitionCtor = new () => SpeechRecognitionLike;
 
 const emptySubscribe = () => () => {};
 
-function VoiceButton({ onResult }: { onResult: (text: string) => void }) {
-  const t = useT();
-  const [listening, setListening] = useState(false);
-  /* gate on mount: avoids SSR window access and setState-in-effect */
-  const mounted = useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
-  if (!mounted) return null;
+// Conversational Egyptian words to strip before searching
+const EG_CONVERSATIONAL_WORDS = [
+  "عاوز", "عايز", "عايزه", "عايزة", "عاوزه", "عاوزة", "عاوزين", "عايزين",
+  "محتاج", "محتاجه", "محتاجة", "محتاجين",
+  "عندكم", "عندك", "فيه", "في", "لو سمحت", "لو سمحتي", "بالله عليك", "بقولك",
+  "هاتلي", "هات", "شوفلي", "ابعتلي", "ابعت",
+  "دوا", "دواء", "علاج", "حاجة", "حاجه", "شريط", "علبة", "علبه", "كرتونة",
+  "امبول", "امبولات", "حقنة", "حقن", "مرهم", "كريم", "قطرة", "قطره", "فوار",
+  "كبسول", "كبسولات", "أقراص", "اقراص", "قرص", "برشام", "لبوس", "بخاخ", "نقط",
+  "بكام", "سعر", "سعره", "سعرها", "من فضلك", "ممكن", "فين", "عاوز اطلب", "عايز اطلب",
+  "بتاع", "بتاعت", "لـ", "للـ"
+];
 
-  const w = window as unknown as {
-    SpeechRecognition?: SpeechRecognitionCtor;
-    webkitSpeechRecognition?: SpeechRecognitionCtor;
-  };
-  const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-  if (!Ctor) return null;
+// Symptoms and Egyptian complaints mapped to active medical products
+const SYMPTOM_TREATMENTS: Record<string, { label: string; terms: string[] }> = {
+  صداع: {
+    label: "صداع ومسكنات ألم",
+    terms: ["بانادول", "بنادول", "بروفين", "كيتوفان", "كتافلام", "باراسيتامول", "سولبادين", "ادول"],
+  },
+  سخونية: {
+    label: "سخونية وخافض حرارة",
+    terms: ["باراسيتامول", "بروفين", "بانادول", "سيتال", "كونجستال", "ابيمول"],
+  },
+  حرارة: {
+    label: "ارتفاع درجة الحرارة",
+    terms: ["باراسيتامول", "بروفين", "بانادول", "سيتال", "كونجستال"],
+  },
+  مغص: {
+    label: "مغص وتقلصات ومعدة",
+    terms: ["سبازمو", "كولونا", "ديجستين", "انتودين", "فلاجيل", "بوسكوبان", "فيسرالجين"],
+  },
+  قولون: {
+    label: "قولون وانتفاخ",
+    terms: ["كولونا", "ديسبلاتيل", "كولوفيرين", "ديجستين", "انتودين"],
+  },
+  حموضة: {
+    label: "حموضة وحرقان المعدة",
+    terms: ["انتودين", "جافيسكون", "نيكسيوم", "اوميبرازول", "كونترولوك", "فوار راني", "مالوكس"],
+  },
+  كحة: {
+    label: "كحة وسعال وبلغم",
+    terms: ["ايفيبرونت", "برونشيكم", "فاركولين", "سيلجون", "بلسم", "توسيفان"],
+  },
+  بلغم: {
+    label: "مذيب وطارد للبلغم",
+    terms: ["ميوكوسول", "استيل سيستايين", "برونشيكم", "فاركولين", "ايفيبرونت"],
+  },
+  برد: {
+    label: "برد ورشح وزكام",
+    terms: ["كونجستال", "كومتركس", "وان تو ثري", "سي ريتارد", "تلفاست", "اوترفين", "فلورست"],
+  },
+  رشح: {
+    label: "رشح وعطس واحتقان",
+    terms: ["كونجستال", "تلفاست", "اوترفين", "زيرتك", "كومتركس"],
+  },
+  ضغط: {
+    label: "أدوية الضغط",
+    terms: ["كونكور", "كابوتن", "اكسفورج", "املوديبين", "نورفاسك", "تارجريت"],
+  },
+  سكر: {
+    label: "أدوية وتنظيم السكر",
+    terms: ["جلوكوفاج", "اماريل", "جليماكس", "جانوفيا", "انسولين"],
+  },
+  حساسية: {
+    label: "حساسية وهرش وجيوب أنفية",
+    terms: ["تلفاست", "زيرتك", "كلاريتين", "هيستوب", "فنستيل"],
+  },
+  عين: {
+    label: "قطرات وترطيب العين",
+    terms: ["سيستان", "تيرز", "تيرز جارد", "توبركس", "قطرة"],
+  },
+  شعر: {
+    label: "تساقط وعناية بالشعر",
+    terms: ["بيوتين", "بانتوجار", "شامبو", "سيروم", "شعر"],
+  },
+  بشرة: {
+    label: "حب الشباب والعناية بالبشرة",
+    terms: ["ستارفيل", "سيرافي", "لاروش", "صن بلوك", "كريم", "تفتيح"],
+  },
+  اطفال: {
+    label: "أدوية ومستلزمات الأطفال",
+    terms: ["بامبرز", "بيبيلاك", "نان", "سودوكريم", "سيتال", "دنتينوكس"],
+  },
+  فيتامين: {
+    label: "فيتامينات ومقويات ومناعة",
+    terms: ["ليميتلس", "سانسوفيت", "فيروجلوبين", "فيتامين سي", "زنك", "اوميجا 3"],
+  },
+  حروق: {
+    label: "حروق وجروح",
+    terms: ["ميبو", "بيبانثين", "فيوسيدين", "ديرمازين"],
+  },
+  اسنان: {
+    label: "مسكنات ألم الأسنان",
+    terms: ["كيتوفان", "كتافلام", "بروفين", "سولبادين", "دينتيل"],
+  },
+};
 
-  const start = () => {
-    const rec = new Ctor();
-    rec.lang = document.documentElement.lang === "en" ? "en-US" : "ar-EG";
-    rec.interimResults = false;
-    rec.onresult = (e) => {
-      const text = e.results?.[0]?.[0]?.transcript ?? "";
-      if (text) onResult(text);
-    };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => {
-      setListening(false);
-      toast.error(t("tools.voiceErr"));
-    };
-    setListening(true);
-    try {
-      rec.start();
-    } catch {
-      setListening(false);
-    }
-  };
-
-  return (
-    <button
-      onClick={start}
-      aria-label={t("tools.voice")}
-      title={t("tools.listening")}
-      className={`absolute top-1/2 end-3 grid size-8 -translate-y-1/2 place-items-center rounded-full transition ${
-        listening
-          ? "animate-pulse bg-[#DC4B4B] text-white"
-          : "bg-[#EAF1F9] text-[#1E4E8F] hover:bg-[#1E4E8F]/15"
-      }`}
-    >
-      <IconMic className="size-4" />
-    </button>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Search dialog                                                       */
-/* ------------------------------------------------------------------ */
 function normAr(s: string) {
   return (s || "")
     .toLowerCase()
@@ -603,64 +648,348 @@ function normAr(s: string) {
     .trim();
 }
 
+function parseEgyptianVoiceQuery(raw: string) {
+  const normalized = normAr(raw);
+  const words = normalized.split(/\s+/).filter(Boolean);
+
+  let intent: "rx" | "care" | "offers" | "pharmacist" | null = null;
+  if (words.some((w) => ["روشته", "روشتة", "صوره", "صورة", "دكتور", "تكرار"].includes(w))) {
+    intent = "rx";
+  } else if (words.some((w) => ["شهري", "شهريه", "شهرية", "مزمن", "مزمنه", "مزمنة"].includes(w))) {
+    intent = "care";
+  } else if (words.some((w) => ["عرض", "عروض", "خصم", "خصومات", "تخفيض", "اوفر"].includes(w))) {
+    intent = "offers";
+  } else if (words.some((w) => ["صيدلي", "استشاره", "استشارة", "واتساب", "تليفون"].includes(w))) {
+    intent = "pharmacist";
+  }
+
+  let detectedSymptom: string | null = null;
+  const expandedTerms: string[] = [];
+
+  for (const [symptomKey, config] of Object.entries(SYMPTOM_TREATMENTS)) {
+    const normKey = normAr(symptomKey);
+    if (words.some((w) => w.includes(normKey) || normKey.includes(w))) {
+      detectedSymptom = config.label;
+      expandedTerms.push(...config.terms.map(normAr));
+    }
+  }
+
+  const normFillers = EG_CONVERSATIONAL_WORDS.map(normAr);
+  const cleanTokens = words.filter((w) => !normFillers.includes(w) && w.length > 1);
+
+  return {
+    cleanTokens,
+    expandedTerms,
+    intent,
+    detectedSymptom,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Search & Voice Dialog                                               */
+/* ------------------------------------------------------------------ */
 export function SearchDialog() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const open = useBahbah((s) => s.searchOpen);
-  const { setSearchOpen, openProduct, openCatalog } = useBahbah();
+  const { setSearchOpen, openProduct, openCatalog, setRxOpen, go } = useBahbah();
   const [q, setQ] = useState("");
+  const [listening, setListening] = useState(false);
+  const [interimText, setInterimText] = useState("");
 
   const addToCart = useBahbah((s) => s.addToCart);
 
+  /* Web Speech API in Egyptian Dialect */
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+
+  const startListening = () => {
+    const w = window as unknown as {
+      SpeechRecognition?: SpeechRecognitionCtor;
+      webkitSpeechRecognition?: SpeechRecognitionCtor;
+    };
+    const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!Ctor) {
+      toast.error("متصفحك لا يدعم خاصية البحث الصوتي مباشرة. يمكنك الكتابة في المربع أعلاه.");
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort?.();
+      }
+
+      const rec = new Ctor();
+      rec.lang = "ar-EG"; // اللهجة المصرية
+      rec.interimResults = true;
+      rec.maxAlternatives = 3;
+
+      rec.onresult = (e: any) => {
+        const transcript = e.results?.[0]?.[0]?.transcript ?? "";
+        setInterimText(transcript);
+        if (e.results?.[0]?.isFinal || e.results?.[0]?.[0]?.confidence > 0.6) {
+          setQ(transcript);
+        }
+      };
+
+      rec.onerror = (err: any) => {
+        setListening(false);
+        setInterimText("");
+        if (err?.error !== "no-speech") {
+          toast.error("برجاء السماح بالمايكروفون للبحث الصوتي");
+        }
+      };
+
+      rec.onend = () => {
+        setListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+      setListening(true);
+      setInterimText("سامعك كويس... اتكلم براحتك باللهجة المصرية");
+    } catch {
+      setListening(false);
+      setInterimText("");
+    }
+  };
+
+  const stopListening = () => {
+    try {
+      recognitionRef.current?.stop();
+    } catch {}
+    setListening(false);
+  };
+
+  // Close cleans up
+  useEffect(() => {
+    if (!open && listening) {
+      stopListening();
+    }
+  }, [open]);
+
+  // Egyptian query analysis
+  const analysis = useMemo(() => {
+    const raw = q.trim() || interimText.trim();
+    if (!raw) return null;
+    return parseEgyptianVoiceQuery(raw);
+  }, [q, interimText]);
+
+  // Fast Product Matching across 1544 products
   const results = useMemo(() => {
     const query = q.trim();
     if (!query) return [];
     const nq = normAr(query);
     const lq = query.toLowerCase();
 
+    const cleanTokens = analysis?.cleanTokens ?? [];
+    const expanded = analysis?.expandedTerms ?? [];
+
     return products
       .filter((p) => {
-        const fullAr = normAr([p.nameAr, p.ingredientAr, p.brandAr, p.formAr].join(" "));
+        const fullAr = normAr([p.nameAr, p.ingredientAr, p.brandAr, p.formAr, p.descAr].join(" "));
         const fullEn = [p.nameEn, p.ingredientEn, p.brandEn, p.formEn].join(" ").toLowerCase();
-        return fullAr.includes(nq) || fullEn.includes(lq);
-      })
-      .slice(0, 16);
-  }, [q]);
 
-  const popular = ["بانادول", "ابيلات", "جليماكس", "ليفيست", "فيتامين", "سيرافي", "أوميجا", "سوبر كيدز", "كونجستال"];
+        // Direct exact or partial match
+        if (fullAr.includes(nq) || fullEn.includes(lq)) return true;
+
+        // Clean tokens match (e.g. "عاوز بنادول احمر" -> matches "بنادول" AND "احمر" or any)
+        if (cleanTokens.length > 0 && cleanTokens.some((tok) => fullAr.includes(tok) || fullEn.includes(tok))) {
+          return true;
+        }
+
+        // Expanded symptom treatments match
+        if (expanded.length > 0 && expanded.some((term) => fullAr.includes(term))) {
+          return true;
+        }
+
+        return false;
+      })
+      .slice(0, 20);
+  }, [q, analysis]);
+
+  const voiceSampleChips = [
+    "عايز بنادول أحمر",
+    "حاجة للمغص والقولون",
+    "دوا كحة وبلغم",
+    "فيتامين سي وأوميجا",
+    "كريم مرطب وتفتيح",
+    "علاج للسكر",
+    "روشتة دكتور",
+    "عروض الصيدلية",
+  ];
 
   return (
     <Dialog open={open} onOpenChange={setSearchOpen}>
-      <DialogContent aria-describedby={undefined} className="top-[12%] max-w-xl translate-y-0 rounded-2xl p-0">
+      <DialogContent aria-describedby={undefined} className="top-[10%] max-w-xl translate-y-0 rounded-3xl p-0 shadow-2xl border-border/80 overflow-hidden">
         <DialogHeader className="px-5 pb-0 pt-5">
-          <DialogTitle className="font-heading text-lg font-black">{t("search.title")}</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 font-heading text-lg font-black text-[#1E4E8F]">
+              <IconMic className="size-5 text-[#F09428]" />
+              البحث الذكي والصوتي باللهجة المصرية
+            </DialogTitle>
+            <Badge className="bg-[#EAF1F9] text-[#1E4E8F] text-[10px] font-bold hover:bg-[#EAF1F9]">
+              صوت مصري 100%
+            </Badge>
+          </div>
         </DialogHeader>
-        <div className="px-5 pb-2">
+
+        {/* Search Input Bar + Live Mic Button */}
+        <div className="px-5 pt-3 pb-2">
           <div className="relative">
             <IconSearchGlass className="absolute top-1/2 start-4 size-4.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={t("search.placeholder")}
-              className="h-12 rounded-full ps-11 pe-12 text-base"
+              placeholder="اكتب اسم الدواء أو تحدث بالمايك باللهجة المصرية..."
+              className="h-12 rounded-full ps-11 pe-12 text-sm md:text-base border-border/80 focus-visible:ring-[#1E4E8F]"
             />
-            <VoiceButton onResult={setQ} />
+            <button
+              type="button"
+              onClick={listening ? stopListening : startListening}
+              aria-label={listening ? "إيقاف الاستماع" : "بدء البحث الصوتي"}
+              title="تحدث بالمايك باللهجة المصرية"
+              className={`absolute top-1/2 end-2.5 grid size-8.5 -translate-y-1/2 place-items-center rounded-full transition-all active:scale-95 ${
+                listening
+                  ? "animate-pulse bg-[#DC4B4B] text-white shadow-md shadow-red-500/40"
+                  : "bg-[#1E4E8F] text-white hover:bg-[#112D51]"
+              }`}
+            >
+              <IconMic className="size-4" />
+            </button>
           </div>
         </div>
 
+        {/* Live Voice Listening Pulse Banner */}
+        {listening && (
+          <div className="mx-5 mb-2 flex items-center justify-between rounded-2xl border border-red-200 bg-red-50/90 p-3 text-red-900 animate-in fade-in slide-in-from-top-1 dark:border-red-950 dark:bg-red-950/40 dark:text-red-200">
+            <div className="flex items-center gap-3">
+              <span className="relative flex size-3">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
+                <span className="relative inline-flex size-3 rounded-full bg-red-600" />
+              </span>
+              <div>
+                <p className="text-xs font-black">جاري الاستماع لصوتك الآن...</p>
+                <p className="text-[11px] font-semibold text-red-700/80 dark:text-red-300">
+                  {interimText || "اتكلم براحتك (مثال: عايز بنادول أحمر، حاجة للمغص والقولون)"}
+                </p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={stopListening}
+              className="h-7 rounded-full border-red-300 bg-white text-[10px] font-bold text-red-700 hover:bg-red-50"
+            >
+              تم
+            </Button>
+          </div>
+        )}
+
+        {/* Detected Smart Shortcuts Banner (Rx, Care, Offers, WhatsApp) */}
+        {analysis?.intent && (
+          <div className="mx-5 mb-2 rounded-2xl bg-gradient-to-r from-[#1E4E8F]/10 via-[#2E9E6B]/10 to-transparent p-3 border border-[#1E4E8F]/20">
+            {analysis.intent === "rx" && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Camera className="size-4 text-[#1E4E8F]" />
+                  <span className="text-xs font-bold">فهمنا أنك تريد رفع الروشتة وتصويرها</span>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-7 rounded-full bg-[#1E4E8F] text-[11px] font-bold text-white hover:bg-[#112D51]"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setRxOpen(true);
+                  }}
+                >
+                  تصوير الروشتة الآن ←
+                </Button>
+              </div>
+            )}
+
+            {analysis.intent === "care" && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="size-4 text-[#2E9E6B]" />
+                  <span className="text-xs font-bold">برنامج عميل الأدوية الشهرية وتكرار العلاج</span>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-7 rounded-full bg-[#2E9E6B] text-[11px] font-bold text-white hover:bg-[#238156]"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    go("care");
+                  }}
+                >
+                  فتح الخدمة الشهرية ←
+                </Button>
+              </div>
+            )}
+
+            {analysis.intent === "offers" && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Flame className="size-4 text-[#EA580C]" />
+                  <span className="text-xs font-bold">عروض وخصومات بحبح الأسبوعية</span>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-7 rounded-full bg-[#EA580C] text-[11px] font-bold text-white hover:bg-[#C2410C]"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    go("offers");
+                  }}
+                >
+                  تصفح العروض الآن ←
+                </Button>
+              </div>
+            )}
+
+            {analysis.intent === "pharmacist" && (
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="size-4 text-[#25D366]" />
+                  <span className="text-xs font-bold">استشارة الصيدلي المناوب فوراً على واتساب</span>
+                </div>
+                <Button
+                  size="sm"
+                  className="h-7 rounded-full bg-[#25D366] text-[11px] font-bold text-white hover:bg-[#1eb757]"
+                  onClick={() => {
+                    window.open("https://wa.me/201011500166?text=" + encodeURIComponent("السلام عليكم دكتور بحبح، محتاج استشارة صيدلانية بخصوص: " + q), "_blank");
+                  }}
+                >
+                  محادثة واتساب ←
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Detected Egyptian Symptom Feedback */}
+        {analysis?.detectedSymptom && (
+          <div className="mx-5 mb-1 flex items-center gap-2 text-xs font-bold text-[#1E4E8F]">
+            <Sparkles className="size-3.5 text-[#F09428]" />
+            <span>عرضنا أدوية مناسبة لـ: {analysis.detectedSymptom}</span>
+          </div>
+        )}
+
+        {/* Dialog Body */}
         <div className="nice-scrollbar max-h-[50vh] overflow-y-auto px-5 pb-5">
           {!q.trim() && (
             <div>
-              <p className="mb-2 text-xs font-bold text-muted-foreground">{t("search.popular")}</p>
+              <p className="mb-2 text-xs font-bold text-muted-foreground">
+                جرب قول بصوتك أو اضغط للبحث المباشر:
+              </p>
               <div className="flex flex-wrap gap-2">
-                {popular.map((p) => (
+                {voiceSampleChips.map((chip) => (
                   <button
-                    key={p}
-                    onClick={() => setQ(p)}
-                    className="rounded-full border border-border/80 bg-muted/60 px-3.5 py-1.5 text-xs font-bold text-foreground/75 transition-all hover:border-[#184C8A]/40 hover:bg-white hover:text-[#184C8A] hover:shadow-sm active:scale-95"
+                    key={chip}
+                    onClick={() => setQ(chip)}
+                    className="flex items-center gap-1.5 rounded-full border border-border/80 bg-muted/60 px-3.5 py-1.5 text-xs font-bold text-foreground/75 transition-all hover:border-[#1E4E8F]/40 hover:bg-white hover:text-[#1E4E8F] hover:shadow-sm active:scale-95"
                   >
-                    {p}
+                    <IconMic className="size-3 text-[#F09428]" />
+                    {chip}
                   </button>
                 ))}
               </div>
@@ -668,20 +997,54 @@ export function SearchDialog() {
           )}
 
           {q.trim() && results.length === 0 && (
-            <p className="py-8 text-center text-sm text-muted-foreground">{t("search.none")}</p>
+            <div className="py-8 text-center space-y-2">
+              <p className="text-sm font-bold text-muted-foreground">
+                لم نجد صنفاً مطابقاً بالضبط لكلمة &quot;{q}&quot;
+              </p>
+              <p className="text-xs text-muted-foreground">
+                يمكنك تصوير الروشتة وسنقوم بتوفيرها، أو استشارة الصيدلي المناوب مباشرة:
+              </p>
+              <div className="flex justify-center gap-2 pt-2">
+                <Button
+                  size="sm"
+                  className="rounded-full bg-[#1E4E8F] text-xs font-bold"
+                  onClick={() => {
+                    setSearchOpen(false);
+                    setRxOpen(true);
+                  }}
+                >
+                  <Camera className="size-3.5 me-1" />
+                  تصوير الروشتة
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full text-xs font-bold border-[#25D366] text-[#25D366] hover:bg-[#25D366]/10"
+                  onClick={() => {
+                    window.open("https://wa.me/201011500166?text=" + encodeURIComponent("السلام عليكم، بسأل عن دواء: " + q), "_blank");
+                  }}
+                >
+                  <MessageCircle className="size-3.5 me-1" />
+                  اسأل الصيدلي
+                </Button>
+              </div>
+            </div>
           )}
 
           {results.length > 0 && (
             <div className="space-y-1">
-              <p className="mb-2 text-xs font-bold text-muted-foreground">{t("search.results")}</p>
+              <p className="mb-2 text-xs font-bold text-muted-foreground">
+                النتائج المطابقة ({results.length}):
+              </p>
               {results.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => openProduct(p.id)}
-                  className="flex w-full items-center gap-3 rounded-xl border border-transparent p-2.5 text-start transition-all hover:border-border/80 hover:bg-[#EAF2FA]/50"
+                  className="flex w-full items-center gap-3 rounded-xl border border-transparent p-2 text-start transition-all hover:border-border/80 hover:bg-[#EAF2FA]/50"
                 >
                   <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-white p-1 flex items-center justify-center shadow-xs">
                     {p.img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img src={p.img} alt={p.nameAr} className="size-full object-contain" />
                     ) : (
                       <p.icon className="size-5 text-[#184C8A]" />
@@ -912,119 +1275,7 @@ export function ConsultDialog() {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Drug interaction checker dialog                                     */
-/* ------------------------------------------------------------------ */
-export function ICDialog() {
-  const t = useT();
-  const lang = useBahbah((s) => s.lang);
-  const open = useBahbah((s) => s.icOpen);
-  const setIcOpen = useBahbah((s) => s.setIcOpen);
-  const [a, setA] = useState("");
-  const [b, setB] = useState("");
-  const [result, setResult] = useState<{
-    level: InteractionLevel;
-    text: string;
-  } | null>(null);
 
-  const check = () => {
-    const pa = getProduct(a);
-    const pb = getProduct(b);
-    if (!pa || !pb) return;
-    const fa = `${pa.ingredientAr} ${pa.ingredientEn}`;
-    const fb = `${pb.ingredientAr} ${pb.ingredientEn}`;
-    const hit = interactionRules.find(
-      (r) =>
-        (fa.includes(r.a) && fb.includes(r.b)) ||
-        (fa.includes(r.b) && fb.includes(r.a))
-    );
-    setResult(
-      hit
-        ? { level: hit.level, text: lang === "ar" ? hit.ar : hit.en }
-        : { level: "safe", text: t("ic.safe") }
-    );
-  };
-
-  const tone: Record<InteractionLevel, string> = {
-    safe: "bg-[#EAF6F1] text-[#2E9E6B] border-[#2E9E6B]/30",
-    warn: "bg-[#FFF4E5] text-[#B45E0A] border-[#F09428]/40",
-    danger: "bg-[#FDECEC] text-[#DC4B4B] border-[#DC4B4B]/40",
-  };
-  const levelLabel: Record<InteractionLevel, string> = {
-    safe: "✓",
-    warn: "!",
-    danger: "×",
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setIcOpen}>
-      <DialogContent aria-describedby={undefined} className="max-w-md rounded-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-heading text-lg font-black">
-            <span className="grid size-9 place-items-center rounded-full bg-[#EAF1F9]">
-              <IconCapsule className="size-4.5 text-[#1E4E8F]" />
-            </span>
-            {t("ic.title")}
-          </DialogTitle>
-        </DialogHeader>
-        <p className="text-sm leading-relaxed text-muted-foreground">{t("ic.desc")}</p>
-
-        <div className="space-y-3">
-          <ProductSelect label={t("ic.a")} value={a} onChange={setA} lang={lang} />
-          <ProductSelect label={t("ic.b")} value={b} onChange={setB} lang={lang} />
-          <Button
-            className="h-12 w-full rounded-full text-base font-bold"
-            disabled={!a || !b || a === b}
-            onClick={check}
-          >
-            {t("ic.check")}
-          </Button>
-
-          {result && (
-            <div className={`flex items-start gap-2.5 rounded-2xl border p-3.5 text-sm font-bold leading-relaxed ${tone[result.level]}`}>
-              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-white/70 text-sm font-black">
-                {levelLabel[result.level]}
-              </span>
-              {result.text}
-            </div>
-          )}
-
-          <p className="text-center text-[11px] leading-relaxed text-muted-foreground">{t("ic.note")}</p>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ProductSelect({
-  label,
-  value,
-  onChange,
-  lang,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  lang: "ar" | "en";
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-xs font-bold text-muted-foreground">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-xl border border-input bg-white px-3 text-sm font-bold text-foreground outline-none transition focus:border-[#1E4E8F]"
-      >
-        <option value="">—</option>
-        {products.map((p) => (
-          <option key={p.id} value={p.id}>
-            {lang === "ar" ? p.nameAr : p.nameEn}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /* Footer                                                              */

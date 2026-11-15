@@ -57,22 +57,34 @@ ALTER TABLE public.rx_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.care_subscriptions ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow anon all on orders" ON public.orders;
-CREATE POLICY "Allow anon all on orders" ON public.orders FOR ALL TO anon USING (true) WITH CHECK (true);
-
 DROP POLICY IF EXISTS "Allow authenticated all on orders" ON public.orders;
-CREATE POLICY "Allow authenticated all on orders" ON public.orders FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public order intake only" ON public.orders FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Staff read orders" ON public.orders FOR SELECT TO authenticated
+  USING ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist', 'courier')
+    OR customer_phone = (auth.jwt() -> 'user_metadata' ->> 'phone'));
+CREATE POLICY "Staff update orders" ON public.orders FOR UPDATE TO authenticated
+  USING ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist', 'courier')
+    OR customer_phone = (auth.jwt() -> 'user_metadata' ->> 'phone'))
+  WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist', 'courier')
+    OR customer_phone = (auth.jwt() -> 'user_metadata' ->> 'phone'));
 
 DROP POLICY IF EXISTS "Allow anon all on rx_requests" ON public.rx_requests;
-CREATE POLICY "Allow anon all on rx_requests" ON public.rx_requests FOR ALL TO anon USING (true) WITH CHECK (true);
-
 DROP POLICY IF EXISTS "Allow authenticated all on rx_requests" ON public.rx_requests;
-CREATE POLICY "Allow authenticated all on rx_requests" ON public.rx_requests FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public prescription intake only" ON public.rx_requests FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Staff read prescriptions" ON public.rx_requests FOR SELECT TO authenticated
+  USING ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist'));
+CREATE POLICY "Staff update prescriptions" ON public.rx_requests FOR UPDATE TO authenticated
+  USING ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist'))
+  WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist'));
 
 DROP POLICY IF EXISTS "Allow anon all on care_subscriptions" ON public.care_subscriptions;
-CREATE POLICY "Allow anon all on care_subscriptions" ON public.care_subscriptions FOR ALL TO anon USING (true) WITH CHECK (true);
-
 DROP POLICY IF EXISTS "Allow authenticated all on care_subscriptions" ON public.care_subscriptions;
-CREATE POLICY "Allow authenticated all on care_subscriptions" ON public.care_subscriptions FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Public care intake only" ON public.care_subscriptions FOR INSERT TO anon, authenticated WITH CHECK (true);
+CREATE POLICY "Staff read care subscriptions" ON public.care_subscriptions FOR SELECT TO authenticated
+  USING ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist'));
+CREATE POLICY "Staff update care subscriptions" ON public.care_subscriptions FOR UPDATE TO authenticated
+  USING ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist'))
+  WITH CHECK ((auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist'));
 
 -- ============================================================================
 -- تفعيل التحديث الفوري (Supabase Realtime)
@@ -106,15 +118,16 @@ END $$;
 -- ============================================================================
 -- السماح برفع صور الروشتات من قِبل الزوار
 DROP POLICY IF EXISTS "Allow public uploads to rx-prescriptions" ON storage.objects;
-CREATE POLICY "Allow public uploads to rx-prescriptions"
+CREATE POLICY "Allow prescription uploads"
 ON storage.objects FOR INSERT TO public
 WITH CHECK (bucket_id = 'rx-prescriptions');
 
 -- السماح بقراءة وعرض صور الروشتات للصيدلي والإدارة
 DROP POLICY IF EXISTS "Allow public read from rx-prescriptions" ON storage.objects;
-CREATE POLICY "Allow public read from rx-prescriptions"
-ON storage.objects FOR SELECT TO public
-USING (bucket_id = 'rx-prescriptions');
+CREATE POLICY "Staff read prescription images"
+ON storage.objects FOR SELECT TO authenticated
+USING (bucket_id = 'rx-prescriptions'
+  AND (auth.jwt() -> 'user_metadata' ->> 'role') IN ('admin', 'pharmacist'));
 
 -- ============================================================================
 -- فهارس تحسين السرعة الفائقة (Performance Indexes)

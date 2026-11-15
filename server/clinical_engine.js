@@ -17,79 +17,17 @@ const dbModule = require('./db');
 const logger = require('./logger');
 
 // Security Salt for QR Card Signing
-const QR_SIGNING_SECRET = process.env.QR_SECRET || 'BahbahLuxuryPharmacyEgypt2026';
+const QR_SIGNING_SECRET = process.env.QR_SECRET;
+
+function requireQrSecret() {
+  if (!QR_SIGNING_SECRET) {
+    throw new Error('QR_SECRET must be configured on the server');
+  }
+  return QR_SIGNING_SECRET;
+}
 
 // Fallback in-memory chronic registry in case DB is offline or being migrated
-const BUILTIN_CHRONIC_PATIENTS = [
-  {
-    id: 1,
-    name: "أحمد عبد الفتاح منصور",
-    phone: "01012345678",
-    national_id: "28005140102578",
-    balance_debt: 450.00,
-    is_chronic: 1,
-    disease: "سكر من النوع الثاني + ضغط وتصلب شرايين",
-    monthly_day: 15,
-    last_dispensed_date: "2026-10-14", // 30 days ago -> due now!
-    refill_cycle_days: 30,
-    qr_token: "PAT-QR-9821",
-    medicines: [
-      { code: "6221025032348", name: "Concor 5mg 30 T", name_ar: "كونكور 5 مجم", qty: 1, unit: "علبة", price: 72.00, instructions: "قرص واحد يومياً صباحاً على الريق" },
-      { code: "000392", name: "Coversyl 4mg- 2blisters- 15tab", name_ar: "كوفرسيل 4 مجم", qty: 2, unit: "علبة", price: 72.00, instructions: "قرص واحد ظهراً بعد الغداء" },
-      { code: "6222003701324", name: "Glucophage 1000mg 30 T", name_ar: "جليكوفاج 1000 مجم", qty: 2, unit: "علبة", price: 54.00, instructions: "قرص مرتين يومياً وسط الأكل" }
-    ]
-  },
-  {
-    id: 2,
-    name: "الحاجة فوزية الشناوي",
-    phone: "01198765432",
-    national_id: "26503120109845",
-    balance_debt: 120.00,
-    is_chronic: 1,
-    disease: "سكر من النوع الثاني + هشاشة عظام",
-    monthly_day: 1,
-    last_dispensed_date: "2026-10-10", // overdue!
-    refill_cycle_days: 30,
-    qr_token: "PAT-QR-4451",
-    medicines: [
-      { code: "6222003701676", name: "Glucophage 500mg 50 T", name_ar: "جليكوفاج 500 مجم", qty: 2, unit: "علبة", price: 60.00, instructions: "قرص مرتين يومياً بعد الأكل" },
-      { code: "001195", name: "Osteonate 10tabl", name_ar: "أوستيونات 10 أقراص", qty: 1, unit: "علبة", price: 28.00, instructions: "قرص واحد أسبوعياً صباحاً مع كوب ماء كبير" }
-    ]
-  },
-  {
-    id: 3,
-    name: "المستشار ممدوح عبد العزيز",
-    phone: "01223344556",
-    national_id: "27508190101982",
-    balance_debt: 0.00,
-    is_chronic: 1,
-    disease: "ضغط دم مرتفع مزمن وقصور شرايين تاجية",
-    monthly_day: 20,
-    last_dispensed_date: "2026-11-08", // 5 days ago -> recently dispensed
-    refill_cycle_days: 30,
-    qr_token: "PAT-QR-7732",
-    medicines: [
-      { code: "6221025032362", name: "Concor 10mg 30 T", name_ar: "كونكور 10 مجم", qty: 1, unit: "علبة", price: 99.00, instructions: "قرص صباحاً" },
-      { code: "6221025032355", name: "Concor 5mg Plus 30 T", name_ar: "كونكور بلس 5 مجم", qty: 1, unit: "علبة", price: 72.00, instructions: "قرص مساءً" }
-    ]
-  },
-  {
-    id: 4,
-    name: "الأستاذة سهير عبد الحميد",
-    phone: "01066778899",
-    national_id: "28511200104321",
-    balance_debt: 85.00,
-    is_chronic: 1,
-    disease: "قصور الغدة الدرقية واضطراب دهون الدم",
-    monthly_day: 12,
-    last_dispensed_date: "2026-10-12", // 32 days ago -> due now
-    refill_cycle_days: 30,
-    qr_token: "PAT-QR-5519",
-    medicines: [
-      { code: "6223003960162", name: "Coversyl 5mg -30tab", name_ar: "كوفرسيل 5 مجم", qty: 1, unit: "علبة", price: 79.00, instructions: "قرص صباحاً قبل الإفطار بنصف ساعة" }
-    ]
-  }
-];
+const BUILTIN_CHRONIC_PATIENTS = [];
 
 // Helper to format Egyptian Currency (EGP)
 function formatEGP(val) {
@@ -216,7 +154,7 @@ function encodePatientQRPayload(patient) {
   const base64 = Buffer.from(jsonStr, 'utf8').toString('base64');
   
   // HMAC signature to prevent card counterfeiting
-  const hmac = crypto.createHmac('sha256', QR_SIGNING_SECRET)
+  const hmac = crypto.createHmac('sha256', requireQrSecret())
     .update(base64)
     .digest('hex')
     .substring(0, 10);
@@ -246,7 +184,7 @@ function decodePatientQRPayload(rawInput) {
       const base64 = parts[1];
       const receivedHmac = parts[2];
       
-      const expectedHmac = crypto.createHmac('sha256', QR_SIGNING_SECRET)
+      const expectedHmac = crypto.createHmac('sha256', requireQrSecret())
         .update(base64)
         .digest('hex')
         .substring(0, 10);

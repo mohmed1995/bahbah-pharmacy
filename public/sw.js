@@ -3,7 +3,7 @@
  * Page shell: network-first with offline fallback.
  * Static assets (images, JS, CSS): cache-first, refreshed in background.
  */
-const VERSION = "bahbah-v2";
+const VERSION = "bahbah-v3";
 const CORE_CACHE = `${VERSION}-core`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -63,7 +63,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  /* static assets → cache first, refresh in background */
+  /* static assets → cache first, refresh in background (exclude catalog photos from bloated worker storage) */
+  const isProductImg = url.pathname.startsWith("/images/products/");
+  if (isProductImg) {
+    // Let browser native HTTP cache handle product photos to save phone storage
+    return;
+  }
+
   const isAsset =
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/images/") ||
