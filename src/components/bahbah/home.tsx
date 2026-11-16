@@ -1502,13 +1502,12 @@ function GymZone() {
 export default function HomeView() {
   return (
     <main className="pb-16 md:pb-20">
+      <AdCarousel />
       <Hero />
       <TrustMarquee />
-      <CareSection />
-      <FreeShipStrip />
-      <AdCarousel />
       <Categories />
       <OffersSection />
+      <CareSection />
       <BestSellers />
       <Services />
       <GymZone />

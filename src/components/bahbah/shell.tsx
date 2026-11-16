@@ -340,60 +340,72 @@ export function BottomNav() {
     active: boolean;
     badge?: number;
     special?: boolean;
+    centerHighlight?: boolean;
   }[] = [
     { key: "home", label: t("nav.home"), icon: IconHomeSoft, onClick: () => go("home"), active: view === "home" },
-    { key: "catalog", label: t("nav.catalog"), icon: IconGridCats, onClick: () => openCatalog(null), active: view === "catalog" || view === "product" },
+    { key: "catalog", label: lang === "ar" ? "التصنيفات" : "Categories", icon: IconGridCats, onClick: () => openCatalog(null), active: view === "catalog" || view === "product" },
+    {
+      key: "offers",
+      label: lang === "ar" ? "العروض" : "Offers",
+      icon: Flame,
+      onClick: () => go("offers"),
+      active: view === "offers",
+      centerHighlight: true,
+    },
     {
       key: "rx",
-      label: lang === "ar" ? "ارفع روشتتك" : "Upload Rx",
+      label: lang === "ar" ? "رفع الروشتة" : "Upload Rx",
       icon: IconRxClipboardDuo,
       onClick: () => setRxOpen(true),
       active: false,
-      special: true,
     },
-    { key: "cart", label: t("nav.cart"), icon: IconCartBag, onClick: () => setCartOpen(true), active: view === "cart" || view === "checkout", badge: count },
-    { key: "account", label: t("nav.account"), icon: IconUserRound, onClick: () => openAccount("orders"), active: view === "account" || view === "login" || view === "track" },
+    { key: "account", label: lang === "ar" ? "الحساب" : "Account", icon: IconUserRound, onClick: () => openAccount("orders"), active: view === "account" || view === "login" || view === "track" },
   ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-white/95 pb-safe backdrop-blur-xl shadow-[0_-4px_25px_rgba(11,30,56,0.06)] md:hidden">
-      <div className="grid grid-cols-5">
+      <div className="grid grid-cols-5 items-center">
         {items.map((it) => (
           <button
             key={it.key}
             onClick={it.onClick}
-            className="relative flex h-16 flex-col items-center justify-center gap-1 transition active:scale-95"
+            className={`relative flex h-16 flex-col items-center justify-center gap-1 transition active:scale-95 ${
+              it.centerHighlight ? "-mt-5" : ""
+            }`}
           >
-            {it.special ? (
-              <span className="grid size-7 place-items-center rounded-full bg-[#ECFDF5] text-[#059669] shadow-xs ring-1 ring-[#10B981]/25">
-                <it.icon className="size-4 text-[#059669]" />
+            {it.centerHighlight ? (
+              <span className="relative flex flex-col items-center">
+                <span className="grid size-12 place-items-center rounded-full bg-gradient-to-tr from-[#EA580C] to-[#EF4444] text-white shadow-lg shadow-[#EA580C]/40 ring-4 ring-white">
+                  <Flame className="size-6 text-white fill-white" />
+                </span>
+                <span className="mt-1 text-[10px] font-black text-[#EA580C]">
+                  {it.label}
+                </span>
               </span>
             ) : (
-              <span className="relative">
-                <it.icon
-                  className={`size-5.5 transition-colors ${it.active ? "text-[#184C8A]" : "text-foreground/50"}`}
-                  strokeWidth={it.active ? 2.4 : 1.9}
-                />
-                {"badge" in it && (it.badge ?? 0) > 0 && (
-                  <span className="bb-pop absolute -top-1.5 -end-2 grid size-4.5 place-items-center rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-1 text-[10px] font-black text-white shadow-sm ring-1 ring-white">
-                    {it.badge}
-                  </span>
+              <>
+                <span className="relative">
+                  <it.icon
+                    className={`size-5.5 transition-colors ${it.active ? "text-[#184C8A]" : "text-foreground/50"}`}
+                    strokeWidth={it.active ? 2.4 : 1.9}
+                  />
+                  {"badge" in it && (it.badge ?? 0) > 0 && (
+                    <span className="bb-pop absolute -top-1.5 -end-2 grid size-4.5 place-items-center rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-1 text-[10px] font-black text-white shadow-sm ring-1 ring-white">
+                      {it.badge}
+                    </span>
+                  )}
+                </span>
+                <span
+                  className={`text-[10px] font-bold ${
+                    it.active ? "text-[#184C8A]" : "text-foreground/55"
+                  }`}
+                >
+                  {it.label}
+                </span>
+                {it.active && (
+                  <span className="absolute top-0 h-1 w-7 rounded-full bg-gradient-to-r from-[#184C8A] to-[#0284C7] shadow-sm" />
                 )}
-              </span>
-            )}
-            <span
-              className={`text-[10px] font-bold ${
-                it.special
-                  ? "font-black text-[#059669]"
-                  : it.active
-                    ? "text-[#184C8A]"
-                    : "text-foreground/55"
-              }`}
-            >
-              {it.label}
-            </span>
-            {it.active && (
-              <span className="absolute top-0 h-1 w-7 rounded-full bg-gradient-to-r from-[#184C8A] to-[#0284C7] shadow-sm" />
+              </>
             )}
           </button>
         ))}
