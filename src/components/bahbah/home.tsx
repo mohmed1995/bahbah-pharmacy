@@ -1503,8 +1503,6 @@ export default function HomeView() {
   return (
     <main className="pb-16 md:pb-20">
       <AdCarousel />
-      <Hero />
-      <TrustMarquee />
       <Categories />
       <OffersSection />
       <CareSection />
