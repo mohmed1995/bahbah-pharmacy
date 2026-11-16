@@ -204,11 +204,11 @@ function AdCarousel() {
   };
 
   return (
-    <section className="mx-auto max-w-7xl px-3 pt-3 md:px-6 md:pt-5" aria-label={t("ads.title")}>
+    <section className="mx-auto max-w-7xl px-3 pt-3 md:px-6 md:pt-4" aria-label={t("ads.title")}>
       <div className="grid gap-3 lg:grid-cols-3 lg:gap-4">
         {/* main banner */}
         <div
-          className="group relative overflow-hidden rounded-2xl shadow-lg ring-1 ring-black/5 lg:col-span-2 lg:rounded-3xl"
+          className="group relative overflow-hidden rounded-3xl shadow-xl ring-1 ring-black/10 lg:col-span-2 lg:rounded-[2rem]"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
           onTouchStart={(e) => {
