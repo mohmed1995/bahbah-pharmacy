@@ -42,6 +42,7 @@ import {
   IconWhatsapp,
   IconCapsule,
   IconRefill,
+  IconRxClipboardDuo,
 } from "./icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,7 +102,7 @@ export function Header() {
   const user = useBahbah((s) => s.user);
   const view = useBahbah((s) => s.view);
   const siteEdits = useBahbah((s) => s.siteEdits);
-  const { go, openCatalog, setCartOpen, setSearchOpen, toggleLang, openAccount, setConsultOpen, setInstallAppOpen } = useBahbah();
+  const { go, openCatalog, setCartOpen, setSearchOpen, toggleLang, openAccount, setConsultOpen, setInstallAppOpen, setRxOpen } = useBahbah();
   const count = cartCount(cart);
 
   const navItems: { label: string; onClick: () => void; active: boolean }[] = [
@@ -267,10 +268,20 @@ export function Header() {
             <span>{lang === "ar" ? "تطبيق الهاتف" : "Mobile App"}</span>
           </button>
 
+          {/* upload rx (prominent in header) */}
+          <button
+            onClick={() => setRxOpen(true)}
+            className="hidden h-10 items-center gap-1.5 rounded-full border border-[#184C8A]/30 bg-[#EAF1F9] px-4 text-xs font-black text-[#184C8A] transition hover:bg-[#184C8A] hover:text-white active:scale-95 shadow-xs sm:flex"
+            aria-label={lang === "ar" ? "ارفع روشتتك" : "Upload Prescription"}
+          >
+            <IconRxClipboardDuo className="size-4" />
+            <span>{lang === "ar" ? "📸 ارفع روشتتك" : "Upload Rx"}</span>
+          </button>
+
           {/* ask pharmacist (fixed in header) */}
           <button
             onClick={() => setConsultOpen(true)}
-            className="hidden h-10 items-center gap-1.5 rounded-full border border-[#10B981]/30 bg-[#ECFDF5] px-3.5 text-xs font-black text-[#059669] transition hover:bg-[#10B981] hover:text-white active:scale-95 shadow-xs sm:flex"
+            className="hidden h-10 items-center gap-1.5 rounded-full border border-[#10B981]/30 bg-[#ECFDF5] px-3.5 text-xs font-black text-[#059669] transition hover:bg-[#10B981] hover:text-white active:scale-95 shadow-xs lg:flex"
             aria-label={lang === "ar" ? "استشارة صيدلي" : "Ask Pharmacist"}
           >
             <IconPhone className="size-3.5" />
@@ -315,7 +326,7 @@ export function BottomNav() {
   const lang = useBahbah((s) => s.lang);
   const view = useBahbah((s) => s.view);
   const cart = useBahbah((s) => s.cart);
-  const { go, openCatalog, setCartOpen, openAccount, setConsultOpen } = useBahbah();
+  const { go, openCatalog, setCartOpen, openAccount, setConsultOpen, setRxOpen } = useBahbah();
   const count = cartCount(cart);
   const hidden = view === "admin";
 
@@ -333,10 +344,10 @@ export function BottomNav() {
     { key: "home", label: t("nav.home"), icon: IconHomeSoft, onClick: () => go("home"), active: view === "home" },
     { key: "catalog", label: t("nav.catalog"), icon: IconGridCats, onClick: () => openCatalog(null), active: view === "catalog" || view === "product" },
     {
-      key: "consult",
-      label: lang === "ar" ? "اسأل صيدلي" : "Consult",
-      icon: IconPhone,
-      onClick: () => setConsultOpen(true),
+      key: "rx",
+      label: lang === "ar" ? "ارفع روشتتك" : "Upload Rx",
+      icon: IconRxClipboardDuo,
+      onClick: () => setRxOpen(true),
       active: false,
       special: true,
     },

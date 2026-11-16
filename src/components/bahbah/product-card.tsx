@@ -311,9 +311,10 @@ export function QtyStepper({
 /* Badges column                                                       */
 /* ------------------------------------------------------------------ */
 function Badges({ product, t, pct }: { product: Product; t: (k: DictKey) => string; pct: number }) {
+  const isMedicine = product.category === "medicines";
   return (
     <div className="absolute top-3 start-3 z-10 flex flex-col gap-1.5">
-      {pct > 0 && (
+      {!isMedicine && pct > 0 && (
         <Badge className="rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-2.5 py-0.5 text-[11px] font-black text-white shadow-sm ring-1 ring-white/20">
           {t("offers.badge")} {pct}%
         </Badge>
@@ -363,12 +364,13 @@ function FavButton({ product }: { product: Product }) {
 /* Price block                                                         */
 /* ------------------------------------------------------------------ */
 function Price({ product, t, big = false }: { product: Product; t: (k: DictKey) => string; big?: boolean }) {
+  const isMedicine = product.category === "medicines";
   return (
     <div className="flex items-baseline gap-1.5">
       <span className={`font-heading font-black text-[#184C8A] tracking-tight ${big ? "text-xl" : "text-lg"}`}>
         {fmtPrice(product.price, t)}
       </span>
-      {product.oldPrice && (
+      {!isMedicine && product.oldPrice && (
         <span className="text-xs font-semibold text-muted-foreground line-through opacity-70">
           {fmtPrice(product.oldPrice, t)}
         </span>
@@ -433,7 +435,7 @@ function CozyCard({ product }: { product: Product }) {
           <span className="font-heading text-base font-black text-[#184C8A]">
             {fmtPrice(product.price, t)}
           </span>
-          {product.oldPrice && (
+          {product.category !== "medicines" && product.oldPrice && (
             <span className="text-[11px] font-semibold text-muted-foreground/70 line-through">
               {fmtPrice(product.oldPrice, t)}
             </span>
@@ -527,7 +529,7 @@ function ListCard({ product }: { product: Product }) {
             <span className="font-heading text-base font-black text-[#184C8A]">
               {fmtPrice(product.price, t)}
             </span>
-            {product.oldPrice && (
+            {product.category !== "medicines" && product.oldPrice && (
               <span className="text-[11px] font-semibold text-muted-foreground/70 line-through">
                 {fmtPrice(product.oldPrice, t)}
               </span>

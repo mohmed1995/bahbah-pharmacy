@@ -1504,16 +1504,16 @@ export default function HomeView() {
     <main className="pb-16 md:pb-20">
       <Hero />
       <TrustMarquee />
+      <CareSection />
       <FreeShipStrip />
       <AdCarousel />
       <TrustStrip />
-      <HowToOrderSection />
       <Categories />
       <OffersSection />
-      <CareSection />
       <BestSellers />
-      <WaslyCards />
       <Services />
+      <GymZone />
+      <HowToOrderSection />
       <ToolsRow />
       <PromoBanners />
       <Tips />
