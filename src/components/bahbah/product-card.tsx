@@ -155,6 +155,7 @@ export function ProductVisual({
         product.img.startsWith("data:") ||
         product.img.startsWith("blob:") ||
         product.img.includes("/images/offers/") ||
+        product.img.includes("/images/products/") ||
         product.img.includes("custom")
       ))
   );
@@ -172,7 +173,7 @@ export function ProductVisual({
       <div
         className={`relative w-full overflow-hidden ${
           isLg
-            ? `${cat.tint} h-72 md:h-80 rounded-3xl`
+            ? "h-72 md:h-80 rounded-3xl bg-gradient-to-b from-white via-white to-[#F8FAFC] border border-slate-100"
             : isSm
               ? "h-full w-full rounded-xl bg-gradient-to-b from-white to-[#F8FAFC]"
               : "h-36 bg-gradient-to-b from-white to-[#F8FAFC] md:h-44 rounded-t-2xl"

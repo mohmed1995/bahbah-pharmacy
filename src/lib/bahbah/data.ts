@@ -438,7 +438,6 @@ const featuredProducts: Product[] = [
     warnAr: "لا تتجاوز 8 أقراص في 24 ساعة. يمنع الاستخدام مع مشروبات الكحول أو مع أدوية أخرى تحتوي باراسيتامول.",
     warnEn: "Do not exceed 8 tablets in 24 hours. Avoid alcohol and other paracetamol-containing medicines.",
     icon: IconCapsule,
-    img: "/images/products/panadol-extra.png",
     tags: ["best"],
   },
   {
@@ -463,7 +462,6 @@ const featuredProducts: Product[] = [
     warnAr: "يؤخذ بعد الأكل مباشرة. يمنع لمرضى القرحة الحادة والربو الحساس للأسبرين.",
     warnEn: "Take after meals. Contraindicated in active peptic ulcer and aspirin-sensitive asthma.",
     icon: IconCapsule,
-    img: "/images/products/brufen-400.png",
     tags: ["best"],
   },
   {
@@ -580,7 +578,6 @@ const featuredProducts: Product[] = [
     descAr: "مضاد هيستامين من الجيل الثاني لحساسية الأنف والجلد، لا يسبب نعاس.",
     descEn: "Second-generation antihistamine for nasal and skin allergies — non-drowsy.",
     icon: IconCapsule,
-    img: "/images/products/telfast-180.png",
     tags: ["best"],
   },
   {
@@ -1356,6 +1353,7 @@ const mappedRealProducts: Product[] = (realCatalogData as any[]).map((p) => {
     ...p,
     category: cat,
     icon: categoryIconMap[cat] || IconCapsule,
+    verifiedPhoto: true,
   };
 });
 const __UNUSED_MAPPED__ = (realCatalogData as any[]).map((p) => ({
