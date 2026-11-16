@@ -291,6 +291,7 @@ export const dict = {
     /* الوضع المريح لكبار السن */
     "tools.elder": "الوضع المريح",
     "tools.elderOn": "الوضع المريح مفعّل — خط أكبر وأزرار مريحة",
+    "tools.elderOff": "تم إيقاف الوضع المريح والعودة للوضع الطبيعي",
     "tools.elderSub": "مخصص لكبار السن — تكبير الخط والأزرار وتقليل الحركة",
 
     /* تسعير التوصيل من اللوحة */
@@ -1169,6 +1170,7 @@ export const dict = {
     /* Elder-friendly mode */
     "tools.elder": "Comfort Mode",
     "tools.elderOn": "Comfort Mode on — bigger text and easy buttons",
+    "tools.elderOff": "Comfort mode turned off — default view restored",
     "tools.elderSub": "Designed for seniors — larger text & buttons, calmer motion",
 
     /* delivery zone pricing from the dashboard */

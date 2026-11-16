@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getProduct, alternativesOf, byCategory, discountPct } from "@/lib/bahbah/data";
-import { useBahbah, useT } from "@/lib/bahbah/store";
+import { useBahbah, useT, effStock } from "@/lib/bahbah/store";
 import { toast } from "sonner";
 import { Rating, ProductVisual, ProductCard, SectionHead, fmtPrice, catOf } from "./product-card";
 import { IconWhatsapp } from "./icons";
@@ -35,6 +35,7 @@ export default function ProductView() {
   const lang = useBahbah((s) => s.lang);
   const productId = useBahbah((s) => s.productId);
   const favorites = useBahbah((s) => s.favorites);
+  const stockAdj = useBahbah((s) => s.stockAdj);
   const { go, addToCart, toggleFavorite, setCartOpen } = useBahbah();
   const [qty, setQty] = useState(1);
 
@@ -62,10 +63,13 @@ export default function ProductView() {
   const isFav = favorites.includes(product.id);
   const pct = discountPct(product);
 
+  const availableStock = effStock(product.id, stockAdj);
+  const isOutOfStock = availableStock <= 0;
+
   const stockLabel =
-    product.stock === 0 ? t("product.out") : product.stock < 30 ? t("product.low") : t("product.inStock");
+    isOutOfStock ? t("product.out") : availableStock < 30 ? t("product.low") : t("product.inStock");
   const stockColor =
-    product.stock === 0 ? "text-[#DC2626] bg-[#DC2626]/10" : product.stock < 30 ? "text-[#D97706] bg-[#FFFBEB] ring-1 ring-[#F59E0B]/20" : "text-[#059669] bg-[#ECFDF5] ring-1 ring-[#10B981]/20";
+    isOutOfStock ? "text-[#DC2626] bg-[#DC2626]/10" : availableStock < 30 ? "text-[#D97706] bg-[#FFFBEB] ring-1 ring-[#F59E0B]/20" : "text-[#059669] bg-[#ECFDF5] ring-1 ring-[#10B981]/20";
 
   return (
     <main className="pb-28 md:pb-16">
@@ -153,16 +157,18 @@ export default function ProductView() {
             <div className="mt-6 flex items-center gap-3">
               <div className="flex items-center gap-2 rounded-full border border-border bg-card px-2 py-1.5 shadow-xs">
                 <button
-                  className="grid size-8 place-items-center rounded-full bg-muted transition hover:bg-[#EAF2FA] active:scale-90"
+                  className="grid size-8 place-items-center rounded-full bg-muted transition hover:bg-[#EAF2FA] active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
                   onClick={() => setQty(Math.max(1, qty - 1))}
+                  disabled={isOutOfStock || qty <= 1}
                   aria-label="minus"
                 >
                   <Minus className="size-4" />
                 </button>
-                <span className="w-8 text-center font-heading text-lg font-black text-[#0B1E38]">{qty}</span>
+                <span className="w-8 text-center font-heading text-lg font-black text-[#0B1E38]">{isOutOfStock ? 0 : qty}</span>
                 <button
-                  className="grid size-8 place-items-center rounded-full bg-muted transition hover:bg-[#EAF2FA] active:scale-90"
-                  onClick={() => setQty(qty + 1)}
+                  className="grid size-8 place-items-center rounded-full bg-muted transition hover:bg-[#EAF2FA] active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  onClick={() => setQty(Math.min(availableStock, qty + 1))}
+                  disabled={isOutOfStock || qty >= availableStock}
                   aria-label="plus"
                 >
                   <Plus className="size-4" />
@@ -170,15 +176,24 @@ export default function ProductView() {
               </div>
               <Button
                 size="lg"
-                className="h-13 flex-1 rounded-full text-base font-black bg-gradient-to-r from-[#184C8A] to-[#113665] text-white shadow-md shadow-[#184C8A]/25 hover:shadow-lg hover:shadow-[#184C8A]/35 active:scale-[0.98] transition-all"
+                disabled={isOutOfStock}
+                className={`h-13 flex-1 rounded-full text-base font-black transition-all ${
+                  isOutOfStock
+                    ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60 shadow-none hover:bg-muted"
+                    : "bg-gradient-to-r from-[#184C8A] to-[#113665] text-white shadow-md shadow-[#184C8A]/25 hover:shadow-lg hover:shadow-[#184C8A]/35 active:scale-[0.98]"
+                }`}
                 onClick={() => {
+                  if (isOutOfStock) {
+                    toast.error(t("product.out"));
+                    return;
+                  }
                   addToCart(product.id, qty);
                   toast.success(t("product.added"));
                   setCartOpen(true);
                 }}
               >
                 <ShoppingCart className="size-5" />
-                {t("product.addToCart")}
+                {isOutOfStock ? t("product.out") : t("product.addToCart")}
               </Button>
               <a
                 href={`https://wa.me/201011500166?text=${encodeURIComponent(

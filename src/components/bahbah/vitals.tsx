@@ -120,9 +120,7 @@ export default function VitalsPortal() {
   const go = useBahbah((s) => s.go);
 
   const [inputCode, setInputCode] = useState(user?.phone || "");
-  const [activeCode, setActiveCode] = useState<string | null>(
-    user?.phone || (measurements.length > 0 ? measurements[0].patientCode : null)
-  );
+  const [activeCode, setActiveCode] = useState<string | null>(user?.phone || null);
   const [selectedMetric, setSelectedMetric] = useState<"sugar" | "bp" | "weight">("sugar");
 
   // Lookup results
@@ -232,39 +230,14 @@ export default function VitalsPortal() {
             </Button>
           </form>
 
-          {/* Fast sample pills */}
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-white/70">
-            <span>{lang === "ar" ? "جرّب نماذج مسجلة سريعة:" : "Try quick demo codes:"}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setInputCode("BB-C-101");
-                setActiveCode("BB-C-101");
-              }}
-              className="rounded-full bg-white/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-white transition hover:bg-white/20"
-            >
-              BB-C-101
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setInputCode("01011500166");
-                setActiveCode("01011500166");
-              }}
-              className="rounded-full bg-white/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-white transition hover:bg-white/20"
-            >
-              01011500166
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setInputCode("BB-C-102");
-                setActiveCode("BB-C-102");
-              }}
-              className="rounded-full bg-white/10 px-2.5 py-0.5 font-mono text-[10px] font-bold text-white transition hover:bg-white/20"
-            >
-              BB-C-102
-            </button>
+          {/* Privacy note */}
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-white/80">
+            <ShieldCheck className="size-4 text-emerald-300" />
+            <span>
+              {lang === "ar"
+                ? "بياناتك الصحية مشفرة ومحمية — لا يمكن لأي شخص الاطلاع على قياساتك إلا بكودك الخاص أو رقم هاتفك."
+                : "Your health records are strictly confidential and protected."}
+            </span>
           </div>
         </div>
       </div>
@@ -754,31 +727,27 @@ export default function VitalsPortal() {
         </div>
       )}
 
-      {/* Empty State when Code not found */}
+      {/* Empty State: Initial Prompt vs Not Found */}
       {patientRecords.length === 0 && (
         <div className="mt-10 flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/80 bg-card p-10 text-center shadow-xs">
           <div className="grid size-16 place-items-center rounded-2xl bg-[#EAF1F9] text-[#184C8A]">
             <Activity className="size-8 text-[#184C8A]" />
           </div>
           <h2 className="mt-4 font-heading text-lg font-black text-foreground">
-            {lang === "ar" ? "لم نجد قياسات مسجلة بهذا الكود حالياً" : "No Records Found"}
+            {!activeCode
+              ? (lang === "ar" ? "أدخل رقم هاتفك أو كود المريض الخاص بك" : "Enter Your Phone or Patient Code")
+              : (lang === "ar" ? `لم نجد قياسات مسجلة برقم (${activeCode})` : "No Records Found")}
           </h2>
           <p className="mt-1.5 max-w-md text-xs leading-relaxed text-muted-foreground">
-            {lang === "ar"
-              ? "تأكد من كتابة كود المريض المسجل لك في صيدلية بحبح بشكل صحيح أو رقم هاتفك المحمول. يمكنك زيارة الصيدلية لقياس السكر والضغط والوزن وسيقوم الصيدلي بإضافتها فوراً لملفك."
-              : "Please verify your patient code or visit Bahbah Pharmacy to measure your vitals and add them to your account."}
+            {!activeCode
+              ? (lang === "ar"
+                  ? "لعرض سجلك الطبي والقياسات الدورية (السكر، الضغط، الوزن) مع المخطط البياني ونصائح الصيدلي، اكتب رقم هاتفك في الخانة بالأعلى واضغط عرض."
+                  : "Type your registered phone number or patient code above to view your historical measurements and charts.")
+              : (lang === "ar"
+                  ? "تأكد من كتابة كود المريض أو رقم الهاتف المسجل في صيدلية بحبح بشكل صحيح. كما يمكنك زيارة الصيدلية لقياس السكر والضغط مجاناً وسيقوم الصيدلي بإضافتها لملفك."
+                  : "Please verify your patient code or visit Bahbah Pharmacy to record your vitals.")}
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Button
-              variant="outline"
-              className="rounded-full text-xs font-bold"
-              onClick={() => {
-                setInputCode("BB-C-101");
-                setActiveCode("BB-C-101");
-              }}
-            >
-              {lang === "ar" ? "استعراض مثال تجريبي (BB-C-101)" : "View Demo Sample"}
-            </Button>
             <Button
               className="rounded-full bg-[#184C8A] text-xs font-bold text-white hover:bg-[#112D51]"
               onClick={() => go("care")}

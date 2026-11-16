@@ -21,7 +21,7 @@ import { adminOrders as adminDemoOrders, driverById, BRANCH, PHARMACY, type Orde
 import { useBahbah, useT, useDrivers, type DictKey } from "@/lib/bahbah/store";
 import { fmtPrice } from "./product-card";
 import { KpiCard } from "./admin-ui";
-import { IconScooter, IconPin } from "./icons";
+import { IconScooter, IconPin, IconWhatsapp } from "./icons";
 
 /* ------------------------------------------------------------------ */
 /* Courier portal — المندوب يلاقي الطلبات والعناوين وحدّث الحالة        */
@@ -239,13 +239,27 @@ function ShipmentCard({
               <p dir="ltr" className="text-xs font-bold text-muted-foreground">{o.phone}</p>
             </div>
           </div>
-          <a
-            href={`tel:${o.phone.replace(/\s/g, "")}`}
-            className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#2E9E6B] px-4 text-xs font-black text-white transition hover:brightness-105"
-          >
-            <Phone className="size-3.5" />
-            {t("cour.callCust")}
-          </a>
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={`https://wa.me/2${o.phone.replace(/[^0-9]/g, "").replace(/^0/, "")}?text=${encodeURIComponent(
+                `السلام عليكم ${lang === "ar" ? o.customerAr : o.customerEn}، معاك مندوب صيدلية بحبح ديروط لتوصيل طلبك #${o.id}. يرجى إرسال اللوكيشن أو أقرب علامة مميزة لتسهيل الوصول لحضرتك.`
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#25D366] px-3.5 text-xs font-black text-white shadow-xs transition hover:brightness-105 active:scale-95"
+              title={lang === "ar" ? "طلب اللوكيشن عبر واتساب" : "Request live location on WhatsApp"}
+            >
+              <IconWhatsapp className="size-4" />
+              <span>{lang === "ar" ? "واتساب اللوكيشن" : "WhatsApp"}</span>
+            </a>
+            <a
+              href={`tel:${o.phone.replace(/\s/g, "")}`}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full bg-[#2E9E6B] px-4 text-xs font-black text-white transition hover:brightness-105 active:scale-95"
+            >
+              <Phone className="size-3.5" />
+              {t("cour.callCust")}
+            </a>
+          </div>
         </div>
 
         {/* address + map */}

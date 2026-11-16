@@ -351,6 +351,7 @@ export function CheckoutView() {
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [payment, setPayment] = useState<"cod" | "instapay" | "card">("cod");
+  const [cashChangeFloat, setCashChangeFloat] = useState<string>("exact");
 
   /* delivery state */
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
@@ -642,8 +643,28 @@ export function CheckoutView() {
                 </div>
 
                 <label className="block space-y-1.5">
-                  <span className="text-xs font-bold text-foreground/75">{t("checkout.address")}</span>
-                  <Textarea value={address} onChange={(e) => setAddress(e.target.value)} rows={2} className="rounded-xl" placeholder={zoneAreas(zone ?? zones[0])} />
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground/75">{t("checkout.address")}</span>
+                    <span className="text-[11px] font-bold text-[#184C8A]">
+                      {lang === "ar" ? "📍 اذكر علامة مميزة (مسجد، مدرسة، عائلة...)" : "📍 Add a nearby landmark"}
+                    </span>
+                  </div>
+                  <Textarea
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    rows={2}
+                    className="rounded-xl leading-relaxed text-sm"
+                    placeholder={
+                      lang === "ar"
+                        ? "اكتب العنوان بالتفصيل: الشارع أو المنطقة، وأقرب علامة مميزة (بجوار مسجد... / أمام مدرسة... / دوار عائلة...)"
+                        : zoneAreas(zone ?? zones[0])
+                    }
+                  />
+                  <p className="text-[11px] font-medium text-muted-foreground">
+                    {lang === "ar"
+                      ? "العلامات المميزة تضمن وصول المندوب لباب بيتك فوراً بدون تأخير."
+                      : "Landmarks ensure fast delivery to your door."}
+                  </p>
                 </label>
               </>
             )}
@@ -772,6 +793,45 @@ export function CheckoutView() {
                 <span className={`size-5 rounded-full border-2 ${payment === key ? "border-[#1E4E8F] bg-[#1E4E8F] ring-2 ring-inset ring-white" : "border-border"}`} />
               </button>
             ))}
+
+            {payment === "cod" && (
+              <div className="rounded-2xl border-2 border-[#184C8A]/20 bg-[#EAF2FA]/60 p-4 space-y-2.5 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <p className="font-heading text-xs font-black text-[#184C8A]">
+                    {lang === "ar" ? "💵 معاك فكة كام؟ (لتجهيز الباقي مع المندوب مسبقاً)" : "Change float needed:"}
+                  </p>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#184C8A] shadow-xs">
+                    {lang === "ar" ? "خدمة مريحة" : "Convenience"}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    { id: "exact", labelAr: "معايا المبلغ مضبوط", labelEn: "Exact amount" },
+                    { id: "100", labelAr: "ورقة 100 ج.م", labelEn: "100 EGP bill" },
+                    { id: "200", labelAr: "ورقة 200 ج.م", labelEn: "200 EGP bill" },
+                    { id: "more", labelAr: "مبلغ أكبر (محتاج فكة)", labelEn: "Need change" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setCashChangeFloat(opt.id)}
+                      className={`rounded-xl border-2 px-2.5 py-2 text-center text-xs font-bold transition active:scale-95 ${
+                        cashChangeFloat === opt.id
+                          ? "border-[#184C8A] bg-[#184C8A] text-white shadow-xs"
+                          : "border-border/80 bg-white text-foreground/80 hover:border-[#184C8A]/40"
+                      }`}
+                    >
+                      {lang === "ar" ? opt.labelAr : opt.labelEn}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  {lang === "ar"
+                    ? "تحديد الفكة يساعد المندوب على تجهيز باقي أموالك بدقة قبل التحرك من الصيدلية."
+                    : "Helps the courier prepare your exact change before dispatch."}
+                </p>
+              </div>
+            )}
             <div className="flex gap-2 pt-2">
               <Button variant="outline" className="h-12 flex-1 rounded-full font-bold" onClick={() => setStep(1)}>
                 {t("checkout.back")}
@@ -826,6 +886,20 @@ export function CheckoutView() {
                 <div className="mt-2 flex items-start gap-2.5">
                   <BadgeCheck className="mt-0.5 size-4 shrink-0 text-[#1E4E8F]" />
                   <span className="text-foreground/80">{notes}</span>
+                </div>
+              )}
+              {payment === "cod" && (
+                <div className="mt-2 flex items-start gap-2.5">
+                  <BadgeCheck className="mt-0.5 size-4 shrink-0 text-[#1E4E8F]" />
+                  <span className="text-foreground/80 font-bold">
+                    {cashChangeFloat === "exact"
+                      ? (lang === "ar" ? "الدفع نقدًا: المبلغ متوفر مضبوط" : "COD: Exact cash ready")
+                      : cashChangeFloat === "100"
+                        ? (lang === "ar" ? "الدفع نقدًا: مطلوب فكة من ورقة 100 ج.م" : "COD: Change needed for 100 EGP")
+                        : cashChangeFloat === "200"
+                          ? (lang === "ar" ? "الدفع نقدًا: مطلوب فكة من ورقة 200 ج.م" : "COD: Change needed for 200 EGP")
+                          : (lang === "ar" ? "الدفع نقدًا: مطلوب فكة لمبلغ كبير" : "COD: Change needed")}
+                  </span>
                 </div>
               )}
             </div>
@@ -952,10 +1026,18 @@ export function CheckoutView() {
                       : zone && deliveryType === "delivery"
                         ? (lang === "ar" ? zone.nameAr : zone.nameEn)
                         : lang === "ar" ? BRANCH.nameAr : BRANCH.nameEn;
-                  const resolvedAddress =
+
+                  const villagePart =
                     zoneId === "custom-village" && customVillageName.trim()
-                      ? `[${customVillageName.trim()}] ${address}`
-                      : address;
+                      ? `[${customVillageName.trim()}] `
+                      : "";
+                  const changePart =
+                    payment === "cod" && cashChangeFloat !== "exact"
+                      ? ` [فكة: ${cashChangeFloat === "100" ? "ورقة 100 ج.م" : cashChangeFloat === "200" ? "ورقة 200 ج.م" : "مطلوب فكة لمبلغ كبير"}]`
+                      : "";
+                  const notesPart = notes.trim() ? ` [ملاحظات: ${notes.trim()}]` : "";
+
+                  const resolvedAddress = `${villagePart}${address.trim()}${notesPart}${changePart}`.trim();
                   const id = placeOrder({
                     address: resolvedAddress,
                     phone,

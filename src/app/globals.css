@@ -306,6 +306,12 @@ html.bahbah-elder input,
 html.bahbah-elder select {
   min-height: 48px;
 }
+html.bahbah-elder button[aria-label="minus"],
+html.bahbah-elder button[aria-label="plus"] {
+  min-height: 40px;
+  min-width: 40px;
+  font-size: 1.15rem;
+}
 html.bahbah-elder nav.fixed button {
   min-height: 56px;
 }

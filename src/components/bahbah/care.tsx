@@ -67,6 +67,50 @@ import {
 
 type CareTab = "register" | "lookup" | "directory";
 
+/* Helper to compress large camera images to prevent localStorage quota exhaustion */
+function compressImageFile(file: File, maxDim = 1200, quality = 0.75): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = document.createElement("img");
+      img.onload = () => {
+        let width = img.naturalWidth || img.width;
+        let height = img.naturalHeight || img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(e.target?.result as string);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => resolve(e.target?.result as string);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function CareView() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
@@ -118,27 +162,18 @@ export default function CareView() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show local preview immediately
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPrescriptionPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    // Upload to Supabase Storage if available
     setUploadingRx(true);
     try {
+      // Compress preview and fallback data URL to prevent localStorage quota exhaustion
+      const compressedDataUrl = await compressImageFile(file);
+      setPrescriptionPreview(compressedDataUrl);
+
       const publicUrl = await uploadRxPrescriptionImage(file);
       if (publicUrl) {
         setPrescriptionUrl(publicUrl);
         toast.success(lang === "ar" ? "تم رفع صورة الروشتة بنجاح" : "Prescription image uploaded successfully");
       } else {
-        // Fallback to data URL
-        const dataUrlReader = new FileReader();
-        dataUrlReader.onload = () => {
-          setPrescriptionUrl(dataUrlReader.result as string);
-        };
-        dataUrlReader.readAsDataURL(file);
+        setPrescriptionUrl(compressedDataUrl);
         toast.info(lang === "ar" ? "تم حفظ صورة الروشتة محلياً" : "Prescription image saved locally");
       }
     } catch {

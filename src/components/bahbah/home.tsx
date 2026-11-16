@@ -1084,8 +1084,9 @@ function ToolsRow() {
       title: "tools.elder",
       desc: elderMode ? "tools.elderOn" : "tools.elderSub",
       onClick: () => {
+        const next = !elderMode;
         toggleElderMode();
-        toast.success(t("tools.elderOn"));
+        toast.success(next ? t("tools.elderOn") : t("tools.elderOff"));
       },
       active: elderMode,
     },
