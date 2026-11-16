@@ -1024,24 +1024,33 @@ function CareSection() {
                 </div>
               </div>
 
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3.5">
                 <Button
                   size="lg"
-                  className="h-12 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EA580C] px-8 text-sm font-black text-white shadow-lg shadow-[#F59E0B]/30 transition hover:brightness-105 active:scale-95"
+                  className="group relative h-13 overflow-hidden rounded-2xl bg-gradient-to-r from-[#F59E0B] via-[#EA580C] to-[#D97706] px-8 text-sm md:text-base font-black text-white shadow-xl shadow-[#EA580C]/35 ring-2 ring-white/30 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl hover:shadow-[#EA580C]/50 active:scale-95"
                   onClick={() => go("care")}
                 >
-                  <IconRxClipboardDuo className="size-4.5" />
-                  {lang === "ar" ? "تسجيل عميل أدوية شهرية جديد" : "Register New Monthly Patient"}
-                  <IconChevronR className="size-4 rtl:rotate-180" />
+                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+                  <span className="relative flex items-center gap-2.5">
+                    <span className="grid size-7 place-items-center rounded-xl bg-white/20 backdrop-blur-xs">
+                      <IconRxClipboardDuo className="size-4.5" />
+                    </span>
+                    <span>{lang === "ar" ? "تسجيل عميل أدوية شهرية جديد" : "Register New Monthly Patient"}</span>
+                    <IconChevronR className="size-4.5 rtl:rotate-180 transition-transform group-hover:translate-x-1 rtl:group-hover:-translate-x-1" />
+                  </span>
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 rounded-full border-white/30 bg-white/10 px-7 text-sm font-bold text-white backdrop-blur transition hover:bg-white/20 hover:text-white"
+                  className="group h-13 rounded-2xl border-2 border-white/40 bg-white/10 px-8 text-sm md:text-base font-black text-white backdrop-blur-md shadow-lg transition-all duration-300 hover:bg-white hover:text-[#0B1E38] hover:scale-[1.03] active:scale-95"
                   onClick={() => go("care")}
                 >
-                  <IconRefill className="size-4.5" />
-                  {lang === "ar" ? "عميل سابق / تكرار العلاج" : "Existing Patient Refill"}
+                  <span className="flex items-center gap-2.5">
+                    <span className="grid size-7 place-items-center rounded-xl bg-white/20 transition-colors group-hover:bg-[#184C8A]/10">
+                      <IconRefill className="size-4.5" />
+                    </span>
+                    <span>{lang === "ar" ? "عميل سابق / تكرار العلاج فوراً" : "Existing Patient Refill"}</span>
+                  </span>
                 </Button>
               </div>
             </div>
