@@ -256,6 +256,7 @@ interface BahbahState {
   accountTab: AccountTab;
   cartOpen: boolean;
   searchOpen: boolean;
+  voiceSearchAutoStart?: boolean;
   rxOpen: boolean;
   consultOpen: boolean;
   icOpen: boolean; // drug-interaction checker dialog
@@ -338,7 +339,7 @@ interface BahbahState {
   reorder: (orderId: string) => void;
 
   setCartOpen: (v: boolean) => void;
-  setSearchOpen: (v: boolean) => void;
+  setSearchOpen: (v: boolean, autoVoice?: boolean) => void;
   setRxOpen: (v: boolean) => void;
   setConsultOpen: (v: boolean) => void;
   setIcOpen: (v: boolean) => void;
@@ -788,7 +789,7 @@ export const useBahbah = create<BahbahState>()(
       },
 
       setCartOpen: (v) => set({ cartOpen: v }),
-      setSearchOpen: (v) => set({ searchOpen: v }),
+      setSearchOpen: (v, autoVoice) => set({ searchOpen: v, voiceSearchAutoStart: Boolean(autoVoice) }),
       setRxOpen: (v) => set({ rxOpen: v }),
       setConsultOpen: (v) => set({ consultOpen: v }),
       setIcOpen: (v) => set({ icOpen: v }),

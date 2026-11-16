@@ -191,18 +191,33 @@ export function Header() {
         </nav>
 
         {/* desktop search */}
-        <button
-          onClick={() => setSearchOpen(true)}
-          className="group mx-auto hidden h-11 w-full max-w-md items-center justify-between rounded-full border border-border/80 bg-muted/60 px-4 text-sm text-muted-foreground shadow-inner transition hover:border-[#184C8A]/40 hover:bg-white hover:shadow-sm md:flex"
-        >
-          <div className="flex items-center gap-2.5 truncate">
-            <IconSearchGlass className="size-4.5 text-muted-foreground transition group-hover:text-[#184C8A]" />
+        <div className="group mx-auto hidden h-11 w-full max-w-md items-center justify-between rounded-full border border-border/80 bg-muted/60 px-2.5 text-sm text-muted-foreground shadow-inner transition hover:border-[#184C8A]/40 hover:bg-white hover:shadow-sm md:flex">
+          <button
+            onClick={() => setSearchOpen(true, false)}
+            className="flex flex-1 items-center gap-2.5 truncate text-start ps-1.5"
+            type="button"
+          >
+            <IconSearchGlass className="size-4.5 shrink-0 text-muted-foreground transition group-hover:text-[#184C8A]" />
             <span className="truncate">{t("nav.search")}</span>
+          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true, true)}
+              title="البحث الصوتي الذكي باللهجة المصرية"
+              className="grid size-8 place-items-center rounded-full bg-[#184C8A]/10 text-[#184C8A] transition-all hover:bg-[#184C8A] hover:text-white active:scale-90"
+              aria-label="البحث الصوتي"
+            >
+              <IconMic className="size-4" />
+            </button>
+            <span
+              onClick={() => setSearchOpen(true, false)}
+              className="flex cursor-pointer items-center gap-1 rounded-md bg-background px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground ring-1 ring-border"
+            >
+              ⌘K
+            </span>
           </div>
-          <span className="flex items-center gap-1 rounded-md bg-background px-1.5 py-0.5 text-[10px] font-bold text-muted-foreground ring-1 ring-border">
-            ⌘K
-          </span>
-        </button>
+        </div>
 
         <div className="ms-auto flex items-center gap-1.5 md:ms-0">
           {/* language */}
@@ -249,9 +264,19 @@ export function Header() {
             <Smartphone className="size-5 text-emerald-600" />
           </button>
 
+          {/* voice search (mobile) */}
+          <button
+            onClick={() => setSearchOpen(true, true)}
+            className="grid size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted hover:text-[#EA580C] active:scale-95 md:hidden"
+            aria-label="البحث الصوتي"
+            title="تحدث بالمايك"
+          >
+            <IconMic className="size-5 text-[#F09428]" />
+          </button>
+
           {/* search (mobile) */}
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={() => setSearchOpen(true, false)}
             className="grid size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted active:scale-95 md:hidden"
             aria-label={t("search.title")}
           >
@@ -582,84 +607,137 @@ const EG_CONVERSATIONAL_WORDS = [
 const SYMPTOM_TREATMENTS: Record<string, { label: string; terms: string[] }> = {
   صداع: {
     label: "صداع ومسكنات ألم",
-    terms: ["بانادول", "بنادول", "بروفين", "كيتوفان", "كتافلام", "باراسيتامول", "سولبادين", "ادول"],
+    terms: ["بانادول", "بنادول", "بروفين", "كتافلام", "كاتافلام", "فولتارين", "بارامول", "باراسيتامول", "باي الكوفان", "سيتال", "كيتوفان", "سولبادين", "ادول"],
   },
   سخونية: {
     label: "سخونية وخافض حرارة",
-    terms: ["باراسيتامول", "بروفين", "بانادول", "سيتال", "كونجستال", "ابيمول"],
+    terms: ["باراسيتامول", "بارامول", "سيتال", "بروفين", "بانادول", "بنادول", "كونجستال", "ابيمول", "فولتارين"],
   },
   حرارة: {
     label: "ارتفاع درجة الحرارة",
-    terms: ["باراسيتامول", "بروفين", "بانادول", "سيتال", "كونجستال"],
+    terms: ["باراسيتامول", "بارامول", "سيتال", "بروفين", "بانادول", "بنادول", "ترمومتر"],
   },
   مغص: {
     label: "مغص وتقلصات ومعدة",
-    terms: ["سبازمو", "كولونا", "ديجستين", "انتودين", "فلاجيل", "بوسكوبان", "فيسرالجين"],
+    terms: ["سبازمو", "سبازموبيرالجين", "جاست", "جاست-ريج", "انتودين", "ديجستين", "فلاجيل", "دينتينوكس", "كونترولوك", "زوركال"],
   },
   قولون: {
-    label: "قولون وانتفاخ",
-    terms: ["كولونا", "ديسبلاتيل", "كولوفيرين", "ديجستين", "انتودين"],
+    label: "قولون وانتفاخ وتقلصات",
+    terms: ["جاست", "جاست-ريج", "ديجستين", "سبازمو", "انتودين", "فلاجيل", "كولونا"],
   },
   حموضة: {
-    label: "حموضة وحرقان المعدة",
-    terms: ["انتودين", "جافيسكون", "نيكسيوم", "اوميبرازول", "كونترولوك", "فوار راني", "مالوكس"],
+    label: "حموضة وحرقان المعدة والمريء",
+    terms: ["انتودين", "كونترولوك", "زوركال", "جاستروتيدين", "جاستروموتيل", "جاست", "نيكسيوم", "اوميبرازول"],
   },
   كحة: {
-    label: "كحة وسعال وبلغم",
-    terms: ["ايفيبرونت", "برونشيكم", "فاركولين", "سيلجون", "بلسم", "توسيفان"],
+    label: "كحة وسعال والتهاب الصدر",
+    terms: ["كف", "فينتو كف", "برونش", "برونشيكم", "فينتولين", "استنشاق", "فاركولين", "فوراديل", "فينتال"],
   },
   بلغم: {
-    label: "مذيب وطارد للبلغم",
-    terms: ["ميوكوسول", "استيل سيستايين", "برونشيكم", "فاركولين", "ايفيبرونت"],
+    label: "مذيب وطارد للبلغم والشعب الهوائية",
+    terms: ["فينتو كف", "برونشيكم", "فاركولين", "فينتال", "استنشاق"],
   },
   برد: {
-    label: "برد ورشح وزكام",
-    terms: ["كونجستال", "كومتركس", "وان تو ثري", "سي ريتارد", "تلفاست", "اوترفين", "فلورست"],
+    label: "برد ورشح وانفلونزا",
+    terms: ["بانادول كولد", "باور كولد", "ستوبادول", "زيرتك", "تلفاست", "كلاريتين", "سي ريتارد", "فيتامين سي"],
   },
   رشح: {
-    label: "رشح وعطس واحتقان",
-    terms: ["كونجستال", "تلفاست", "اوترفين", "زيرتك", "كومتركس"],
+    label: "رشح وزكام واحتقان أنف",
+    terms: ["سينومارين", "بخاخ انف", "تيكاناز", "فليكسونيز", "فيزيومير", "زيرتك", "تلفاست", "كلاريتين"],
+  },
+  احتقان: {
+    label: "احتقان الأنف والحلق",
+    terms: ["بي بي سي", "بروبوليس", "ستربسلز", "كاندي", "سينومارين", "بخاخ انف"],
+  },
+  زور: {
+    label: "التهاب الحلق واحتقان الزور",
+    terms: ["بي بي سي", "بروبوليس", "ستربسلز", "كاندي", "استحلاب"],
+  },
+  حلق: {
+    label: "التهاب الحلق والبلعوم",
+    terms: ["بي بي سي", "بروبوليس", "ستربسلز", "كاندي", "استحلاب"],
   },
   ضغط: {
-    label: "أدوية الضغط",
-    terms: ["كونكور", "كابوتن", "اكسفورج", "املوديبين", "نورفاسك", "تارجريت"],
+    label: "أدوية وأجهزة قياس الضغط",
+    terms: ["كونكور", "اكسفورج", "نورفاسك", "املوديبين", "روزماكس", "جهاز ضغط"],
   },
   سكر: {
-    label: "أدوية وتنظيم السكر",
-    terms: ["جلوكوفاج", "اماريل", "جليماكس", "جانوفيا", "انسولين"],
+    label: "تنظيم السكر وشرائط وأجهزة القياس",
+    terms: ["جلوكوفاج", "اماريل", "جليماكس", "كونتور", "اكوا تشيك", "وان تاتش", "اون كول", "شرائط قياس سكر"],
   },
   حساسية: {
     label: "حساسية وهرش وجيوب أنفية",
-    terms: ["تلفاست", "زيرتك", "كلاريتين", "هيستوب", "فنستيل"],
+    terms: ["زيرتك", "تلفاست", "كلاريتين", "سينومارين", "بخاخ انف", "فنستيل"],
   },
-  عين: {
-    label: "قطرات وترطيب العين",
-    terms: ["سيستان", "تيرز", "تيرز جارد", "توبركس", "قطرة"],
+  اسهال: {
+    label: "إسهال ومطهر معوي",
+    terms: ["انتينال", "فلاجيل", "فلاجيلات"],
   },
-  شعر: {
-    label: "تساقط وعناية بالشعر",
-    terms: ["بيوتين", "بانتوجار", "شامبو", "سيروم", "شعر"],
+  ترجيع: {
+    label: "قيء وترجيع وغثيان",
+    terms: ["موتيليوم", "جاستروموتيل", "زوفران", "موتيل فاست"],
   },
-  بشرة: {
-    label: "حب الشباب والعناية بالبشرة",
-    terms: ["ستارفيل", "سيرافي", "لاروش", "صن بلوك", "كريم", "تفتيح"],
-  },
-  اطفال: {
-    label: "أدوية ومستلزمات الأطفال",
-    terms: ["بامبرز", "بيبيلاك", "نان", "سودوكريم", "سيتال", "دنتينوكس"],
-  },
-  فيتامين: {
-    label: "فيتامينات ومقويات ومناعة",
-    terms: ["ليميتلس", "سانسوفيت", "فيروجلوبين", "فيتامين سي", "زنك", "اوميجا 3"],
+  مضاد: {
+    label: "مضادات حيوية واسعة المجال",
+    terms: ["اوجمنتين", "كيورام", "كلافيموكس", "يونيكتام", "ابيسيفين", "زوراكسون"],
   },
   حروق: {
-    label: "حروق وجروح",
-    terms: ["ميبو", "بيبانثين", "فيوسيدين", "ديرمازين"],
+    label: "حروق وجروح وإسعافات أولية",
+    terms: ["ميبو", "بيبانثين", "فيوسيدين", "بلاستر", "شاش"],
   },
   اسنان: {
-    label: "مسكنات ألم الأسنان",
-    terms: ["كيتوفان", "كتافلام", "بروفين", "سولبادين", "دينتيل"],
+    label: "تسكين ألم وعناية الأسنان واللثة",
+    terms: ["كاتافلام", "كتافلام", "بروفين", "فولتارين", "سينسوداين", "مسواك", "سيجنال", "معجون اسنان"],
   },
+  شعر: {
+    label: "تساقط وعناية وتقوية الشعر",
+    terms: ["سيروبيب", "مينوكسيجرو", "تويست اند جو", "كابيكسي", "شامبو", "تساقط الشعر"],
+  },
+  بشرة: {
+    label: "تفتيح وترطيب ونضارة البشرة",
+    terms: ["اليجون", "ستارفيل", "لاروش", "بيبانثين", "دير هايدريشن", "كولاجرا", "انفينيتي", "سيروم"],
+  },
+  شمس: {
+    label: "واقي وحماية من أشعة الشمس (صن بلوك)",
+    terms: ["ديرماكتيف", "حماية من الشمس", "spf", "دراكون", "مايا سينما"],
+  },
+  اطفال: {
+    label: "حفاضات ومستلزمات وألبان الأطفال",
+    terms: ["بيبي جوي", "مولفيكس", "بامبرز", "موني", "لبن اطفال", "نان", "هيرو بيبي", "دينتينوكس"],
+  },
+  فيتامين: {
+    label: "فيتامينات ومقويات ومناعة وحديد",
+    terms: ["ليمتلس", "اوميجا", "زنكترون", "سي ريتارد", "حديد", "كالسيوم", "فيتامين سي"],
+  },
+};
+
+// Common Egyptian medicine alias mapping for fuzzy phonetic matches
+const DRUG_SYNONYMS: Record<string, string[]> = {
+  بنادول: ["بانادول", "بنادول", "panadol"],
+  بانادول: ["بانادول", "بنادول", "panadol"],
+  كتافلام: ["كتافلام", "كاتافلام", "كاتفلام", "cataflam"],
+  كاتافلام: ["كتافلام", "كاتافلام", "كاتفلام", "cataflam"],
+  كونكور: ["كونكور", "concor"],
+  جلوكوفاج: ["جلوكوفاج", "glucophage"],
+  اماريل: ["اماريل", "amaryl"],
+  بروفين: ["بروفين", "brufen"],
+  فولتارين: ["فولتارين", "voltaren"],
+  انتودين: ["انتودين", "antodine"],
+  فلاجيل: ["فلاجيل", "فلاجيلات", "flagyl"],
+  ميبو: ["ميبو", "mebo"],
+  بيبانثين: ["بيبانثين", "bepanthen"],
+  فيوسيدين: ["فيوسيدين", "fucidin"],
+  زيرتك: ["زيرتك", "zyrtec"],
+  تلفاست: ["تلفاست", "telfast"],
+  كلاريتين: ["كلاريتين", "claritine"],
+  اوجمنتين: ["اوجمنتين", "augmentin"],
+  كيورام: ["كيورام", "curam"],
+  يونيكتام: ["يونيكتام", "unicteam"],
+  بامبرز: ["بامبرز", "بيبي جوي", "مولفيكس", "حفاض"],
+  سودوكريم: ["سودوكريم", "بيبانثين", "زنك"],
+  نيكسيوم: ["نيكسيوم", "كونترولوك", "زوركال", "انتودين"],
+  كونترولوك: ["كونترولوك", "controloc", "زوركال"],
+  انسولين: ["انسولين", "سكر", "شرائط قياس"],
 };
 
 function normAr(s: string) {
@@ -698,6 +776,14 @@ function parseEgyptianVoiceQuery(raw: string) {
     }
   }
 
+  // Expand drug synonyms (e.g. بنادول -> بانادول / كتافلام -> كاتافلام)
+  for (const [key, aliases] of Object.entries(DRUG_SYNONYMS)) {
+    const normKey = normAr(key);
+    if (words.some((w) => w.includes(normKey) || normKey.includes(w))) {
+      expandedTerms.push(...aliases.map(normAr));
+    }
+  }
+
   const normFillers = EG_CONVERSATIONAL_WORDS.map(normAr);
   const cleanTokens = words.filter((w) => !normFillers.includes(w) && w.length > 1);
 
@@ -716,15 +802,19 @@ export function SearchDialog() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const open = useBahbah((s) => s.searchOpen);
+  const voiceSearchAutoStart = useBahbah((s) => s.voiceSearchAutoStart);
   const { setSearchOpen, openProduct, openCatalog, setRxOpen, go } = useBahbah();
   const [q, setQ] = useState("");
   const [listening, setListening] = useState(false);
   const [interimText, setInterimText] = useState("");
+  const [audioLevel, setAudioLevel] = useState(0);
 
   const addToCart = useBahbah((s) => s.addToCart);
 
   /* Web Speech API in Egyptian Dialect */
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const animFrameRef = useRef<number | null>(null);
 
   const startListening = () => {
     const w = window as unknown as {
@@ -733,13 +823,46 @@ export function SearchDialog() {
     };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
     if (!Ctor) {
-      toast.error("متصفحك لا يدعم خاصية البحث الصوتي مباشرة. يمكنك الكتابة في المربع أعلاه.");
+      toast.error("متصفحك لا يدعم خاصية البحث الصوتي المباشر. يمكنك كتابة اسم الدواء في المربع.");
       return;
     }
 
     try {
       if (recognitionRef.current) {
         recognitionRef.current.abort?.();
+      }
+
+      // Try connecting microphone volume visualizer
+      if (navigator?.mediaDevices?.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            try {
+              const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+              if (AudioCtx) {
+                const audioCtx = new AudioCtx();
+                const analyser = audioCtx.createAnalyser();
+                const micSource = audioCtx.createMediaStreamSource(stream);
+                analyser.fftSize = 64;
+                micSource.connect(analyser);
+                audioContextRef.current = audioCtx;
+
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                const checkVolume = () => {
+                  analyser.getByteFrequencyData(dataArray);
+                  let sum = 0;
+                  for (let i = 0; i < dataArray.length; i++) {
+                    sum += dataArray[i];
+                  }
+                  const avg = sum / dataArray.length;
+                  setAudioLevel(Math.min(100, Math.round((avg / 128) * 100)));
+                  animFrameRef.current = requestAnimationFrame(checkVolume);
+                };
+                checkVolume();
+              }
+            } catch {}
+          })
+          .catch(() => {});
       }
 
       const rec = new Ctor();
@@ -750,7 +873,7 @@ export function SearchDialog() {
       rec.onresult = (e: any) => {
         const transcript = e.results?.[0]?.[0]?.transcript ?? "";
         setInterimText(transcript);
-        if (e.results?.[0]?.isFinal || e.results?.[0]?.[0]?.confidence > 0.6) {
+        if (e.results?.[0]?.isFinal || e.results?.[0]?.[0]?.confidence > 0.55) {
           setQ(transcript);
         }
       };
@@ -758,22 +881,25 @@ export function SearchDialog() {
       rec.onerror = (err: any) => {
         setListening(false);
         setInterimText("");
+        setAudioLevel(0);
         if (err?.error !== "no-speech") {
-          toast.error("برجاء السماح بالمايكروفون للبحث الصوتي");
+          toast.error("برجاء السماح بصلاحية المايكروفون في المتصفح لتفعيل البحث الصوتي");
         }
       };
 
       rec.onend = () => {
         setListening(false);
+        setAudioLevel(0);
       };
 
       recognitionRef.current = rec;
       rec.start();
       setListening(true);
-      setInterimText("سامعك كويس... اتكلم براحتك باللهجة المصرية");
+      setInterimText("سامعك كويس... اتفضل اتكلم باسم الدواء أو الشكوى");
     } catch {
       setListening(false);
       setInterimText("");
+      setAudioLevel(0);
     }
   };
 
@@ -781,8 +907,27 @@ export function SearchDialog() {
     try {
       recognitionRef.current?.stop();
     } catch {}
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+    if (audioContextRef.current) {
+      try {
+        audioContextRef.current.close();
+      } catch {}
+    }
     setListening(false);
+    setAudioLevel(0);
   };
+
+  // Auto-start listening if triggered from mic button
+  useEffect(() => {
+    if (open && voiceSearchAutoStart) {
+      const timer = setTimeout(() => {
+        startListening();
+      }, 250);
+      return () => clearTimeout(timer);
+    }
+  }, [open, voiceSearchAutoStart]);
 
   // Close cleans up
   useEffect(() => {
@@ -813,22 +958,22 @@ export function SearchDialog() {
         const fullAr = normAr([p.nameAr, p.ingredientAr, p.brandAr, p.formAr, p.descAr].join(" "));
         const fullEn = [p.nameEn, p.ingredientEn, p.brandEn, p.formEn].join(" ").toLowerCase();
 
-        // Direct exact or partial match
+        // 1. Direct exact or substring match in Arabic or English
         if (fullAr.includes(nq) || fullEn.includes(lq)) return true;
 
-        // Clean tokens match (e.g. "عاوز بنادول احمر" -> matches "بنادول" AND "احمر" or any)
+        // 2. Clean tokens match (e.g. "عاوز بنادول احمر" -> "بنادول" AND/OR "احمر")
         if (cleanTokens.length > 0 && cleanTokens.some((tok) => fullAr.includes(tok) || fullEn.includes(tok))) {
           return true;
         }
 
-        // Expanded symptom treatments match
-        if (expanded.length > 0 && expanded.some((term) => fullAr.includes(term))) {
+        // 3. Expanded symptom and medical synonyms match
+        if (expanded.length > 0 && expanded.some((term) => fullAr.includes(term) || fullEn.includes(term))) {
           return true;
         }
 
         return false;
       })
-      .slice(0, 20);
+      .slice(0, 24);
   }, [q, analysis]);
 
   const voiceSampleChips = [
@@ -837,7 +982,11 @@ export function SearchDialog() {
     "دوا كحة وبلغم",
     "فيتامين سي وأوميجا",
     "كريم مرطب وتفتيح",
-    "علاج للسكر",
+    "علاج وتنظيم السكر",
+    "أدوية الضغط",
+    "مسكن لألم الأسنان",
+    "واقي شمس صن بلوك",
+    "حفاضات بيبي جوي",
     "روشتة دكتور",
     "عروض الصيدلية",
   ];
@@ -886,27 +1035,46 @@ export function SearchDialog() {
 
         {/* Live Voice Listening Pulse Banner */}
         {listening && (
-          <div className="mx-5 mb-2 flex items-center justify-between rounded-2xl border border-red-200 bg-red-50/90 p-3 text-red-900 animate-in fade-in slide-in-from-top-1 dark:border-red-950 dark:bg-red-950/40 dark:text-red-200">
-            <div className="flex items-center gap-3">
-              <span className="relative flex size-3">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
-                <span className="relative inline-flex size-3 rounded-full bg-red-600" />
-              </span>
-              <div>
-                <p className="text-xs font-black">جاري الاستماع لصوتك الآن...</p>
-                <p className="text-[11px] font-semibold text-red-700/80 dark:text-red-300">
-                  {interimText || "اتكلم براحتك (مثال: عايز بنادول أحمر، حاجة للمغص والقولون)"}
-                </p>
+          <div className="mx-5 mb-2 rounded-2xl border border-red-200 bg-gradient-to-r from-red-50 via-white to-red-50/70 p-3.5 text-red-900 shadow-sm animate-in fade-in slide-in-from-top-1 dark:border-red-950 dark:bg-red-950/40 dark:text-red-200">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="relative flex size-4 shrink-0">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
+                  <span className="relative inline-flex size-4 rounded-full bg-red-600 shadow-xs" />
+                </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-black text-red-950 dark:text-red-100">
+                      جاري الاستماع لصوتك باللهجة المصرية...
+                    </p>
+                    {/* Live Audio Volume Waveform */}
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((bar) => {
+                        const h = Math.max(4, Math.min(18, Math.round((audioLevel || 20) * (bar / 4))));
+                        return (
+                          <span
+                            key={bar}
+                            style={{ height: `${h}px` }}
+                            className="w-1 rounded-full bg-red-600 transition-all duration-75"
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <p className="mt-0.5 text-[11px] font-semibold text-red-700/90 dark:text-red-300">
+                    {interimText || "اتفضل اتكلم براحتك (مثال: عايز بنادول أحمر، حاجة للمغص والقولون، كريم مرطب)"}
+                  </p>
+                </div>
               </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={stopListening}
+                className="h-8 rounded-full border-red-300 bg-white px-3 text-xs font-black text-red-700 shadow-xs hover:bg-red-50 hover:text-red-800 shrink-0"
+              >
+                تأكيد وبحث ✓
+              </Button>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={stopListening}
-              className="h-7 rounded-full border-red-300 bg-white text-[10px] font-bold text-red-700 hover:bg-red-50"
-            >
-              تم
-            </Button>
           </div>
         )}
 

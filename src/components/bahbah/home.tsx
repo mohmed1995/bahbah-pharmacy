@@ -1084,7 +1084,7 @@ function ToolsRow() {
       color: "text-[#C56A0A]",
       title: "tools.voice",
       desc: "search.title",
-      onClick: () => setSearchOpen(true),
+      onClick: () => setSearchOpen(true, true),
     },
     {
       icon: IconTextSize,
