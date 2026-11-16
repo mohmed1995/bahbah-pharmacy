@@ -1507,7 +1507,6 @@ export default function HomeView() {
       <CareSection />
       <FreeShipStrip />
       <AdCarousel />
-      <TrustStrip />
       <Categories />
       <OffersSection />
       <BestSellers />
