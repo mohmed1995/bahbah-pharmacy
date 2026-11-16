@@ -377,28 +377,28 @@ function Hero() {
       <span className="bb-float pointer-events-none absolute top-14 end-[6%] hidden text-5xl opacity-30 lg:block" aria-hidden>💊</span>
       <span className="bb-float-slow pointer-events-none absolute bottom-24 start-[4%] hidden text-4xl opacity-25 lg:block" aria-hidden>🧴</span>
 
-      <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-10 md:grid-cols-2 md:px-6 md:pb-24 md:pt-16">
+      <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-4 pb-10 pt-6 md:grid-cols-2 md:px-6 md:pb-14 md:pt-10">
         {/* copy */}
         <div className="order-2 md:order-1">
-          <Badge className="mb-5 gap-1.5 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-bold text-white/95 backdrop-blur-md shadow-xs hover:bg-white/15">
+          <Badge className="mb-3.5 gap-1.5 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-xs font-bold text-white/95 backdrop-blur-md shadow-xs hover:bg-white/15">
             <IconShieldCheck className="size-3.5 text-[#F59E0B]" />
             {siteEdits?.heroBadgeAr || t("hero.badge")}
           </Badge>
 
-          <h1 className="font-heading text-4xl font-black leading-[1.18] md:text-6xl tracking-tight">
+          <h1 className="font-heading text-3xl font-black leading-[1.18] md:text-5xl tracking-tight">
             {siteEdits?.heroTitleAr || t("hero.title")}
             <br />
             <span className="bb-gradient-text">{siteEdits?.heroAccentAr || t("hero.titleAccent")}</span>
           </h1>
 
-          <p className="mt-5 max-w-lg text-base leading-relaxed text-white/80 md:text-lg">
+          <p className="mt-3.5 max-w-lg text-sm leading-relaxed text-white/80 md:text-base">
             {siteEdits?.heroSubAr || t("hero.sub")}
           </p>
 
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap gap-2.5">
             <Button
               size="lg"
-              className="h-13 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EA580C] px-8 text-base font-black text-white shadow-lg shadow-[#F59E0B]/30 transition-all hover:shadow-xl hover:shadow-[#F59E0B]/40 hover:-translate-y-0.5 active:scale-95"
+              className="h-11 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EA580C] px-6 text-sm font-black text-white shadow-md shadow-[#F59E0B]/30 transition-all hover:shadow-lg hover:shadow-[#F59E0B]/40 hover:-translate-y-0.5 active:scale-95"
               onClick={() => openCatalog(null)}
             >
               {t("hero.cta1")}
@@ -408,7 +408,7 @@ function Hero() {
             <Button
               size="lg"
               variant="outline"
-              className="h-13 rounded-full border-white/30 bg-white/10 px-8 text-base font-bold text-white backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95"
+              className="h-11 rounded-full border-white/30 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95"
               onClick={() => setRxOpen(true)}
             >
               <IconUploadCloud className="size-4" />
@@ -416,21 +416,21 @@ function Hero() {
             </Button>
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2">
-            <span className="flex items-center gap-1.5 text-sm font-bold text-white/90">
-              <span className="grid size-5 place-items-center rounded-full bg-[#059669] shadow-xs">
+          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-1.5">
+            <span className="flex items-center gap-1.5 text-xs font-bold text-white/90 md:text-sm">
+              <span className="grid size-4.5 place-items-center rounded-full bg-[#059669] shadow-xs">
                 <IconShieldCheck className="size-3 text-white" />
               </span>
               {siteEdits?.deliveryPromiseAr || t("hero.chip2")}
             </span>
-            <span className="flex items-center gap-1.5 text-sm font-bold text-white/90">
-              <span className="grid size-5 place-items-center rounded-full bg-[#059669] shadow-xs">
+            <span className="flex items-center gap-1.5 text-xs font-bold text-white/90 md:text-sm">
+              <span className="grid size-4.5 place-items-center rounded-full bg-[#059669] shadow-xs">
                 <IconShieldCheck className="size-3 text-white" />
               </span>
               {siteEdits?.shippingPromiseAr || t("hero.chip1")}
             </span>
-            <span className="flex items-center gap-1.5 text-sm font-bold text-white/90">
-              <span className="grid size-5 place-items-center rounded-full bg-[#059669] shadow-xs">
+            <span className="flex items-center gap-1.5 text-xs font-bold text-white/90 md:text-sm">
+              <span className="grid size-4.5 place-items-center rounded-full bg-[#059669] shadow-xs">
                 <IconShieldCheck className="size-3 text-white" />
               </span>
               {t("hero.chip3")}
@@ -441,15 +441,15 @@ function Hero() {
         {/* visual */}
         <div className="order-1 flex justify-center md:order-2">
           <div className="relative">
-            {/* big badge */}
-            <div className="relative size-44 md:size-64">
-              <div className="absolute inset-0 rounded-full bg-white/20 blur-2xl" />
-              <div className="relative size-44 overflow-hidden rounded-full bg-white p-2 shadow-2xl ring-4 ring-white/60 md:size-64 md:p-3">
+            {/* badge */}
+            <div className="relative size-36 md:size-48">
+              <div className="absolute inset-0 rounded-full bg-white/20 blur-xl" />
+              <div className="relative size-36 overflow-hidden rounded-full bg-white p-2 shadow-xl ring-4 ring-white/60 md:size-48 md:p-2.5">
                 <Image
                   src={siteEdits?.heroImage || "/images/bahbah-badge.png"}
                   alt="Bahbah Pharmacy badge"
-                  width={256}
-                  height={256}
+                  width={192}
+                  height={192}
                   className="size-full object-contain"
                   priority
                 />
@@ -457,9 +457,9 @@ function Hero() {
             </div>
 
             {/* floating pills around the badge */}
-            <FloatingOrb className="-top-4 -start-6 md:-start-14" delay="0s" icon={<IconShieldCheck className="size-5 text-[#059669]" />} label={t("trust.original")} />
-            <FloatingOrb className="top-1/2 -end-8 md:-end-20" delay="0.8s" icon={<IconVan className="size-5 text-[#184C8A]" />} label={t("trust.ship")} />
-            <FloatingOrb className="-bottom-5 start-6 md:start-2" delay="1.6s" icon={<IconPharmacist className="size-5 text-[#D97706]" />} label={t("trust.pharmacist")} />
+            <FloatingOrb className="-top-3 -start-4 md:-start-8" delay="0s" icon={<IconShieldCheck className="size-4 text-[#059669]" />} label={t("trust.original")} />
+            <FloatingOrb className="top-1/2 -end-6 md:-end-12" delay="0.8s" icon={<IconVan className="size-4 text-[#184C8A]" />} label={t("trust.ship")} />
+            <FloatingOrb className="-bottom-3 start-4 md:start-2" delay="1.6s" icon={<IconPharmacist className="size-4 text-[#D97706]" />} label={t("trust.pharmacist")} />
           </div>
         </div>
       </div>
