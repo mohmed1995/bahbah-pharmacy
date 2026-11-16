@@ -196,12 +196,14 @@ export function mapDbMeasurementToMeasurement(row: DbPatientMeasurement): Patien
 export async function insertOrderToSupabase(order: Order, subtotal?: number) {
   try {
     const payload = mapOrderToDb(order, subtotal);
-    const { data, error } = await supabase.from("orders").insert(payload).select().single();
+    // Note: Do NOT use .select() here so anon inserts succeed without requiring SELECT permissions
+    const { error } = await supabase.from("orders").insert(payload);
     if (error) {
-      console.warn("Supabase insertOrder error:", error.message);
+      console.warn("Supabase insertOrder error:", error.message, error);
       return null;
     }
-    return data;
+    console.log("⚡ [Supabase Sync] Order inserted successfully into Supabase:", order.id);
+    return payload;
   } catch (err) {
     console.warn("Supabase insertOrder failed:", err);
     return null;

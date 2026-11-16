@@ -577,7 +577,7 @@ export const useBahbah = create<BahbahState>()(
       couponOff: [],
       adsOff: [],
       careSubs: [],
-      measurements: demoMeasurements,
+      measurements: [],
 
       setLang: (l) => set({ lang: l }),
       toggleLang: () => set({ lang: get().lang === "ar" ? "en" : "ar" }),
@@ -1224,6 +1224,15 @@ export const useBahbah = create<BahbahState>()(
           price_override: {},
           custom_products: [],
         });
+        /* Also wipe remote Supabase tables so production starts with zero test orders */
+        if (typeof window !== "undefined") {
+          import("../supabase").then(({ supabase }) => {
+            supabase.from("orders").delete().neq("id", "none").then(() => {});
+            supabase.from("rx_requests").delete().neq("id", "none").then(() => {});
+            supabase.from("care_subscriptions").delete().neq("id", "none").then(() => {});
+            supabase.from("patient_measurements").delete().neq("id", "none").then(() => {});
+          }).catch(() => {});
+        }
       },
     }),
     {
