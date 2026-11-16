@@ -76,7 +76,7 @@ import {
   useSiteInfo,
 } from "@/lib/bahbah/store";
 import { toast } from "sonner";
-import { fmtPrice } from "./product-card";
+import { fmtPrice, ProductVisual } from "./product-card";
 
 /* ------------------------------------------------------------------ */
 /* Syncs <html dir/lang> with the selected language                    */
@@ -109,6 +109,7 @@ export function Header() {
     { label: t("nav.catalog"), onClick: () => openCatalog(null), active: view === "catalog" || view === "product" },
     { label: t("nav.offers"), onClick: () => go("offers"), active: view === "offers" },
     { label: t("nav.care"), onClick: () => go("care"), active: view === "care" },
+    { label: t("nav.vitals"), onClick: () => go("vitals"), active: view === "vitals" },
     { label: t("nav.favorites"), onClick: () => openAccount("favorites"), active: false },
   ];
 
@@ -1042,13 +1043,8 @@ export function SearchDialog() {
                   onClick={() => openProduct(p.id)}
                   className="flex w-full items-center gap-3 rounded-xl border border-transparent p-2 text-start transition-all hover:border-border/80 hover:bg-[#EAF2FA]/50"
                 >
-                  <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-border/60 bg-white p-1 flex items-center justify-center shadow-xs">
-                    {p.img ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={p.img} alt={p.nameAr} className="size-full object-contain" />
-                    ) : (
-                      <p.icon className="size-5 text-[#184C8A]" />
-                    )}
+                  <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-border/60 shadow-xs">
+                    <ProductVisual product={p} size="sm" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-foreground">

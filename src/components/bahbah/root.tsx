@@ -19,6 +19,7 @@ import CatalogView from "./catalog";
 import ProductView from "./product";
 import OffersView from "./offers";
 import CareView from "./care";
+import VitalsPortal from "./vitals";
 import TrackView from "./track";
 import { CartView, CheckoutView, SuccessView } from "./cart";
 import { LoginView, AccountView } from "./auth";
@@ -193,6 +194,7 @@ export default function BahbahApp() {
         {view === "product" && <ProductView />}
         {view === "offers" && <OffersView />}
         {view === "care" && <CareView />}
+        {view === "vitals" && <VitalsPortal />}
         {view === "track" && <TrackView />}
         {view === "cart" && <CartView />}
         {view === "checkout" && <CheckoutView />}

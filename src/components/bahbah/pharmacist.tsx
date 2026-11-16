@@ -19,19 +19,41 @@ import {
   LogIn,
   MapPin,
   Tag,
+  Activity,
+  Heart,
+  Scale,
+  User,
+  Stethoscope,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { adminOrders as adminDemoOrders, categories, discountPct } from "@/lib/bahbah/data";
-import { useBahbah, useT, useAdminProducts, type Product } from "@/lib/bahbah/store";
-import { fmtPrice } from "./product-card";
+import { useBahbah, useT, useAdminProducts, type Product, type PatientMeasurement } from "@/lib/bahbah/store";
+import { fmtPrice, ProductVisual } from "./product-card";
 import { KpiCard, daysUntil, TableWrap, TH, TD } from "./admin-ui";
 import { StaffGate } from "./courier";
 import { IconPharmacist, IconRxClipboard } from "./icons";
+import { getSugarStatus, getBPStatus, getBmiStatus, timingArabic } from "./vitals";
+import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
-/* Pharmacist portal — مخزون + بحث + روشتات + طلبات التحضير            */
+/* Pharmacist portal — مخزون + بحث + روشتات + طلبات التحضير + القياسات */
 /* ------------------------------------------------------------------ */
 
 export default function PharmacistPortal() {
@@ -40,10 +62,30 @@ export default function PharmacistPortal() {
   const user = useBahbah((s) => s.user);
   const adminOrders = useBahbah((s) => s.adminOrders);
   const rxQueue = useBahbah((s) => s.rxQueue);
+  const measurements = useBahbah((s) => s.measurements);
   const allProducts = useAdminProducts();
-  const { go, pharmacistReady, adminSetRx, restock } = useBahbah();
+  const { go, pharmacistReady, adminSetRx, restock, addMeasurement, deleteMeasurement } = useBahbah();
 
+  const [portalTab, setPortalTab] = useState<"orders" | "vitals">("orders");
   const [q, setQ] = useState("");
+
+  // Measurement Modal & Form
+  const [openMeasModal, setOpenMeasModal] = useState(false);
+  const [patientCode, setPatientCode] = useState("");
+  const [patientName, setPatientName] = useState("");
+  const [patientPhone, setPatientPhone] = useState("");
+  const [bloodSugar, setBloodSugar] = useState("");
+  const [sugarTiming, setSugarTiming] = useState<PatientMeasurement["sugarTiming"]>("fasting");
+  const [systolic, setSystolic] = useState("");
+  const [diastolic, setDiastolic] = useState("");
+  const [pulse, setPulse] = useState("");
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [pharmacistNotes, setPharmacistNotes] = useState("");
+  const [savingMeas, setSavingMeas] = useState(false);
+
+  // Vitals filter search
+  const [vitalsSearch, setVitalsSearch] = useState("");
 
   const orders = adminOrders ?? [];
   const pending = orders.filter((o) => o.status === "pending");
@@ -71,6 +113,75 @@ export default function PharmacistPortal() {
       .slice(0, 8);
   }, [q, allProducts]);
 
+  const filteredMeasurements = useMemo(() => {
+    const s = vitalsSearch.trim().toLowerCase();
+    if (!s) return measurements;
+    return measurements.filter(
+      (m) =>
+        m.patientName.toLowerCase().includes(s) ||
+        m.patientCode.toLowerCase().includes(s) ||
+        m.patientPhone.includes(s)
+    );
+  }, [measurements, vitalsSearch]);
+
+  const handleSaveMeasurement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientName.trim()) {
+      toast.error(lang === "ar" ? "برجاء كتابة اسم المريض" : "Please enter patient name");
+      return;
+    }
+    if (!patientCode.trim() && !patientPhone.trim()) {
+      toast.error(lang === "ar" ? "برجاء كتابة كود المريض أو رقم الهاتف" : "Please enter code or phone");
+      return;
+    }
+
+    const code = patientCode.trim() || `BB-${patientPhone.trim().slice(-4) || "P"}`;
+    const sugarNum = bloodSugar ? Number(bloodSugar) : undefined;
+    const sysNum = systolic ? Number(systolic) : undefined;
+    const diaNum = diastolic ? Number(diastolic) : undefined;
+    const pulseNum = pulse ? Number(pulse) : undefined;
+    const weightNum = weight ? Number(weight) : undefined;
+    const heightNum = height ? Number(height) : undefined;
+
+    setSavingMeas(true);
+    try {
+      await addMeasurement({
+        patientCode: code,
+        patientName: patientName.trim(),
+        patientPhone: patientPhone.trim(),
+        bloodSugar: sugarNum,
+        sugarTiming,
+        systolic: sysNum,
+        diastolic: diaNum,
+        pulse: pulseNum,
+        weight: weightNum,
+        height: heightNum,
+        pharmacistNotes: pharmacistNotes.trim() || undefined,
+        recordedBy: user?.name ? `د. ${user.name}` : "د. بحبح — صيدلية بحبح",
+      });
+
+      toast.success(
+        lang === "ar"
+          ? `تم حفظ قياسات المريض (${patientName}) بنجاح بالكود: ${code}`
+          : "Measurement recorded successfully!"
+      );
+
+      // Reset Form
+      setBloodSugar("");
+      setSystolic("");
+      setDiastolic("");
+      setPulse("");
+      setWeight("");
+      setHeight("");
+      setPharmacistNotes("");
+      setOpenMeasModal(false);
+    } catch {
+      toast.error(lang === "ar" ? "حدث خطأ أثناء الحفظ" : "Failed to record measurement");
+    } finally {
+      setSavingMeas(false);
+    }
+  };
+
   if (!user || user.role !== "pharmacist") return <StaffGatePharm />;
 
   return (
@@ -86,252 +197,665 @@ export default function PharmacistPortal() {
             <p className="text-xs font-bold text-muted-foreground md:text-sm">{t("pharm.sub")}</p>
           </div>
         </div>
-        <Button variant="outline" size="sm" className="rounded-full font-bold" onClick={() => go("home")}>
-          <ArrowRight className="size-4 rtl:inline ltr:hidden" />
-          <ArrowLeft className="size-4 ltr:inline rtl:hidden" />
-          {t("admin.back")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-full font-bold text-xs"
+            onClick={() => go("vitals")}
+          >
+            <Activity className="size-3.5 text-[#184C8A] me-1" />
+            {lang === "ar" ? "بوابة قياسات المرضى" : "Vitals Portal"}
+          </Button>
+          <Button variant="outline" size="sm" className="rounded-full font-bold" onClick={() => go("home")}>
+            <ArrowRight className="size-4 rtl:inline ltr:hidden" />
+            <ArrowLeft className="size-4 ltr:inline rtl:hidden" />
+            {t("admin.back")}
+          </Button>
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard icon={<Package className="size-5" />} tint="bg-[#EAF1F9]" color="text-[#1E4E8F]" value={String(pending.length)} label={t("pharm.kpiNew")} />
-        <KpiCard icon={<FileText className="size-5" />} tint="bg-[#FFF4E5]" color="text-[#B45E0A]" value={String(newRx.length)} label={t("pharm.kpiRx")} />
-        <KpiCard icon={<AlertTriangle className="size-5" />} tint="bg-[#DC4B4B]/10" color="text-[#DC4B4B]" value={String(lowStock.length + outStock.length)} label={t("pharm.kpiLow")} />
-        <KpiCard icon={<Clock className="size-5" />} tint="bg-[#EAF6F1]" color="text-[#2E9E6B]" value={String(expiring.length)} label={t("pharm.kpiExp")} />
-      </div>
+      {/* Navigation Tabs */}
+      <div className="mt-5 flex items-center justify-between border-b border-border/80 pb-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setPortalTab("orders")}
+            className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition ${
+              portalTab === "orders"
+                ? "bg-[#184C8A] text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Package className="size-4" />
+            <span>{lang === "ar" ? "الطلبات والمخزون والروشتات" : "Orders & Stock"}</span>
+            {pending.length > 0 && (
+              <span className="rounded-full bg-amber-400 px-1.5 py-0.2 text-[10px] font-black text-slate-900">
+                {pending.length}
+              </span>
+            )}
+          </button>
 
-      {/* ---- product search ---- */}
-      <div className="mt-6 rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-        <h2 className="flex items-center gap-2 font-heading text-base font-black md:text-lg">
-          <Search className="size-4.5 text-[#1E4E8F]" />
-          {t("nav.search")}
-        </h2>
-        <div className="relative mt-3">
-          <Search className="absolute top-1/2 start-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t("pharm.search")}
-            className="h-12 rounded-2xl ps-10 text-base"
-          />
+          <button
+            onClick={() => setPortalTab("vitals")}
+            className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition ${
+              portalTab === "vitals"
+                ? "bg-[#2E9E6B] text-white shadow-sm"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Activity className="size-4" />
+            <span>{lang === "ar" ? "قياسات السكر والضغط والوزن" : "Vitals & Measurements"}</span>
+            <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[10px] font-bold text-emerald-800">
+              {measurements.length}
+            </span>
+          </button>
         </div>
 
-        {q.trim().length >= 2 && (
-          <div className="mt-3 space-y-2">
-            {results.length === 0 ? (
-              <p className="py-4 text-center text-sm font-bold text-muted-foreground">{t("pharm.searchNone")}</p>
-            ) : (
-              results.map((p) => {
-                const cat = categories.find((c) => c.id === p.category);
-                const off = discountPct(p);
-                return (
-                  <div
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3 transition hover:border-[#1E4E8F]/30"
-                  >
-                    {/* packshot / duotone fallback */}
-                    <div
-                      className={`relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl ${
-                        p.img ? "bg-white ring-1 ring-black/5" : "bg-[#EAF6F1]"
-                      }`}
-                    >
-                      {p.img ? (
-                        <Image src={p.img} alt={p.nameEn} fill sizes="56px" className="object-contain p-1" />
-                      ) : (
-                        <Pill className="size-6 text-[#2E9E6B]" />
-                      )}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-black">{lang === "ar" ? p.nameAr : p.nameEn}</p>
-                      <p className="truncate text-[11px] font-bold text-muted-foreground">
-                        {lang === "ar" ? p.ingredientAr : p.ingredientEn} · {lang === "ar" ? p.brandAr : p.brandEn}
-                      </p>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        {cat && (
-                          <span className="rounded-full bg-[#EAF1F9] px-2 py-0.5 text-[10px] font-black text-[#1E4E8F]">
-                            {lang === "ar" ? cat.nameAr : cat.nameEn}
-                          </span>
-                        )}
-                        {off > 0 && (
-                          <span className="flex items-center gap-0.5 rounded-full bg-[#FFF4E5] px-2 py-0.5 text-[10px] font-black text-[#B45E0A]">
-                            <Tag className="size-2.5" />
-                            {off}٪ {t("misc.discount")}
-                          </span>
-                        )}
-                        <Badge
-                          className={`rounded-full border-0 ${
-                            p.stock === 0
-                              ? "bg-[#DC4B4B]/10 text-[#DC4B4B]"
-                              : p.stock < 30
-                                ? "bg-[#FFF4E5] text-[#B45E0A]"
-                                : "bg-[#EAF6F1] text-[#2E9E6B]"
-                          }`}
-                        >
-                          {t("pharm.qty")}: {p.stock}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      <div className="text-end">
-                        <p className="text-sm font-black text-[#1E4E8F]">{fmtPrice(p.price, t)}</p>
-                        {p.oldPrice && (
-                          <p className="text-[10px] font-bold text-muted-foreground line-through">
-                            {fmtPrice(p.oldPrice, t)}
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="rounded-full px-3 font-black text-[#2E9E6B]"
-                        onClick={() => {
-                          restock(p.id, 10);
-                          // refresh search results in place
-                          setQ((v) => v);
-                        }}
-                      >
-                        <Plus className="size-3.5" />
-                        10
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+        {portalTab === "vitals" && (
+          <Button
+            size="sm"
+            className="rounded-full bg-[#2E9E6B] text-xs font-black text-white hover:bg-[#238156]"
+            onClick={() => setOpenMeasModal(true)}
+          >
+            <Plus className="size-3.5 me-1" />
+            {lang === "ar" ? "تسجيل قياس جديد لمريض" : "New Measurement"}
+          </Button>
         )}
       </div>
 
-      {/* ---- preparation queue ---- */}
-      <h2 className="mt-7 flex items-center gap-2 font-heading text-lg font-black">
-        <IconRxClipboard className="size-5 text-[#1E4E8F]" />
-        {t("pharm.queue")} ({pending.length})
-      </h2>
+      {/* ================= TAB 1: ORDERS & INVENTORY ================= */}
+      {portalTab === "orders" && (
+        <div className="space-y-6 pt-2">
+          {/* KPIs */}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <KpiCard icon={<Package className="size-5" />} tint="bg-[#EAF1F9]" color="text-[#1E4E8F]" value={String(pending.length)} label={t("pharm.kpiNew")} />
+            <KpiCard icon={<FileText className="size-5" />} tint="bg-[#FFF4E5]" color="text-[#B45E0A]" value={String(newRx.length)} label={t("pharm.kpiRx")} />
+            <KpiCard icon={<AlertTriangle className="size-5" />} tint="bg-[#DC4B4B]/10" color="text-[#DC4B4B]" value={String(lowStock.length + outStock.length)} label={t("pharm.kpiLow")} />
+            <KpiCard icon={<Clock className="size-5" />} tint="bg-[#EAF6F1]" color="text-[#2E9E6B]" value={String(expiring.length)} label={t("pharm.kpiExp")} />
+          </div>
 
-      {pending.length === 0 ? (
-        <div className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#2E9E6B]/40 bg-[#EAF6F1]/50 p-6 text-sm font-bold text-[#2E9E6B]">
-          <CheckCircle2 className="size-4.5" />
-          {t("pharm.queueNone")}
-        </div>
-      ) : (
-        <div className="mt-3 space-y-4">
-          {pending.map((o) => (
-            <div key={o.id} className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5">
-                  <span className="font-heading text-base font-black text-[#1E4E8F]">{o.id}</span>
-                  <Badge className="rounded-full border-0 bg-[#FFF4E5] text-[#B45E0A]">{t("admin.stPending")}</Badge>
-                </div>
-                <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                  <Phone className="size-3.5" />
-                  <span dir="ltr">{o.phone}</span>
-                </div>
+          {/* ---- product search ---- */}
+          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
+            <h2 className="flex items-center gap-2 font-heading text-base font-black md:text-lg">
+              <Search className="size-4.5 text-[#1E4E8F]" />
+              {t("nav.search")}
+            </h2>
+            <div className="relative mt-3">
+              <Search className="absolute top-1/2 start-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={t("pharm.search")}
+                className="h-12 rounded-2xl ps-10 text-base"
+              />
+            </div>
+
+            {q.trim().length >= 2 && (
+              <div className="mt-3 space-y-2">
+                {results.length === 0 ? (
+                  <p className="py-4 text-center text-sm font-bold text-muted-foreground">{t("pharm.searchNone")}</p>
+                ) : (
+                  results.map((p) => {
+                    const cat = categories.find((c) => c.id === p.category);
+                    const off = discountPct(p);
+                    return (
+                      <div
+                        key={p.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-muted/30 p-3 transition hover:border-[#1E4E8F]/30"
+                      >
+                        <div
+                          className={`relative grid size-14 shrink-0 place-items-center overflow-hidden rounded-xl ${
+                            p.img ? "bg-white ring-1 ring-black/5" : "bg-[#EAF6F1]"
+                          }`}
+                        >
+                          {p.img ? (
+                            <Image src={p.img} alt={p.nameEn} fill sizes="56px" className="object-contain p-1" />
+                          ) : (
+                            <Pill className="size-6 text-[#2E9E6B]" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-black">{lang === "ar" ? p.nameAr : p.nameEn}</p>
+                          <p className="truncate text-[11px] font-bold text-muted-foreground">
+                            {lang === "ar" ? p.ingredientAr : p.ingredientEn} · {lang === "ar" ? p.brandAr : p.brandEn}
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                            {cat && (
+                              <span className="rounded-full bg-[#EAF1F9] px-2 py-0.5 text-[10px] font-black text-[#1E4E8F]">
+                                {lang === "ar" ? cat.nameAr : cat.nameEn}
+                              </span>
+                            )}
+                            {off > 0 && (
+                              <span className="flex items-center gap-0.5 rounded-full bg-[#FFF4E5] px-2 py-0.5 text-[10px] font-black text-[#B45E0A]">
+                                <Tag className="size-2.5" />
+                                {off}٪ {t("misc.discount")}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="text-end">
+                          <p className="font-heading text-sm font-black text-[#1E4E8F]">{fmtPrice(p.price, t)}</p>
+                          <p className="text-[11px] font-bold text-muted-foreground">{p.stock} علبة متوفرة</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
+            )}
+          </div>
 
-              <div className="mt-3 space-y-1">
-                {o.items.map((it) => (
-                  <div key={it.productId} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="truncate">
-                      {lang === "ar" ? it.nameAr : it.nameEn}
-                      <span className="text-muted-foreground"> × {it.qty}</span>
-                    </span>
-                    <span className="shrink-0 font-bold">{fmtPrice(it.price * it.qty, t)}</span>
+          {/* ---- preparation queue ---- */}
+          <div>
+            <h2 className="flex items-center gap-2 font-heading text-lg font-black">
+              <IconRxClipboard className="size-5 text-[#1E4E8F]" />
+              {t("pharm.queue")} ({pending.length})
+            </h2>
+
+            {pending.length === 0 ? (
+              <div className="mt-3 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#2E9E6B]/40 bg-[#EAF6F1]/50 p-6 text-sm font-bold text-[#2E9E6B]">
+                <CheckCircle2 className="size-4.5" />
+                {t("pharm.queueNone")}
+              </div>
+            ) : (
+              <div className="mt-3 space-y-4">
+                {pending.map((o) => (
+                  <div key={o.id} className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-heading text-base font-black text-[#1E4E8F]">{o.id}</span>
+                        <Badge className="rounded-full border-0 bg-[#FFF4E5] text-[#B45E0A]">{t("admin.stPending")}</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                        <Phone className="size-3.5" />
+                        <span dir="ltr">{o.phone}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-1">
+                      {o.items.map((it) => (
+                        <div key={it.productId} className="flex items-center justify-between gap-2 text-sm">
+                          <span className="truncate">
+                            {lang === "ar" ? it.nameAr : it.nameEn}
+                            <span className="text-muted-foreground"> × {it.qty}</span>
+                          </span>
+                          <span className="shrink-0 font-bold">{fmtPrice(it.price * it.qty, t)}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 flex items-start gap-2 rounded-xl bg-muted/50 p-3 text-xs font-bold text-muted-foreground">
+                      <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#DC4B4B]" />
+                      {o.address}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3.5">
+                      <span className="text-sm font-bold text-muted-foreground">
+                        {lang === "ar" ? o.customerAr : o.customerEn}
+                      </span>
+                      <Button className="h-11 rounded-full px-6 font-black" onClick={() => pharmacistReady(o.id)}>
+                        <CheckCircle2 className="size-4" />
+                        {t("pharm.readyBtn")}
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
+            )}
+          </div>
 
-              <div className="mt-3 flex items-start gap-2 rounded-xl bg-muted/50 p-3 text-xs font-bold text-muted-foreground">
-                <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#DC4B4B]" />
-                {o.address}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3.5">
-                <span className="text-sm font-bold text-muted-foreground">
-                  {lang === "ar" ? o.customerAr : o.customerEn}
-                </span>
-                <Button className="h-11 rounded-full px-6 font-black" onClick={() => pharmacistReady(o.id)}>
-                  <CheckCircle2 className="size-4" />
-                  {t("pharm.readyBtn")}
-                </Button>
+          {/* ---- incoming prescriptions ---- */}
+          {newRx.length > 0 && (
+            <div>
+              <h2 className="flex items-center gap-2 font-heading text-lg font-black">
+                <FileText className="size-5 text-[#B45E0A]" />
+                {t("pharm.rxQueue")} ({newRx.length})
+              </h2>
+              <div className="mt-3 space-y-2.5">
+                {newRx.map((r) => (
+                  <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#F09428]/30 bg-[#FFF4E5]/50 p-4">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#F09428]/15 text-[#B45E0A]">
+                        <FileText className="size-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-black">
+                          {r.id} — {lang === "ar" ? r.customerAr : r.customerEn}
+                        </p>
+                        <p className="truncate text-[11px] font-bold text-muted-foreground">
+                          {r.fileName && (r.fileName.startsWith("http://") || r.fileName.startsWith("https://")) ? (
+                            <a
+                              href={r.fileName}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-bold text-[#1E4E8F] underline hover:text-[#163a6b]"
+                            >
+                              عرض الروشتة ↗
+                            </a>
+                          ) : (
+                            <span>{r.fileName}</span>
+                          )}{" "}
+                          · <span dir="ltr">{r.phone}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        className="h-9 rounded-full bg-[#2E9E6B] px-4 font-black text-white hover:bg-[#278a5e]"
+                        onClick={() => adminSetRx(r.id, "approved")}
+                      >
+                        <CheckCircle2 className="size-3.5" />
+                        {t("pharm.accept")}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9 rounded-full border-[#DC4B4B]/30 px-4 font-black text-[#DC4B4B] hover:bg-[#DC4B4B]/10"
+                        onClick={() => adminSetRx(r.id, "rejected")}
+                      >
+                        <XCircle className="size-3.5" />
+                        {t("pharm.reject")}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* ---- low stock + expiring tables ---- */}
+          <div className="grid gap-4 lg:grid-cols-2">
+            <StockTable
+              title={t("pharm.lowTbl")}
+              icon={<AlertTriangle className="size-4.5 text-[#DC4B4B]" />}
+              rows={[...outStock, ...lowStock].slice(0, 8)}
+              onRestock={(id) => restock(id, 10)}
+            />
+            <ExpiringTable rows={expiring.slice(0, 8)} />
+          </div>
         </div>
       )}
 
-      {/* ---- incoming prescriptions ---- */}
-      {newRx.length > 0 && (
-        <>
-          <h2 className="mt-7 flex items-center gap-2 font-heading text-lg font-black">
-            <FileText className="size-5 text-[#B45E0A]" />
-            {t("pharm.rxQueue")} ({newRx.length})
-          </h2>
-          <div className="mt-3 space-y-2.5">
-            {newRx.map((r) => (
-              <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#F09428]/30 bg-[#FFF4E5]/50 p-4">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#F09428]/15 text-[#B45E0A]">
-                    <FileText className="size-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-black">
-                      {r.id} — {lang === "ar" ? r.customerAr : r.customerEn}
-                    </p>
-                    <p className="truncate text-[11px] font-bold text-muted-foreground">
-                      {r.fileName && (r.fileName.startsWith("http://") || r.fileName.startsWith("https://")) ? (
-                        <a
-                          href={r.fileName}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold text-[#1E4E8F] underline hover:text-[#163a6b]"
-                        >
-                          عرض الروشتة ↗
-                        </a>
-                      ) : (
-                        <span>{r.fileName}</span>
-                      )}{" "}
-                      · <span dir="ltr">{r.phone}</span>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    className="h-9 rounded-full bg-[#2E9E6B] px-4 font-black text-white hover:bg-[#278a5e]"
-                    onClick={() => adminSetRx(r.id, "approved")}
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                    {t("pharm.accept")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-9 rounded-full border-[#DC4B4B]/30 px-4 font-black text-[#DC4B4B] hover:bg-[#DC4B4B]/10"
-                    onClick={() => adminSetRx(r.id, "rejected")}
-                  >
-                    <XCircle className="size-3.5" />
-                    {t("pharm.reject")}
-                  </Button>
-                </div>
+      {/* ================= TAB 2: PATIENT VITALS & MEASUREMENTS ================= */}
+      {portalTab === "vitals" && (
+        <div className="space-y-5 pt-2">
+          {/* Quick Info & Action Header */}
+          <div className="rounded-3xl border border-border/80 bg-gradient-to-br from-emerald-50/60 to-background p-5 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="flex items-center gap-2 font-heading text-lg font-black text-foreground">
+                  <Activity className="size-5 text-[#2E9E6B]" />
+                  {lang === "ar" ? "تسجيل ومتابعة قياسات المرضى (السكر، الضغط، الوزن)" : "Patient Health Vitals Registry"}
+                </h2>
+                <p className="mt-1 text-xs text-muted-foreground font-semibold">
+                  {lang === "ar"
+                    ? "عند حضور المريض للصيدلية لقياس السكر أو الضغط أو الوزن، سجّل قراءاته هنا لتظهر مباشرة في بوابته وتطبيق هاتفه."
+                    : "Record patient vitals at the pharmacy counter so they can view their historical trend in their portal."}
+                </p>
               </div>
-            ))}
+              <div className="flex items-center gap-2">
+                <Button
+                  className="rounded-full bg-[#2E9E6B] text-xs font-black text-white shadow-md hover:bg-[#238156]"
+                  onClick={() => setOpenMeasModal(true)}
+                >
+                  <Plus className="size-4 me-1" />
+                  {lang === "ar" ? "قياس جديد للمريض" : "Record Measurement"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Filter Search */}
+            <div className="mt-4">
+              <div className="relative max-w-sm">
+                <Search className="absolute start-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={vitalsSearch}
+                  onChange={(e) => setVitalsSearch(e.target.value)}
+                  placeholder={lang === "ar" ? "بحث باسم المريض أو الكود أو الموبايل..." : "Search patient..."}
+                  className="h-9 rounded-xl ps-9 text-xs"
+                />
+              </div>
+            </div>
           </div>
-        </>
+
+          {/* Measurements Table */}
+          <TableWrap>
+            <table className="w-full min-w-[850px] text-xs">
+              <thead className="border-b border-border bg-muted/50 text-[11px]">
+                <tr>
+                  <th className={TH}>{lang === "ar" ? "كود واسم المريض" : "Patient Code & Name"}</th>
+                  <th className={TH}>{lang === "ar" ? "رقم الموبايل" : "Phone"}</th>
+                  <th className={TH}>{lang === "ar" ? "قياس السكر" : "Blood Sugar"}</th>
+                  <th className={TH}>{lang === "ar" ? "ضغط الدم" : "Blood Pressure"}</th>
+                  <th className={TH}>{lang === "ar" ? "الوزن و BMI" : "Weight & BMI"}</th>
+                  <th className={TH}>{lang === "ar" ? "تاريخ ووقت القياس" : "Date & Time"}</th>
+                  <th className={TH}>{lang === "ar" ? "ملاحظات وتوصيات الصيدلي" : "Pharmacist Notes"}</th>
+                  <th className={TH}>{lang === "ar" ? "إجراءات" : "Actions"}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMeasurements.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-xs font-bold text-muted-foreground">
+                      {lang === "ar" ? "لا توجد قياسات مسجلة مطابقة للبحث" : "No measurements recorded yet"}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMeasurements.map((m) => {
+                    const sugarSt = getSugarStatus(m.bloodSugar, m.sugarTiming);
+                    const bpSt = getBPStatus(m.systolic, m.diastolic);
+                    const bmiSt = getBmiStatus(m.bmi);
+                    const d = new Date(m.recordedAt);
+                    const formatted = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString(
+                      lang === "ar" ? "ar-EG" : "en-US",
+                      { hour: "2-digit", minute: "2-digit" }
+                    )}`;
+
+                    return (
+                      <tr key={m.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30">
+                        <td className={TD}>
+                          <span className="font-mono text-[11px] font-black text-[#184C8A] block">
+                            {m.patientCode}
+                          </span>
+                          <span className="font-bold text-foreground text-xs">{m.patientName}</span>
+                        </td>
+                        <td className={TD}>
+                          <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+                            {m.patientPhone || "—"}
+                          </span>
+                        </td>
+                        <td className={TD}>
+                          {m.bloodSugar != null ? (
+                            <div>
+                              <span className="font-heading font-black text-sm text-amber-700">
+                                {m.bloodSugar}
+                              </span>{" "}
+                              <span className="text-[10px] text-muted-foreground">mg/dL</span>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <span className="text-[9px] text-muted-foreground">
+                                  {timingArabic(m.sugarTiming)}
+                                </span>
+                                {sugarSt && (
+                                  <Badge className={`h-4 text-[9px] px-1 font-bold ${sugarSt.color}`}>
+                                    {sugarSt.label}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className={TD}>
+                          {m.systolic && m.diastolic ? (
+                            <div>
+                              <span className="font-heading font-black text-sm text-red-700">
+                                {m.systolic}/{m.diastolic}
+                              </span>{" "}
+                              <span className="text-[10px] text-muted-foreground">mmHg</span>
+                              {bpSt && (
+                                <div className="mt-0.5">
+                                  <Badge className={`h-4 text-[9px] px-1 font-bold ${bpSt.color}`}>
+                                    {bpSt.label}
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className={TD}>
+                          {m.weight != null ? (
+                            <div>
+                              <span className="font-heading font-black text-xs text-emerald-700">
+                                {m.weight} كجم
+                              </span>
+                              {m.bmi != null && (
+                                <span className="text-[10px] text-muted-foreground block">
+                                  BMI: {m.bmi}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className={TD}>
+                          <span className="text-[11px] font-semibold text-muted-foreground block">
+                            {formatted}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground">
+                            {m.recordedBy || "الصيدلي"}
+                          </span>
+                        </td>
+                        <td className={`${TD} max-w-[200px]`}>
+                          <p className="text-[11px] leading-relaxed text-foreground truncate" title={m.pharmacistNotes}>
+                            {m.pharmacistNotes || "—"}
+                          </p>
+                        </td>
+                        <td className={TD}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 size-7 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                            onClick={() => {
+                              deleteMeasurement(m.id);
+                              toast.success("تم حذف القياس");
+                            }}
+                            title="حذف القياس"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </TableWrap>
+        </div>
       )}
 
-      {/* ---- low stock + expiring tables ---- */}
-      <div className="mt-7 grid gap-4 lg:grid-cols-2">
-        <StockTable
-          title={t("pharm.lowTbl")}
-          icon={<AlertTriangle className="size-4.5 text-[#DC4B4B]" />}
-          rows={[...outStock, ...lowStock].slice(0, 8)}
-          onRestock={(id) => restock(id, 10)}
-        />
-        <ExpiringTable rows={expiring.slice(0, 8)} />
-      </div>
+      {/* ================= MODAL: RECORD NEW PATIENT MEASUREMENT ================= */}
+      <Dialog open={openMeasModal} onOpenChange={setOpenMeasModal}>
+        <DialogContent className="max-w-lg rounded-3xl p-6">
+          <DialogHeader className="border-b border-border/80 pb-3">
+            <DialogTitle className="flex items-center gap-2 font-heading text-lg font-black text-foreground">
+              <Stethoscope className="size-5 text-[#2E9E6B]" />
+              {lang === "ar" ? "تسجيل قياسات طبية لمريض في الصيدلية" : "Record Patient Health Vitals"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveMeasurement} className="mt-4 space-y-4">
+            {/* Patient Info */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-foreground">اسم المريض *</span>
+                <Input
+                  required
+                  value={patientName}
+                  onChange={(e) => setPatientName(e.target.value)}
+                  placeholder="مثال: الحاج أحمد عبد الرحمن"
+                  className="h-10 rounded-xl text-xs"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-foreground">رقم الهاتف *</span>
+                <Input
+                  required
+                  value={patientPhone}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPatientPhone(val);
+                    if (!patientCode && val.length >= 4) {
+                      setPatientCode(`BB-${val.slice(-4)}`);
+                    }
+                  }}
+                  placeholder="01011500166"
+                  className="h-10 rounded-xl text-xs"
+                  dir="ltr"
+                />
+              </label>
+
+              <label className="block space-y-1 sm:col-span-2">
+                <span className="text-xs font-bold text-foreground">كود المريض الخاص (للدخول به في البوابة)</span>
+                <Input
+                  value={patientCode}
+                  onChange={(e) => setPatientCode(e.target.value)}
+                  placeholder="مثال: BB-C-105 أو رقم الموبايل"
+                  className="h-10 rounded-xl text-xs"
+                  dir="ltr"
+                />
+              </label>
+            </div>
+
+            {/* Blood Sugar Group */}
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 space-y-2.5">
+              <p className="font-heading text-xs font-black text-amber-900 flex items-center gap-1.5">
+                <Activity className="size-4 text-amber-600" />
+                <span>قياس السكر في الدم</span>
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-amber-950">نسبة السكر (mg/dL)</span>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={bloodSugar}
+                    onChange={(e) => setBloodSugar(e.target.value)}
+                    placeholder="مثال: 120"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-amber-950">توقيت القياس</span>
+                  <Select
+                    value={sugarTiming}
+                    onValueChange={(v) => setSugarTiming(v as PatientMeasurement["sugarTiming"])}
+                  >
+                    <SelectTrigger className="h-9 rounded-xl bg-white text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fasting">صائم (8 ساعات)</SelectItem>
+                      <SelectItem value="random">عشوائي</SelectItem>
+                      <SelectItem value="postprandial">بعد الأكل بساعتين</SelectItem>
+                      <SelectItem value="bedtime">قبل النوم</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </label>
+              </div>
+            </div>
+
+            {/* Blood Pressure Group */}
+            <div className="rounded-2xl border border-red-200 bg-red-50/50 p-3.5 space-y-2.5">
+              <p className="font-heading text-xs font-black text-red-900 flex items-center gap-1.5">
+                <Heart className="size-4 text-red-600" />
+                <span>قياس ضغط الدم والنبض</span>
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-red-950">الانقباضي (العالي)</span>
+                  <Input
+                    type="number"
+                    value={systolic}
+                    onChange={(e) => setSystolic(e.target.value)}
+                    placeholder="120"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-red-950">الانبساطي (الواطي)</span>
+                  <Input
+                    type="number"
+                    value={diastolic}
+                    onChange={(e) => setDiastolic(e.target.value)}
+                    placeholder="80"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-red-950">النبض (bpm)</span>
+                  <Input
+                    type="number"
+                    value={pulse}
+                    onChange={(e) => setPulse(e.target.value)}
+                    placeholder="75"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Weight & Height Group */}
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2.5">
+              <p className="font-heading text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                <Scale className="size-4 text-emerald-600" />
+                <span>الوزن والطول</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-emerald-950">الوزن (كجم)</span>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder="مثال: 78.5"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-emerald-950">الطول (سم) - لحساب BMI</span>
+                  <Input
+                    type="number"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    placeholder="مثال: 170"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Pharmacist Notes */}
+            <label className="block space-y-1">
+              <span className="text-xs font-bold text-foreground">توصيات وملاحظات الصيدلي للمريض</span>
+              <Textarea
+                value={pharmacistNotes}
+                onChange={(e) => setPharmacistNotes(e.target.value)}
+                placeholder="اكتب أي نصائح غذائية أو دوائية أو موعد المتابعة القادم..."
+                className="rounded-xl text-xs h-18 resize-none"
+              />
+            </label>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/80">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-xl text-xs font-bold"
+                onClick={() => setOpenMeasModal(false)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingMeas}
+                className="h-10 rounded-xl bg-[#2E9E6B] px-6 text-xs font-black text-white hover:bg-[#238156]"
+              >
+                {savingMeas ? "جاري الحفظ..." : "حفظ وإرسال للملف"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
@@ -372,9 +896,8 @@ function StockTable({
               <thead className="border-b border-border bg-muted/50">
                 <tr>
                   <th className={TH}>{t("nav.catalog")}</th>
-                  <th className={TH}>{t("admin.products")}</th>
                   <th className={TH}>{t("pharm.qty")}</th>
-                  <th className={TH}></th>
+                  <th className={TH}>{t("pharm.restock10")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,7 +919,6 @@ function StockTable({
                         <span className="font-bold">{lang === "ar" ? p.nameAr : p.nameEn}</span>
                       </div>
                     </td>
-                    <td className={`${TD} font-black text-[#1E4E8F]`}>{fmtPrice(p.price, t)}</td>
                     <td className={TD}>
                       <Badge
                         className={`rounded-full border-0 ${

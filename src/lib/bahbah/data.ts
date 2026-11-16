@@ -68,6 +68,7 @@ export interface Product {
   warnEn?: string;
   icon: IconType;
   img?: string; // AI packshot — falls back to duotone icon stage
+  verifiedPhoto?: boolean; // True only when the medicine photo is physically authentic & verified
   tags: ("offer" | "best" | "new")[];
 }
 
@@ -1324,7 +1325,40 @@ const categoryIconMap: Record<string, IconType> = {
   fitness: Dumbbell,
 };
 
-const mappedRealProducts: Product[] = (realCatalogData as any[]).map((p) => ({
+let customProductsGetter: (() => Product[]) | null = null;
+export function registerCustomProductsGetter(fn: () => Product[]) {
+  customProductsGetter = fn;
+}
+
+let customDriversGetter: (() => Driver[]) | null = null;
+export function registerCustomDriversGetter(fn: () => Driver[]) {
+  customDriversGetter = fn;
+}
+
+const mappedRealProducts: Product[] = (realCatalogData as any[]).map((p) => {
+  let cat = p.category;
+  const name = (p.nameAr || "").toLowerCase();
+  // Clean up miscategorized items
+  if (name.includes("ميسلار") || name.includes("غسول") || name.includes("مرطب") || name.includes("شعر") || name.includes("بشرة") || name.includes("كريم تفتيح")) {
+    if (cat === "medicines") cat = "skincare";
+  } else if (name.includes("معجون") || name.includes("شاور") || name.includes("صابون") || name.includes("فرشاة") || name.includes("مبرد") || name.includes("مزيل")) {
+    if (cat === "medicines") cat = "personal";
+  } else if (name.includes("بامبرز") || name.includes("حفاض") || name.includes("لهاية") || name.includes("ببرونة") || name.includes("أطفال")) {
+    if (cat === "medicines") cat = "baby";
+  } else if (name.includes("جهاز") || name.includes("ضغط") || name.includes("سكر") || name.includes("حرارة") || name.includes("ميزان") || name.includes("شرائط")) {
+    if (cat === "medicines") cat = "devices";
+  } else if (name.includes("بروتين") || name.includes("كرياتين") || name.includes("واي") || name.includes("جيم") || name.includes("bcaa")) {
+    if (cat === "medicines") cat = "fitness";
+  } else if (name.includes("فيتامين") || name.includes("كالسيوم") || name.includes("حديد") || name.includes("زنك") || name.includes("أوميجا") || name.includes("مكمل")) {
+    if (cat === "medicines") cat = "vitamins";
+  }
+  return {
+    ...p,
+    category: cat,
+    icon: categoryIconMap[cat] || IconCapsule,
+  };
+});
+const __UNUSED_MAPPED__ = (realCatalogData as any[]).map((p) => ({
   ...p,
   icon: categoryIconMap[p.category] || IconCapsule,
 }));
@@ -1354,11 +1388,201 @@ export const deliveryZones: DeliveryZone[] = [
     id: "deirout-city",
     nameAr: "مدينة ديروط",
     nameEn: "Deirout City",
-    areasAr: "وسط المدينة — شارع المحطة، الشارع الرئيسي، حي السوق، المستشفى، منطقة الترعة",
-    areasEn: "Downtown — Station St., Main St., Souq district, Hospital, Canal zone",
+    areasAr: "وسط المدينة — شارع المحطة، الشارع الرئيسي، حي السوق، المستشفى، منطقة الترعة، تقسيم أبو جبل، مساكن الضباط، القرشية",
+    areasEn: "Downtown — Station St., Main St., Souq district, Hospital, Canal zone, Abu Gabal, Officers Housing",
     fee: 10,
     etaMin: 25,
     freeOver: 250,
+  },
+  {
+    id: "deirout-sharif",
+    nameAr: "ديروط الشريف",
+    nameEn: "Deirout El-Sharif",
+    areasAr: "ديروط الشريف بحري وقبلي والمناطق المحيطة",
+    areasEn: "Deirout El-Sharif and surrounding areas",
+    fee: 12,
+    etaMin: 30,
+    freeOver: 300,
+  },
+  {
+    id: "masara",
+    nameAr: "مسارة — سرحان — جرف سرحان",
+    nameEn: "Masara / Sarhan / Geif Sarhan",
+    areasAr: "قرية مسارة، سرحان، جرف سرحان",
+    areasEn: "Masara village, Sarhan, Geif Sarhan",
+    fee: 12,
+    etaMin: 30,
+    freeOver: 300,
+  },
+  {
+    id: "koudia",
+    nameAr: "كودية الإسلام",
+    nameEn: "Koudia El-Islam",
+    areasAr: "كودية الإسلام وتوابعها",
+    areasEn: "Koudia El-Islam and hamlets",
+    fee: 12,
+    etaMin: 30,
+    freeOver: 300,
+  },
+  {
+    id: "deshlut",
+    nameAr: "دشلوط",
+    nameEn: "Deshlut",
+    areasAr: "دشلوط — أكبر قرى مركز ديروط وتوابعها",
+    areasEn: "Deshlut — the largest village of Deirut",
+    fee: 15,
+    etaMin: 35,
+    freeOver: 350,
+  },
+  {
+    id: "houta",
+    nameAr: "الحوطا الشرقية والغربية",
+    nameEn: "El-Houta Sharqiya and Gharbiya",
+    areasAr: "الحوطا الشرقية، الحوطا الغربية",
+    areasEn: "El-Houta Sharqiya, El-Houta Gharbiya",
+    fee: 15,
+    etaMin: 35,
+    freeOver: 350,
+  },
+  {
+    id: "sanbo",
+    nameAr: "صنبو",
+    nameEn: "Sanbo",
+    areasAr: "قرية صنبو، عزبة صنبو والمناطق المجاورة",
+    areasEn: "Sanbo village and surroundings",
+    fee: 15,
+    etaMin: 35,
+    freeOver: 350,
+  },
+  {
+    id: "bawit",
+    nameAr: "باويط",
+    nameEn: "Bawit",
+    areasAr: "قرية باويط وتوابعها ودير أبا هور",
+    areasEn: "Bawit village and hamlets",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "beblaw",
+    nameAr: "ببلاو",
+    nameEn: "Beblaw",
+    areasAr: "قرية ببلاو والنجوع التابعة",
+    areasEn: "Beblaw village and hamlets",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "bani-yahya",
+    nameAr: "بني يحيى",
+    nameEn: "Bani Yahya",
+    areasAr: "بني يحيى بحري، بني يحيى قبلي والمناطق المجاورة",
+    areasEn: "Bani Yahya Bahari and Qibli",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "kasr-haidar",
+    nameAr: "قصر حيدر",
+    nameEn: "Kasr Haidar",
+    areasAr: "قصر حيدر والنجوع المجاورة",
+    areasEn: "Kasr Haidar village and hamlets",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "amshoul",
+    nameAr: "أمشول — عواجة — شلش",
+    nameEn: "Amshoul / Awaga / Shelsh",
+    areasAr: "أمشول، عواجة، شلش وتوابعها",
+    areasEn: "Amshoul, Awaga, Shelsh",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "abu-karim",
+    nameAr: "أبو كريم — أبو الهدر",
+    nameEn: "Abu Karim / Abu El-Hadar",
+    areasAr: "أبو كريم، أبو الهدر والمناطق التابعة",
+    areasEn: "Abu Karim, Abu El-Hadar",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "riyad",
+    nameAr: "الرياض — المطاوعة",
+    nameEn: "El-Riyad / El-Matawa",
+    areasAr: "قرية الرياض، المطاوعة والنجوع",
+    areasEn: "El-Riyad, El-Matawa",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "mahmoudia",
+    nameAr: "المحمودية — المناشي — المندرة",
+    nameEn: "El-Mahmoudia / El-Manashi / El-Mandra",
+    areasAr: "المحمودية، المناشي، المندرة بحري، النهاية",
+    areasEn: "El-Mahmoudia, El-Manashi, El-Mandra Bahari",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "kom-boha",
+    nameAr: "كوم بوها — زاوية هارون — كوم أنجاشة",
+    nameEn: "Kom Boha / Zawyet Haroun / Kom Angasha",
+    areasAr: "كوم بوها بحري، زاوية هارون، كوم أنجاشة",
+    areasEn: "Kom Boha, Zawyet Haroun, Kom Angasha",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "aramia",
+    nameAr: "عرامية الخضيري — نجع خضر",
+    nameEn: "Aramiet El-Khodeiri / Nag' Khodr",
+    areasAr: "عرامية الخضيري، نجع خضر، الحما",
+    areasEn: "Aramiet El-Khodeiri, Nag' Khodr",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "sharaqwa",
+    nameAr: "الشراقوة — خارفة — مزينة — بانوب",
+    nameEn: "El-Sharaqwa / Kharfa / Mzina / Banoub",
+    areasAr: "الشراقوة، خارفة، مزينة، بانوب ظهر الجمل",
+    areasEn: "El-Sharaqwa, Kharfa, Mzina, Banoub Zahr El-Gamal",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "nazal",
+    nameAr: "نزلات ديروط (كل النزلات)",
+    nameEn: "The Nazal villages",
+    areasAr: "نزلة عبد الله، نزلة ظاهر، نزلة ضاهر، نزلة بدوي، نزلة ساو، نزلة سرقنا، نزلة العوامر، نزلة فرج محمود، نزلة مصطفى عبد الحليم",
+    areasEn: "Nazlet Abdallah, Zaher, Daher, Badawi, Saw, Sarqana, Awamer, Farag Mahmoud, Mostafa Abdel Halim",
+    fee: 15,
+    etaMin: 40,
+    freeOver: 350,
+  },
+  {
+    id: "custom-village",
+    nameAr: "قرية أو نجع آخر — اكتب اسم مكانك بنفسك ✍️",
+    nameEn: "Other Village or Hamlet — Type Your Location",
+    areasAr: "أي قرية أو عزبة أو نجع أو حوض داخل مركز ديروط وضواحيها — اكتب اسم المكان",
+    areasEn: "Any other village, hamlet or area in Dairut center — type your specific location",
+    fee: 18,
+    etaMin: 45,
+    freeOver: 350,
   },
   {
     id: "deirout-ring",
@@ -1369,36 +1593,6 @@ export const deliveryZones: DeliveryZone[] = [
     fee: 12,
     etaMin: 30,
     freeOver: 300,
-  },
-  {
-    id: "deshlut",
-    nameAr: "دشلوط",
-    nameEn: "Deshlut",
-    areasAr: "دشلوط — أكبر قرى مركز ديروط",
-    areasEn: "Deshlut — the largest village of Deirut",
-    fee: 15,
-    etaMin: 35,
-    freeOver: 350,
-  },
-  {
-    id: "houta",
-    nameAr: "الحوطا الشرقية والغربية",
-    nameEn: "El-Houta Sharqiya & Gharbiya",
-    areasAr: "الحوطا الشرقية، الحوطا الغربية",
-    areasEn: "El-Houta Sharqiya, El-Houta Gharbiya",
-    fee: 15,
-    etaMin: 35,
-    freeOver: 350,
-  },
-  {
-    id: "nazal",
-    nameAr: "النزلات",
-    nameEn: "The Nazal villages",
-    areasAr: "نزلة عبد الله، نزلة ظاهر، نزلة ضاهر، نزلة بدوي، نزلة ساو، نزلة سرقنا، نزلة العوامر، نزلة فرج محمود، نزلة مصطفى عبد الحليم",
-    areasEn: "Nazlet Abdallah, Zaher, Daher, Badawi, Saw, Sarqana, Awamer, Farag Mahmoud, Mostafa Abdel Halim",
-    fee: 15,
-    etaMin: 40,
-    freeOver: 350,
   },
   {
     id: "sunrise",
@@ -1423,7 +1617,7 @@ export const deliveryZones: DeliveryZone[] = [
   {
     id: "assiut",
     nameAr: "أسيوط والمدينة الجديدة",
-    nameEn: "Assiut & New City",
+    nameEn: "Assiut and New City",
     areasAr: "أسيوط، أسيوط الجديدة، الحمراء، الواسطى، العادلية",
     areasEn: "Assiut, New Assiut, Hamra, Wasti, Adalia",
     fee: 30,
@@ -1447,7 +1641,7 @@ export const deliveryZones: DeliveryZone[] = [
     areasAr: "كل المحافظات — القاهرة، الجيزة، الإسكندرية، الصعيد والدلتا — عبر شركات الشحن",
     areasEn: "All governorates — Cairo, Giza, Alexandria, Delta & Upper Egypt — via couriers",
     fee: 60,
-    etaMin: 2880, // 48-72h shipping
+    etaMin: 2880,
     freeOver: 800,
   },
 ];
@@ -1613,7 +1807,17 @@ export const drivers: Driver[] = [
   },
 ];
 
-export const driverById = (id?: string) => drivers.find((d) => d.id === id);
+export const driverById = (id?: string): Driver | undefined => {
+  if (!id) return undefined;
+  if (customDriversGetter) {
+    try {
+      const list = customDriversGetter();
+      const found = list.find((d) => d.id === id);
+      if (found) return found;
+    } catch {}
+  }
+  return drivers.find((d) => d.id === id);
+};
 
 /* Branch for pickup orders — العنوان الحقيقي */
 export const BRANCH = {
@@ -1886,7 +2090,16 @@ export const adminOrders: Order[] = [
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-export const getProduct = (id: string) => products.find((p) => p.id === id);
+export const getProduct = (id: string): Product | undefined => {
+  if (customProductsGetter) {
+    try {
+      const list = customProductsGetter();
+      const found = list.find((p) => p.id === id);
+      if (found) return found;
+    } catch {}
+  }
+  return products.find((p) => p.id === id);
+};
 
 export const alternativesOf = (p: Product) =>
   products.filter((x) => x.category === p.category && x.id !== p.id);

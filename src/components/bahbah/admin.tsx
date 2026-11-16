@@ -16,6 +16,9 @@ import {
   Ticket,
   Megaphone,
   Wrench,
+  Volume2,
+  Bell,
+  Sparkles,
 } from "lucide-react";
 import {
   AreaChart,
@@ -43,11 +46,13 @@ import {
   weeklyData,
   driverById,
   carePlans,
+  deliveryZones,
 } from "@/lib/bahbah/data";
 import {
   useBahbah,
   useT,
   useAdminProducts,
+  playOrderChime,
   type AdminSection,
 } from "@/lib/bahbah/store";
 import { fmtPrice } from "./product-card";
@@ -61,6 +66,7 @@ import {
   IconRefill,
   IconPhone,
   IconSparkles,
+  IconHeartPulse,
 } from "./icons";
 import {
   AdminCard,
@@ -74,7 +80,7 @@ import { OrdersSection, ProductsSection, InventorySection } from "./admin-ops";
 import { DeliverySection } from "./admin-delivery";
 import { CustomersSection, ReportsSection } from "./admin-insights";
 import { PrescriptionsSection } from "./admin-rx";
-import { CouponsSection, AdsSection, CareAdminSection, MaintenanceSection } from "./admin-extra";
+import { CouponsSection, AdsSection, CareAdminSection, VitalsAdminSection, MaintenanceSection } from "./admin-extra";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -129,6 +135,7 @@ export function AdminGate() {
 
 export default function AdminView() {
   const t = useT();
+  const lang = useBahbah((s) => s.lang);
   const section = useBahbah((s) => s.adminSection);
   const setSection = useBahbah((s) => s.setAdminSection);
   const rxQueue = useBahbah((s) => s.rxQueue);
@@ -148,6 +155,7 @@ export default function AdminView() {
     { key: "inventory", label: t("adm.inventory"), icon: IconBoxes },
     { key: "delivery", label: t("adm.delivery"), icon: IconScooter },
     { key: "care", label: t("adm.care"), icon: IconRefill },
+    { key: "vitals", label: lang === "ar" ? "قياسات المرضى" : "Vitals", icon: IconHeartPulse },
     { key: "coupons", label: t("adm.coupons"), icon: Ticket },
     { key: "ads", label: t("adm.ads"), icon: Megaphone },
     { key: "customers", label: t("admin.customers"), icon: Users },
@@ -302,13 +310,49 @@ export default function AdminView() {
               </span>
               {current.label}
             </h1>
-            <Badge className="gap-1 rounded-full bg-[#EAF6F1] px-3 py-1.5 text-[10px] font-black text-[#2E9E6B] hover:bg-[#EAF6F1]">
-              <span className="relative flex size-2">
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#2E9E6B] opacity-60" />
-                <span className="relative inline-flex size-2 rounded-full bg-[#2E9E6B]" />
-              </span>
-              {t("track.live")}
-            </Badge>
+
+            {/* Audio Notification & Browser Alert Header Controls */}
+            <div className="flex items-center gap-2.5">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5 rounded-full border-[#184C8A]/30 bg-[#EAF1F9]/50 px-3.5 text-xs font-black text-[#184C8A] hover:bg-[#EAF1F9]"
+                onClick={() => {
+                  playOrderChime();
+                  toast.success("🔔 تم اختبار جرس التنبيه الصوتي بنجاح!");
+                }}
+              >
+                <Volume2 className="size-3.5 text-[#184C8A]" />
+                {lang === "ar" ? "تجربة جرس الطلبات 🔊" : "Test Audio Chime"}
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5 rounded-full border-amber-300 bg-amber-50 px-3.5 text-xs font-black text-amber-800 hover:bg-amber-100"
+                onClick={async () => {
+                  if (typeof window !== "undefined" && "Notification" in window) {
+                    const res = await Notification.requestPermission();
+                    if (res === "granted") {
+                      toast.success("تم تفعيل إشعارات المتصفح الفورية للطلبات بنجاح ✓");
+                    } else {
+                      toast.info("إذن الإشعارات: " + res);
+                    }
+                  }
+                }}
+              >
+                <Bell className="size-3.5 text-amber-600" />
+                {lang === "ar" ? "تفعيل الإشعارات 🔔" : "Enable Alerts"}
+              </Button>
+
+              <Badge className="gap-1 rounded-full bg-[#EAF6F1] px-3 py-1.5 text-[10px] font-black text-[#2E9E6B] hover:bg-[#EAF6F1]">
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#2E9E6B] opacity-60" />
+                  <span className="relative inline-flex size-2 rounded-full bg-[#2E9E6B]" />
+                </span>
+                {t("track.live")}
+              </Badge>
+            </div>
           </div>
 
           <div className="px-4 pt-5 md:px-6">
@@ -319,6 +363,7 @@ export default function AdminView() {
             {section === "inventory" && <InventorySection />}
             {section === "delivery" && <DeliverySection />}
             {section === "care" && <CareAdminSection />}
+            {section === "vitals" && <VitalsAdminSection />}
             {section === "coupons" && <CouponsSection />}
             {section === "ads" && <AdsSection />}
             {section === "customers" && <CustomersSection />}
@@ -343,18 +388,11 @@ function OverviewSection() {
   const setSection = useBahbah((s) => s.setAdminSection);
   const orders = adminOrders ?? [];
 
-  const totalSales = salesData.reduce((s, m) => s + m.revenue, 0);
-  const monthOrders = salesData[salesData.length - 1].orders;
-  const avgBasket = Math.round(totalSales / salesData.reduce((s, m) => s + m.orders, 0));
-
-  const chartData = salesData.map((m) => ({
-    name: lang === "ar" ? m.monthAr : m.monthEn,
-    revenue: m.revenue,
-  }));
-  const weekly = weeklyData.map((d) => ({
-    name: lang === "ar" ? d.dayAr : d.dayEn,
-    orders: d.orders,
-  }));
+  const nonCancelled = orders.filter((o) => o.status !== "cancelled");
+  const revTotal = nonCancelled.reduce((s, o) => s + o.total, 0);
+  const ordersCount = orders.length;
+  const deliveriesCount = orders.filter((o) => o.status === "delivered" || o.status === "shipping").length;
+  const activeCustomers = new Set(orders.map((o) => o.phone || o.customerAr)).size;
 
   const lowCount = products.filter((p) => p.stock < 30).length;
   const expiringCount = products.filter((p) => {
@@ -362,11 +400,20 @@ function OverviewSection() {
     return d >= 0 && d < 120;
   }).length;
 
+  const chartData = salesData.map((m) => ({
+    name: lang === "ar" ? m.monthAr : m.monthEn,
+    revenue: ordersCount === 0 ? 0 : m.revenue,
+  }));
+  const weekly = weeklyData.map((d) => ({
+    name: lang === "ar" ? d.dayAr : d.dayEn,
+    orders: ordersCount === 0 ? 0 : d.orders,
+  }));
+
   const kpis = [
-    { icon: <Wallet className="size-5" />, tint: "bg-[#EAF1F9]", color: "text-[#1E4E8F]", value: fmtPrice(12400, t), label: t("adm.revToday"), sub: "+12%" },
-    { icon: <ShoppingCart className="size-5" />, tint: "bg-[#FFF4E5]", color: "text-[#C56A0A]", value: "49", label: t("adm.ordersToday"), sub: "+8%" },
-    { icon: <IconScooter className="size-5" />, tint: "bg-[#EAF6F1]", color: "text-[#2E9E6B]", value: "41", label: t("adm.kpiDeliveries") },
-    { icon: <UserPlus className="size-5" />, tint: "bg-[#EEF0F7]", color: "text-[#112D51]", value: "128", label: t("adm.newThisMonth") },
+    { icon: <Wallet className="size-5" />, tint: "bg-[#EAF1F9]", color: "text-[#1E4E8F]", value: fmtPrice(revTotal, t), label: t("adm.revToday") },
+    { icon: <ShoppingCart className="size-5" />, tint: "bg-[#FFF4E5]", color: "text-[#C56A0A]", value: String(ordersCount), label: t("adm.ordersToday") },
+    { icon: <IconScooter className="size-5" />, tint: "bg-[#EAF6F1]", color: "text-[#2E9E6B]", value: String(deliveriesCount), label: t("adm.kpiDeliveries") },
+    { icon: <UserPlus className="size-5" />, tint: "bg-[#EEF0F7]", color: "text-[#112D51]", value: String(activeCustomers), label: t("adm.newThisMonth") },
     { icon: <Package className="size-5" />, tint: "bg-[#F09428]/15", color: "text-[#B45E0A]", value: String(lowCount), label: t("adm.invLow") },
     { icon: <AlertTriangle className="size-5" />, tint: "bg-[#DC4B4B]/10", color: "text-[#DC4B4B]", value: String(expiringCount), label: t("adm.invExpiring") },
   ];
@@ -647,8 +694,9 @@ function SettingsSection() {
   const settings = useBahbah((s) => s.settings);
   const siteEdits = useBahbah((s) => s.siteEdits);
   const careEdits = useBahbah((s) => s.careEdits);
+  const zoneEdits = useBahbah((s) => s.zoneEdits);
   const setSection = useBahbah((s) => s.setAdminSection);
-  const { updateSettings, updateSiteEdits, updateCareEdit, setAdminPass, resetAdminDemo } =
+  const { updateSettings, updateSiteEdits, updateCareEdit, updateZoneEdit, setAdminPass, resetAdminDemo } =
     useBahbah();
   const [newPass, setNewPass] = useState("");
 
@@ -689,6 +737,62 @@ function SettingsSection() {
               ? "— " + t("adm.stOpen") + " · " + t("adm.stAccept")
               : t("admin.accessNote")}
           </p>
+        </div>
+      </AdminCard>
+
+      {/* delivery settings & zone pricing control */}
+      <AdminCard className="lg:col-span-2">
+        <SectionTitle
+          icon={<IconScooter className="size-5 text-[#C56A0A]" />}
+          title="ضبط تسعيرة وتوصيل القرى والنجوع (ديروط وضواحيها)"
+        />
+        <p className="mt-1 text-xs text-muted-foreground font-semibold">
+          تحكم في سعر التوصيل والوقت المتوقع لكل قرية ونجع، وتحديد خيار كتابة المكان المخصص
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3 max-h-96 overflow-y-auto p-1 nice-scrollbar">
+          {deliveryZones.map((z) => {
+            const e = zoneEdits[z.id] ?? {};
+            return (
+              <div key={z.id} className="rounded-xl border border-border/70 p-3 bg-muted/20 space-y-2">
+                <div className="flex items-center justify-between gap-1">
+                  <p className="font-heading text-xs font-black truncate text-[#184C8A]">{z.nameAr}</p>
+                  <Badge variant="outline" className="text-[10px] shrink-0 font-mono">
+                    {e.fee !== undefined ? e.fee : z.fee} ج.م
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div>
+                    <span className="text-muted-foreground block font-bold mb-0.5">السعر (ج.م):</span>
+                    <Input
+                      type="number"
+                      placeholder={String(z.fee)}
+                      value={e.fee ?? ""}
+                      onChange={(ev) =>
+                        updateZoneEdit(z.id, {
+                          fee: ev.target.value === "" ? undefined : Number(ev.target.value),
+                        })
+                      }
+                      className="h-8 rounded-lg text-center text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block font-bold mb-0.5">الدقائق:</span>
+                    <Input
+                      type="number"
+                      placeholder={String(z.etaMin)}
+                      value={e.etaMin ?? ""}
+                      onChange={(ev) =>
+                        updateZoneEdit(z.id, {
+                          etaMin: ev.target.value === "" ? undefined : Number(ev.target.value),
+                        })
+                      }
+                      className="h-8 rounded-lg text-center text-xs font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </AdminCard>
 
@@ -897,6 +1001,18 @@ function SettingsSection() {
 
           <label className="block space-y-1.5">
             <span className="text-xs font-bold text-foreground/80">
+              نص الوصف الترحيبي أسفل عنوان الهيرو
+            </span>
+            <Input
+              value={siteEdits.heroSubAr ?? ""}
+              onChange={(e) => updateSiteEdits({ heroSubAr: e.target.value })}
+              placeholder="أدويتك ومستلزماتك الطبية وتجميلك تصلك لباب بيتك فوراً.."
+              className="h-11 rounded-xl"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/80">
               الشريط الإعلاني أعلى الموقع (Top Micro Bar)
             </span>
             <Input
@@ -906,6 +1022,49 @@ function SettingsSection() {
               className="h-11 rounded-xl"
             />
           </label>
+
+          <div className="sm:col-span-2 space-y-2 pt-2 border-t border-border/60">
+            <span className="text-xs font-bold text-foreground/80 block">
+              صورة وشعار الهيرو الدائري بالواجهة:
+            </span>
+            <div className="flex items-center gap-3">
+              <div className="size-14 shrink-0 rounded-2xl border bg-white p-1 overflow-hidden shadow-xs">
+                <img
+                  src={siteEdits.heroImage || "/images/bahbah-badge.png"}
+                  alt="Hero Preview"
+                  className="size-full object-contain"
+                />
+              </div>
+              <Input
+                value={siteEdits.heroImage ?? ""}
+                onChange={(e) => updateSiteEdits({ heroImage: e.target.value })}
+                placeholder="رابط الصورة أو ارفع من جهازك.."
+                className="h-11 flex-1 rounded-xl text-xs"
+                dir="ltr"
+              />
+              <label className="cursor-pointer rounded-full bg-[#184C8A] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#112D51] shrink-0">
+                رفع صورة
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === "string") {
+                          updateSiteEdits({ heroImage: reader.result });
+                          toast.success("تم تحديث صورة الهيرو بنجاح ✓");
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
         </div>
 
         <div className="mt-4 flex items-center justify-between border-t border-border/60 pt-3">
@@ -943,23 +1102,36 @@ function SettingsSection() {
         </div>
       </AdminCard>
 
-      {/* reset */}
-      <AdminCard className="border-[#DC4B4B]/30 lg:col-span-2">
-        <SectionTitle
-          icon={<AlertTriangle className="size-5 text-[#DC4B4B]" />}
-          title={t("adm.stReset")}
-        />
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-muted-foreground">{t("adm.stResetD")}</p>
+      {/* Production Clean Reset to 0 */}
+      <AdminCard className="border-rose-300 bg-rose-50/40 dark:border-rose-950 dark:bg-rose-950/20 lg:col-span-2">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="grid size-9 place-items-center rounded-xl bg-rose-600 text-white">
+                <AlertTriangle className="size-5" />
+              </span>
+              <h3 className="font-heading text-base font-black text-rose-900 dark:text-rose-200">
+                تصفير شامل للتشغيل الفعلي — بدء العمل على نظيف (Zero Reset)
+              </h3>
+            </div>
+            <p className="text-xs text-rose-800/80 dark:text-rose-300 font-semibold max-w-xl">
+              تصفير كافة الطلبات والروشتات والاشتراكات التجريبية السابقة تماماً، وبدء العدادات والإحصائيات من صفر لبدء استقبال طلبات العملاء الحقيقية في صيدلية بحبح ديروط.
+            </p>
+          </div>
+
           <Button
-            variant="outline"
-            className="rounded-full border-[#DC4B4B]/40 px-5 text-sm font-bold text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
+            className="h-11 rounded-full bg-rose-600 px-6 font-black text-white hover:bg-rose-700 shadow-md shadow-rose-600/25 active:scale-95 transition-all text-xs"
             onClick={() => {
-              resetAdminDemo();
-              toast.success(t("adm.stResetDone"));
+              const ok = window.confirm(
+                "تأكيد التصفير الشامل:\n\nهل تريد تصفير جميع الطلبات والروشتات التجريبية وتصفير العدادات لبدء التشغيل الفعلي على نظيف؟"
+              );
+              if (ok) {
+                resetAdminDemo();
+                toast.success("تم تصفير لوحة الإدارة بالكامل بنجاح — جاهز للتشغيل الحي الفعلي على نظيف! 🚀");
+              }
             }}
           >
-            {t("adm.stReset")}
+            تصفير شامل للتشغيل الفعلي 0️⃣
           </Button>
         </div>
       </AdminCard>

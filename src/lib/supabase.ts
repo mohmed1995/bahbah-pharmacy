@@ -170,6 +170,26 @@ export function mapDbCareToSubscriber(row: DbCareSubscription): CareSubscriber {
   };
 }
 
+export function mapDbMeasurementToMeasurement(row: DbPatientMeasurement): PatientMeasurement {
+  return {
+    id: row.id,
+    patientCode: row.patient_code,
+    patientName: row.patient_name,
+    patientPhone: row.patient_phone,
+    recordedAt: row.recorded_at,
+    bloodSugar: row.blood_sugar != null ? Number(row.blood_sugar) : undefined,
+    sugarTiming: (row.sugar_timing as PatientMeasurement["sugarTiming"]) || undefined,
+    systolic: row.systolic != null ? Number(row.systolic) : undefined,
+    diastolic: row.diastolic != null ? Number(row.diastolic) : undefined,
+    pulse: row.pulse != null ? Number(row.pulse) : undefined,
+    weight: row.weight != null ? Number(row.weight) : undefined,
+    height: row.height != null ? Number(row.height) : undefined,
+    bmi: row.bmi != null ? Number(row.bmi) : undefined,
+    pharmacistNotes: row.pharmacist_notes || undefined,
+    recordedBy: row.recorded_by || undefined,
+  };
+}
+
 /* Supabase API Services */
 
 // Insert Order
@@ -362,6 +382,53 @@ export async function fetchCareSubsFromSupabase(): Promise<CareSubscriber[]> {
     return (data as DbCareSubscription[]).map(mapDbCareToSubscriber);
   } catch (err) {
     console.warn("Supabase fetchCareSubs failed:", err);
+    return [];
+  }
+}
+
+// -------------------------------------------------------------
+// Patient Measurements (السكر والضغط والوزن)
+// -------------------------------------------------------------
+export async function insertMeasurementToSupabase(m: PatientMeasurement) {
+  try {
+    const { error } = await supabase.from("patient_measurements").insert({
+      id: m.id,
+      patient_code: m.patientCode,
+      patient_name: m.patientName,
+      patient_phone: m.patientPhone,
+      recorded_at: m.recordedAt,
+      blood_sugar: m.bloodSugar ?? null,
+      sugar_timing: m.sugarTiming ?? null,
+      systolic: m.systolic ?? null,
+      diastolic: m.diastolic ?? null,
+      pulse: m.pulse ?? null,
+      weight: m.weight ?? null,
+      height: m.height ?? null,
+      bmi: m.bmi ?? null,
+      pharmacist_notes: m.pharmacistNotes ?? null,
+      recorded_by: m.recordedBy ?? null,
+    });
+    if (error) console.warn("[Supabase Measurements] insert error:", error.message);
+  } catch (err) {
+    console.warn("[Supabase Measurements] insert failed:", err);
+  }
+}
+
+export async function fetchMeasurementsFromSupabase(): Promise<PatientMeasurement[]> {
+  try {
+    const { data, error } = await supabase
+      .from("patient_measurements")
+      .select("*")
+      .order("recorded_at", { ascending: false })
+      .limit(200);
+
+    if (error) {
+      console.warn("[Supabase Measurements] fetch error:", error.message);
+      return [];
+    }
+    return (data as DbPatientMeasurement[]).map(mapDbMeasurementToMeasurement);
+  } catch (err) {
+    console.warn("[Supabase Measurements] fetch failed:", err);
     return [];
   }
 }

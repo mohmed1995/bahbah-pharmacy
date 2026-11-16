@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { adminOrders as adminDemoOrders, driverById, BRANCH, PHARMACY, type Order } from "@/lib/bahbah/data";
-import { useBahbah, useT, type DictKey } from "@/lib/bahbah/store";
+import { useBahbah, useT, useDrivers, type DictKey } from "@/lib/bahbah/store";
 import { fmtPrice } from "./product-card";
 import { KpiCard } from "./admin-ui";
 import { IconScooter, IconPin } from "./icons";
@@ -309,14 +309,27 @@ function ShipmentCard({
 /* ------------------------------------------------------------------ */
 export function StaffGate({ role }: { role: "courier" | "pharmacist" | "admin" }) {
   const t = useT();
-  const { go } = useBahbah();
+  const lang = useBahbah((s) => s.lang);
+  const drivers = useDrivers();
+  const { go, login } = useBahbah();
 
   const portalKey: DictKey = role === "courier" ? "port.courier" : role === "pharmacist" ? "port.pharmacist" : "port.admin";
   const quickKey: DictKey = role === "courier" ? "auth.quickCourier" : role === "pharmacist" ? "auth.quickPharmacist" : "auth.quickAdmin";
   const email = role === "courier" ? "courier@bahbah.eg" : role === "pharmacist" ? "pharmacist@bahbah.eg" : "admin@bahbah.eg";
 
+  const loginAsSpecificDriver = (d: { id: string; nameAr: string; nameEn: string; phone: string }) => {
+    login({
+      name: `${lang === "ar" ? d.nameAr : d.nameEn} — أسطول واصلي`,
+      email: `${d.id}@wasly.bahbah.eg`,
+      phone: d.phone,
+      role: "courier",
+      driverId: d.id,
+    });
+    go("courier");
+  };
+
   const loginAsStaff = () => {
-    useBahbah.getState().login({
+    login({
       name:
         role === "courier"
           ? "محمود سيد — مندوب واصلي"
@@ -325,31 +338,71 @@ export function StaffGate({ role }: { role: "courier" | "pharmacist" | "admin" }
             : "إدارة صيدلية بحبح",
       email,
       role,
-      driverId: role === "courier" ? "dr-1" : undefined,
+      driverId: role === "courier" ? (drivers[0]?.id || "dr-1") : undefined,
     });
     go(role);
   };
 
   return (
-    <main className="flex flex-col items-center justify-center gap-5 px-4 py-24 text-center">
-      <span className="grid size-20 place-items-center rounded-full bg-[#EAF1F9]">
-        <LogIn className="size-9 text-[#1E4E8F]" />
-      </span>
-      <div>
-        <h1 className="font-heading text-xl font-black md:text-2xl">{t(portalKey)}</h1>
-        <p className="mt-1.5 max-w-sm text-sm font-bold text-muted-foreground">{t("port.forbidden")}</p>
+    <main className="mx-auto max-w-xl px-4 py-16 text-center">
+      <div className="flex flex-col items-center gap-4">
+        <span className="grid size-20 place-items-center rounded-3xl bg-[#EAF1F9] text-[#1E4E8F] shadow-sm">
+          <LogIn className="size-9" />
+        </span>
+        <div>
+          <h1 className="font-heading text-xl font-black md:text-2xl">{t(portalKey)}</h1>
+          <p className="mt-1.5 text-xs font-bold text-muted-foreground md:text-sm">
+            {role === "courier"
+              ? (lang === "ar" ? "اختر اسمك أو رقم هاتفك من قائمة مناديب أسطول واصلي للدخول المباشر:" : "Select your courier profile:")
+              : t("port.forbidden")}
+          </p>
+        </div>
+
+        {role === "courier" ? (
+          <div className="w-full space-y-2.5 pt-2">
+            <div className="grid gap-2 sm:grid-cols-2">
+              {drivers.map((d) => (
+                <button
+                  key={d.id}
+                  onClick={() => loginAsSpecificDriver(d)}
+                  className="flex items-center justify-between gap-2.5 rounded-2xl border border-border/80 bg-card p-3 text-start shadow-xs transition hover:border-[#1E4E8F] hover:bg-[#EAF1F9]/40 active:scale-98"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#1E4E8F] font-heading font-black text-white text-sm">
+                      {(lang === "ar" ? d.nameAr : d.nameEn).charAt(0)}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-heading text-xs font-black truncate">{lang === "ar" ? d.nameAr : d.nameEn}</p>
+                      <p className="text-[10px] text-muted-foreground font-mono" dir="ltr">{d.phone}</p>
+                    </div>
+                  </div>
+                  <Badge className="shrink-0 bg-[#2E9E6B]/15 text-[#2E9E6B] border-0 text-[10px]">
+                    {lang === "ar" ? "دخول" : "Login"}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+
+            <div className="pt-3 flex flex-wrap items-center justify-center gap-2 border-t border-border/60">
+              <Button size="sm" variant="outline" className="rounded-full px-6 font-bold" onClick={() => go("login")}>
+                {t("auth.login")}
+              </Button>
+              <Button size="sm" variant="ghost" className="rounded-full px-4 text-xs font-bold text-muted-foreground" onClick={() => go("home")}>
+                ← {t("nav.home")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+            <Button size="lg" className="rounded-full px-8 font-black" onClick={loginAsStaff}>
+              {t(quickKey)}
+            </Button>
+            <Button size="lg" variant="outline" className="rounded-full px-8 font-bold" onClick={() => go("login")}>
+              {t("auth.login")}
+            </Button>
+          </div>
+        )}
       </div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <Button size="lg" className="rounded-full px-8 font-black" onClick={loginAsStaff}>
-          {t(quickKey)}
-        </Button>
-        <Button size="lg" variant="outline" className="rounded-full px-8 font-bold" onClick={() => go("login")}>
-          {t("auth.login")}
-        </Button>
-      </div>
-      <p dir="ltr" className="text-xs font-bold text-muted-foreground">
-        {email} · 123456
-      </p>
     </main>
   );
 }

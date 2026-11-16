@@ -4,6 +4,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   getProduct,
+  registerCustomProductsGetter,
+  registerCustomDriversGetter,
   products as baseProducts,
   adminOrders as adminDemoOrders,
   demoRxQueue,
@@ -26,7 +28,11 @@ import {
   type CareSubscriber,
   type Role,
   demoCareSubs,
+  demoMeasurements,
+  type PatientMeasurement,
+  type Driver,
 } from "./data";
+import { toast } from "sonner";
 import {
   insertOrderToSupabase,
   updateOrderStatusInSupabase,
@@ -34,6 +40,7 @@ import {
   updateRxStatusInSupabase,
   insertCareSubToSupabase,
   updateCareSubStatusInSupabase,
+  insertMeasurementToSupabase,
   syncAdminSettingsToSupabase,
   signOutFromSupabase,
 } from "@/lib/supabase";
@@ -87,6 +94,7 @@ export type View =
   | "product"
   | "offers"
   | "care"
+  | "vitals"
   | "track"
   | "cart"
   | "checkout"
@@ -97,7 +105,7 @@ export type View =
   | "courier"
   | "pharmacist";
 
-export type AccountTab = "orders" | "favorites" | "profile" | "care";
+export type AccountTab = "orders" | "favorites" | "profile" | "care" | "vitals";
 
 /* ---- catalog display & control state ---- */
 export type CatalogView = "cozy" | "list" | "compact";
@@ -140,6 +148,7 @@ export type AdminSection =
   | "inventory"
   | "delivery"
   | "care"
+  | "vitals"
   | "coupons"
   | "ads"
   | "customers"
@@ -168,11 +177,18 @@ export interface SiteEdits {
   heroTitleAr?: string;
   heroAccentAr?: string;
   heroBadgeAr?: string;
+  heroSubAr?: string;
+  heroSubEn?: string;
+  heroImage?: string;
+  heroChip1Ar?: string;
+  heroChip2Ar?: string;
+  heroChip3Ar?: string;
   deliveryPromiseAr?: string;
   deliveryPromiseSubAr?: string;
   shippingPromiseAr?: string;
   shippingPromiseSubAr?: string;
   announcementAr?: string;
+  announcementEn?: string;
 }
 
 /** ad-banner copy the owner can rewrite from the dashboard */
@@ -278,6 +294,8 @@ interface BahbahState {
   adminSection: AdminSection;
   adminOrders: Order[] | null;
   customProducts: Product[];
+  customDrivers: Driver[];
+  productImgOverride: Record<string, { img: string; verified?: boolean }>;
   stockAdj: Record<string, number>;
   priceOverride: Record<string, number>;
   driverStatus: Record<string, DriverStatus>;
@@ -288,6 +306,7 @@ interface BahbahState {
   couponOff: string[];
   adsOff: string[];
   careSubs: CareSubscriber[];
+  measurements: PatientMeasurement[];
 
   setLang: (l: Lang) => void;
   toggleLang: () => void;
@@ -358,6 +377,8 @@ interface BahbahState {
   restock: (productId: string, qty: number) => void;
   setPrice: (productId: string, price: number) => void;
   addAdminProduct: (p: Product) => void;
+  addDriver: (d: Driver) => void;
+  updateProductImage: (productId: string, img: string, verified?: boolean) => void;
   cycleDriverStatus: (driverId: string) => void;
   toggleZone: (zoneId: string) => void;
   updateSettings: (patch: Partial<AdminSettings>) => void;
@@ -365,6 +386,8 @@ interface BahbahState {
   addCoupon: (c: Coupon) => void;
   toggleAd: (adId: string) => void;
   toggleCareSubStatus: (id: string) => void;
+  addMeasurement: (m: Omit<PatientMeasurement, "id" | "recordedAt">) => Promise<string>;
+  deleteMeasurement: (id: string) => void;
   resetAdminDemo: () => void;
 
   /* ---- admin password gate & CMS editors ---- */
@@ -433,6 +456,73 @@ const seedOrder: Order = {
   },
 };
 
+
+/* ------------------------------------------------------------------ */
+/* Web Audio API Synthesized Chime & Instant Order Notification       */
+/* ------------------------------------------------------------------ */
+export function playOrderChime() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
+    // High quality 3-tone pharmacy chime
+    const notes = [
+      { freq: 587.33, time: 0.0, dur: 0.25 }, // D5
+      { freq: 880.00, time: 0.15, dur: 0.35 }, // A5
+      { freq: 1174.66, time: 0.32, dur: 0.55 }, // D6
+    ];
+
+    notes.forEach(({ freq, time, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + time);
+
+      gain.gain.setValueAtTime(0, ctx.currentTime + time);
+      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + time + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + time + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(ctx.currentTime + time);
+      osc.stop(ctx.currentTime + time + dur);
+    });
+  } catch (err) {
+    console.warn("Could not play synthesized audio chime:", err);
+  }
+}
+
+export function notifyNewOrder(order: Order) {
+  playOrderChime();
+
+  if (typeof window !== "undefined") {
+    toast.success(`🚨 طلب جديد وارد الآن! #${order.id} بقيمة ${order.total} ج.م`, {
+      description: `${order.customerAr || order.customerEn} — ${order.address}`,
+      duration: 10000,
+    });
+
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(`طلب جديد في صيدلية بحبح #${order.id}`, {
+          body: `العميل: ${order.customerAr || order.customerEn} — الإجمالي: ${order.total} ج.م — ${order.address}`,
+          icon: "/images/bahbah-badge.png",
+        });
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+}
+
 export const useBahbah = create<BahbahState>()(
   persist(
     (set, get) => ({
@@ -475,6 +565,8 @@ export const useBahbah = create<BahbahState>()(
       adminSection: "overview",
       adminOrders: [],
       customProducts: [],
+      customDrivers: [],
+      productImgOverride: {},
       stockAdj: {},
       priceOverride: {},
       driverStatus: {},
@@ -485,6 +577,7 @@ export const useBahbah = create<BahbahState>()(
       couponOff: [],
       adsOff: [],
       careSubs: [],
+      measurements: demoMeasurements,
 
       setLang: (l) => set({ lang: l }),
       toggleLang: () => set({ lang: get().lang === "ar" ? "en" : "ar" }),
@@ -591,11 +684,12 @@ export const useBahbah = create<BahbahState>()(
               ? 0 + slotExtra
               : zone.fee + slotExtra;
         const total = Math.max(0, subtotal - discount) + fee;
+        const allDrivers = [...(get().customDrivers || []), ...demoDrivers];
         const driver =
           deliveryType === "delivery"
-            ? (demoDrivers.find((d) => d.zoneId === zone?.id && get().driverStatus[d.id] !== "offline" && get().driverStatus[d.id] !== "busy") ??
-              demoDrivers.find((d) => d.status === "available") ??
-              demoDrivers[0])
+            ? (allDrivers.find((d) => d.zoneId === zone?.id && get().driverStatus[d.id] !== "offline" && get().driverStatus[d.id] !== "busy") ??
+              allDrivers.find((d) => (get().driverStatus[d.id] ?? d.status) === "available") ??
+              allDrivers[0])
             : undefined;
 
         const id = `BB-${orderCounter++}`;
@@ -646,6 +740,14 @@ export const useBahbah = create<BahbahState>()(
             ? state.coupons.map((c) => (c.code === coupon?.code ? { ...c, uses: c.uses + 1 } : c))
             : state.coupons,
         });
+        notifyNewOrder(order);
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          try {
+            const bc = new BroadcastChannel("bahbah_orders_broadcast");
+            bc.postMessage({ type: "NEW_ORDER", order });
+            bc.close();
+          } catch {}
+        }
         insertOrderToSupabase(order, subtotal);
         return id;
       },
@@ -986,6 +1088,14 @@ export const useBahbah = create<BahbahState>()(
         set({ customProducts: next });
         syncAdminSettingsToSupabase({ custom_products: next });
       },
+      addDriver: (d) => {
+        set({ customDrivers: [d, ...(get().customDrivers || [])] });
+      },
+      updateProductImage: (productId, img, verified) => {
+        const next = { ...get().productImgOverride, [productId]: { img, verified: verified ?? true } };
+        set({ productImgOverride: next });
+        syncAdminSettingsToSupabase({ custom_products: get().customProducts });
+      },
 
       cycleDriverStatus: (driverId) => {
         const order: DriverStatus[] = ["available", "busy", "offline"];
@@ -1034,6 +1144,27 @@ export const useBahbah = create<BahbahState>()(
           ),
         });
       },
+      addMeasurement: async (m) => {
+        const id = `MEAS-${Date.now().toString().slice(-6)}`;
+        const recordedAt = new Date().toISOString();
+        let bmi: number | undefined = undefined;
+        if (m.weight && m.height && m.height > 0) {
+          const hM = m.height / 100;
+          bmi = Number((m.weight / (hM * hM)).toFixed(1));
+        }
+        const newRecord: PatientMeasurement = {
+          ...m,
+          id,
+          recordedAt,
+          bmi: m.bmi ?? bmi,
+        };
+        set({ measurements: [newRecord, ...get().measurements] });
+        await insertMeasurementToSupabase(newRecord);
+        return id;
+      },
+      deleteMeasurement: (id) => {
+        set({ measurements: get().measurements.filter((m) => m.id !== id) });
+      },
 
       /* ---- admin password gate & CMS editors ---- */
       lockAdmin: () => {
@@ -1069,9 +1200,12 @@ export const useBahbah = create<BahbahState>()(
         set({ zoneEdits: next });
         syncAdminSettingsToSupabase({ zone_edits: next });
       },
-      resetAdminDemo: () =>
+      resetAdminDemo: () => {
+        orderCounter = 1001;
         set({
           adminOrders: [],
+          myOrders: [],
+          lastOrderId: null,
           customProducts: [],
           stockAdj: {},
           priceOverride: {},
@@ -1083,7 +1217,14 @@ export const useBahbah = create<BahbahState>()(
           couponOff: [],
           adsOff: [],
           careSubs: [],
-        }),
+          measurements: [],
+        });
+        syncAdminSettingsToSupabase({
+          stock_adj: {},
+          price_override: {},
+          custom_products: [],
+        });
+      },
     }),
     {
       name: "bahbah-store",
@@ -1134,6 +1275,8 @@ export const useBahbah = create<BahbahState>()(
         careSub: s.careSub,
         adminOrders: s.adminOrders,
         customProducts: s.customProducts,
+        customDrivers: s.customDrivers,
+        productImgOverride: s.productImgOverride,
         stockAdj: s.stockAdj,
         priceOverride: s.priceOverride,
         driverStatus: s.driverStatus,
@@ -1143,6 +1286,7 @@ export const useBahbah = create<BahbahState>()(
         coupons: s.coupons,
         adsOff: s.adsOff,
         careSubs: s.careSubs,
+        measurements: s.measurements,
         adminUnlocked: s.adminUnlocked,
         adminPass: s.adminPass,
         siteEdits: s.siteEdits,
@@ -1165,21 +1309,33 @@ export const cartCount = (cart: CartItem[]) => cart.reduce((s, c) => s + c.qty, 
 export function mergeAdminProducts(
   customProducts: Product[],
   stockAdj: Record<string, number>,
-  priceOverride: Record<string, number>
+  priceOverride: Record<string, number>,
+  productImgOverride: Record<string, { img: string; verified?: boolean }> = {}
 ): Product[] {
   const all = [...customProducts, ...baseProducts];
-  return all.map((p) => ({
-    ...p,
-    stock: Math.max(0, p.stock + (stockAdj[p.id] ?? 0)),
-    price: priceOverride[p.id] ?? p.price,
-  }));
+  return all.map((p) => {
+    const imgOver = productImgOverride[p.id];
+    return {
+      ...p,
+      stock: Math.max(0, p.stock + (stockAdj[p.id] ?? 0)),
+      price: priceOverride[p.id] ?? p.price,
+      img: imgOver?.img !== undefined ? imgOver.img : p.img,
+      verifiedPhoto: imgOver?.verified !== undefined ? imgOver.verified : p.verifiedPhoto,
+    };
+  });
 }
 
 export const useAdminProducts = () => {
   const custom = useBahbah((s) => s.customProducts);
   const adj = useBahbah((s) => s.stockAdj);
   const price = useBahbah((s) => s.priceOverride);
-  return mergeAdminProducts(custom, adj, price);
+  const imgOver = useBahbah((s) => s.productImgOverride) || {};
+  return mergeAdminProducts(custom, adj, price, imgOver);
+};
+
+export const useDrivers = () => {
+  const custom = useBahbah((s) => s.customDrivers) || [];
+  return [...custom, ...demoDrivers];
 };
 
 /** live contact info = defaults from data.ts overridden by dashboard edits */
@@ -1291,5 +1447,43 @@ export const useT = () => {
   return makeT(lang);
 };
 
-export type { DictKey, Lang, Product, IconType, RxRequest, RxStatus, Role };
+export type { DictKey, Lang, Product, IconType, RxRequest, RxStatus, Role, PatientMeasurement };
 export { adminDemoOrders };
+
+
+// Register dynamic getters for data.ts
+if (typeof window !== "undefined") {
+  registerCustomProductsGetter(() => {
+    try {
+      const s = useBahbah.getState();
+      return mergeAdminProducts(s.customProducts || [], s.stockAdj || {}, s.priceOverride || {}, s.productImgOverride || {});
+    } catch {
+      return [];
+    }
+  });
+
+  registerCustomDriversGetter(() => {
+    try {
+      return [...(useBahbah.getState().customDrivers || []), ...demoDrivers];
+    } catch {
+      return demoDrivers;
+    }
+  });
+
+  // Multi-tab order sync across all open tabs in pharmacy
+  try {
+    const bc = new BroadcastChannel("bahbah_orders_broadcast");
+    bc.onmessage = (event) => {
+      if (event.data?.type === "NEW_ORDER" && event.data.order) {
+        const newOrder = event.data.order;
+        const current = useBahbah.getState().adminOrders || [];
+        if (!current.some((o) => o.id === newOrder.id)) {
+          useBahbah.setState({
+            adminOrders: [newOrder, ...current],
+          });
+          notifyNewOrder(newOrder);
+        }
+      }
+    };
+  } catch {}
+}

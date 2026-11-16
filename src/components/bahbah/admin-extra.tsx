@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap, Camera, Upload, Trash2, Tag, Percent, Sparkles, Check } from "lucide-react";
+import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap, Camera, Upload, Trash2, Tag, Percent, Sparkles, Check, Activity, Heart, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,10 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useBahbah, useT, useAdminProducts, useOffers } from "@/lib/bahbah/store";
+import { useBahbah, useT, useAdminProducts, useOffers, type PatientMeasurement } from "@/lib/bahbah/store";
 import { adSlides, carePlans, planById, getProduct, type CareSubscriber } from "@/lib/bahbah/data";
 import { AdminCard, SectionTitle, KpiCard, TableWrap, TH, TD } from "./admin-ui";
 import { fmtPrice } from "./product-card";
+import { getSugarStatus, getBPStatus, getBmiStatus, timingArabic } from "./vitals";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -1108,6 +1109,241 @@ export function CareAdminSection() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* قياسات المريض — لوحة إدارة قياسات السكر والضغط والوزن              */
+/* ------------------------------------------------------------------ */
+export function VitalsAdminSection() {
+  const lang = useBahbah((s) => s.lang);
+  const measurements = useBahbah((s) => s.measurements);
+  const deleteMeasurement = useBahbah((s) => s.deleteMeasurement);
+  const go = useBahbah((s) => s.go);
+
+  const [q, setQ] = useState("");
+
+  const filtered = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    if (!s) return measurements;
+    return measurements.filter(
+      (m) =>
+        m.patientName.toLowerCase().includes(s) ||
+        m.patientCode.toLowerCase().includes(s) ||
+        m.patientPhone.includes(s)
+    );
+  }, [measurements, q]);
+
+  const sugarCount = measurements.filter((m) => m.bloodSugar != null).length;
+  const bpCount = measurements.filter((m) => m.systolic != null).length;
+  const weightCount = measurements.filter((m) => m.weight != null).length;
+
+  return (
+    <div className="space-y-5">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <KpiCard
+          icon={<Activity className="size-5" />}
+          tint="bg-[#EAF1F9]"
+          color="text-[#1E4E8F]"
+          value={String(measurements.length)}
+          label={lang === "ar" ? "إجمالي القياسات المسجلة" : "Total Measurements"}
+        />
+        <KpiCard
+          icon={<Activity className="size-5" />}
+          tint="bg-[#FFF4E5]"
+          color="text-[#C56A0A]"
+          value={String(sugarCount)}
+          label={lang === "ar" ? "قياسات السكر" : "Blood Sugar Records"}
+        />
+        <KpiCard
+          icon={<Heart className="size-5" />}
+          tint="bg-red-50"
+          color="text-red-600"
+          value={String(bpCount)}
+          label={lang === "ar" ? "قياسات ضغط الدم" : "Blood Pressure Records"}
+        />
+        <KpiCard
+          icon={<Scale className="size-5" />}
+          tint="bg-[#EAF6F1]"
+          color="text-[#2E9E6B]"
+          value={String(weightCount)}
+          label={lang === "ar" ? "قياسات الوزن" : "Weight Records"}
+        />
+      </div>
+
+      {/* Header and Search */}
+      <AdminCard>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <SectionTitle
+              icon={<Activity className="size-5 text-[#2E9E6B]" />}
+              title={lang === "ar" ? "سجل قياسات السكر والضغط والوزن لجميع المرضى" : "Patients Health Vitals Log"}
+            />
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              {lang === "ar"
+                ? "يمكنك فحص سجل القياسات الطبية ومتابعة تطور الحالات، والذهاب لبوابة المريض العامة مباشرة."
+                : "Manage and monitor recorded vital signs for all pharmacy patients."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-10 rounded-xl text-xs font-bold"
+              onClick={() => go("vitals")}
+            >
+              {lang === "ar" ? "فتح بوابة المريض ↗" : "Open Patient Portal ↗"}
+            </Button>
+            <div className="w-64">
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder={lang === "ar" ? "بحث باسم المريض أو الكود..." : "Search..."}
+                className="h-10 rounded-xl text-xs"
+              />
+            </div>
+          </div>
+        </div>
+      </AdminCard>
+
+      {/* Table */}
+      <TableWrap>
+        <table className="w-full min-w-[850px] text-xs">
+          <thead className="border-b border-border bg-muted/50 text-[11px]">
+            <tr>
+              <th className={TH}>{lang === "ar" ? "كود واسم المريض" : "Patient Code & Name"}</th>
+              <th className={TH}>{lang === "ar" ? "رقم الموبايل" : "Phone"}</th>
+              <th className={TH}>{lang === "ar" ? "قياس السكر" : "Blood Sugar"}</th>
+              <th className={TH}>{lang === "ar" ? "ضغط الدم والنبض" : "Blood Pressure"}</th>
+              <th className={TH}>{lang === "ar" ? "الوزن و BMI" : "Weight & BMI"}</th>
+              <th className={TH}>{lang === "ar" ? "التاريخ والوقت" : "Recorded At"}</th>
+              <th className={TH}>{lang === "ar" ? "ملاحظات الصيدلي" : "Pharmacist Notes"}</th>
+              <th className={TH}>{lang === "ar" ? "حذف" : "Action"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="py-8 text-center text-xs font-bold text-muted-foreground">
+                  {lang === "ar" ? "لا توجد قياسات مطابقة" : "No records found"}
+                </td>
+              </tr>
+            ) : (
+              filtered.map((m) => {
+                const sugarSt = getSugarStatus(m.bloodSugar, m.sugarTiming);
+                const bpSt = getBPStatus(m.systolic, m.diastolic);
+                const bmiSt = getBmiStatus(m.bmi);
+                const d = new Date(m.recordedAt);
+                const dtStr = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} ${d.toLocaleTimeString(
+                  lang === "ar" ? "ar-EG" : "en-US",
+                  { hour: "2-digit", minute: "2-digit" }
+                )}`;
+
+                return (
+                  <tr key={m.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30">
+                    <td className={TD}>
+                      <span className="font-mono text-[11px] font-black text-[#184C8A] block">
+                        {m.patientCode}
+                      </span>
+                      <span className="font-bold text-foreground text-xs">{m.patientName}</span>
+                    </td>
+                    <td className={TD}>
+                      <span className="font-mono text-xs text-muted-foreground" dir="ltr">
+                        {m.patientPhone || "—"}
+                      </span>
+                    </td>
+                    <td className={TD}>
+                      {m.bloodSugar != null ? (
+                        <div>
+                          <span className="font-heading font-black text-sm text-amber-700">
+                            {m.bloodSugar}
+                          </span>{" "}
+                          <span className="text-[10px] text-muted-foreground">mg/dL</span>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[9px] text-muted-foreground">
+                              {timingArabic(m.sugarTiming)}
+                            </span>
+                            {sugarSt && (
+                              <Badge className={`h-4 text-[9px] px-1 font-bold ${sugarSt.color}`}>
+                                {sugarSt.label}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className={TD}>
+                      {m.systolic && m.diastolic ? (
+                        <div>
+                          <span className="font-heading font-black text-sm text-red-700">
+                            {m.systolic}/{m.diastolic}
+                          </span>{" "}
+                          <span className="text-[10px] text-muted-foreground">mmHg</span>
+                          {bpSt && (
+                            <div className="mt-0.5">
+                              <Badge className={`h-4 text-[9px] px-1 font-bold ${bpSt.color}`}>
+                                {bpSt.label}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className={TD}>
+                      {m.weight != null ? (
+                        <div>
+                          <span className="font-heading font-black text-xs text-emerald-700">
+                            {m.weight} كجم
+                          </span>
+                          {m.bmi != null && (
+                            <span className="text-[10px] text-muted-foreground block">
+                              BMI: {m.bmi}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className={TD}>
+                      <span className="text-[11px] font-semibold text-muted-foreground block">
+                        {dtStr}
+                      </span>
+                      <span className="text-[9px] text-muted-foreground">
+                        {m.recordedBy || "الصيدلي"}
+                      </span>
+                    </td>
+                    <td className={`${TD} max-w-[200px]`}>
+                      <p className="text-[11px] leading-relaxed text-foreground truncate" title={m.pharmacistNotes}>
+                        {m.pharmacistNotes || "—"}
+                      </p>
+                    </td>
+                    <td className={TD}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 size-7 p-0 text-red-500 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => {
+                          deleteMeasurement(m.id);
+                          toast.success("تم حذف القياس بنجاح");
+                        }}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </TableWrap>
     </div>
   );
 }

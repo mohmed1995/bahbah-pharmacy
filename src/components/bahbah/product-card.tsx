@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
-import { BadgeCheck, FileWarning } from "lucide-react";
+import { BadgeCheck, FileWarning, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,7 +30,6 @@ export function fmtPrice(n: number, t: (k: DictKey) => string) {
 export function catOf(id: string) {
   return categories.find((c) => c.id === id)!;
 }
-
 /* ------------------------------------------------------------------ */
 /* Rating                                                              */
 /* ------------------------------------------------------------------ */
@@ -52,22 +52,133 @@ export function Rating({ value, count, t }: { value: number; count?: number; t: 
   );
 }
 
+
 /* ------------------------------------------------------------------ */
-/* Product visual — AI packshot when available, duotone icon fallback  */
+/* Safe Pharmaceutical Packshot — prevents any medicine display mismatch */
 /* ------------------------------------------------------------------ */
-export function ProductVisual({ product, size = "md" }: { product: Product; size?: "md" | "lg" }) {
+export function SafeMedicinePackshot({
+  product,
+  size = "md",
+}: {
+  product: Product;
+  size?: "sm" | "md" | "lg";
+}) {
+  const Icon = product.icon;
+  const isSm = size === "sm";
+  const isLg = size === "lg";
+
+  return (
+    <div
+      className={`relative flex w-full flex-col justify-between overflow-hidden border border-slate-200/90 bg-gradient-to-b from-white via-[#F8FAFC] to-[#EFF4F9] text-start transition-all select-none ${
+        isLg
+          ? "h-72 md:h-80 p-5 rounded-3xl shadow-sm"
+          : isSm
+            ? "h-full w-full p-2.5 rounded-xl"
+            : "h-36 md:h-44 p-3 rounded-t-2xl"
+      }`}
+    >
+      {/* Top medical gradient strip */}
+      <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#184C8A] via-[#0284C7] to-[#059669]" />
+
+      {/* Header: Verified Bahbah Pharmacy Rx seal */}
+      <div className="flex items-center justify-between gap-1.5 pt-0.5">
+        <div className="flex items-center gap-1 rounded-full bg-[#184C8A]/10 px-2 py-0.5 text-[9.5px] font-black text-[#184C8A] md:text-[10px]">
+          <BadgeCheck className="size-3 text-[#184C8A] shrink-0" />
+          <span className="truncate">صيدلية بحبح معتمد 100%</span>
+        </div>
+        {product.rx ? (
+          <span className="rounded bg-rose-100 px-1.5 py-0.2 text-[9px] font-black text-rose-700">
+            Rx
+          </span>
+        ) : (
+          <span className="rounded bg-emerald-100 px-1.5 py-0.2 text-[9px] font-black text-emerald-700">
+            OTC
+          </span>
+        )}
+      </div>
+
+      {/* Middle: Medical dosage icon + Medicine Arabic & English Name */}
+      <div className="my-auto py-1">
+        <div className="flex items-center gap-2">
+          <div className="grid size-7 shrink-0 place-items-center rounded-lg bg-white shadow-xs border border-slate-100 text-[#184C8A]">
+            <Icon className="size-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h4
+              className={`line-clamp-2 font-heading font-black leading-snug text-[#0B1E38] ${
+                isLg ? "text-lg md:text-xl" : isSm ? "text-[11px]" : "text-[12px] md:text-[13px]"
+              }`}
+            >
+              {product.nameAr}
+            </h4>
+            <p className="line-clamp-1 text-[10px] font-bold text-slate-500 font-mono" dir="ltr">
+              {product.nameEn}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer: Strength / Concentration & Form Badges */}
+      <div className="space-y-1 border-t border-slate-200/70 pt-1.5">
+        <div className="flex items-center justify-between gap-1 text-[10px]">
+          <span className="rounded-md bg-[#0284C7]/10 px-2 py-0.5 font-black text-[#0284C7] truncate max-w-[65%]">
+            {product.ingredientAr || product.formAr || "جرعة معتمدة"}
+          </span>
+          <span className="text-[9px] font-bold text-slate-600 truncate">
+            {product.formAr || "أقراص / شراب"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Product visual — verified photo when authentic, safe packshot fallback */
+/* ------------------------------------------------------------------ */
+export function ProductVisual({
+  product,
+  size = "md",
+}: {
+  product: Product;
+  size?: "sm" | "md" | "lg";
+}) {
+  const [imgError, setImgError] = useState(false);
   const cat = catOf(product.category);
   const Icon = product.icon;
-  const box = size === "lg" ? "size-36" : "size-20";
+  const isMedicine = product.category === "medicines" || Boolean(product.rx);
 
-  if (product.img) {
+  // Check if product image is an authentic verified photo
+  const isVerified = Boolean(
+    product.verifiedPhoto ||
+      (product.img && (
+        product.img.startsWith("data:") ||
+        product.img.startsWith("blob:") ||
+        product.img.includes("/images/offers/") ||
+        product.img.includes("custom")
+      ))
+  );
+
+  // For medicines without a verified authentic photo, always render the clean certified packshot
+  if (isMedicine && (!isVerified || !product.img || imgError)) {
+    return <SafeMedicinePackshot product={product} size={size} />;
+  }
+
+  if (product.img && !imgError) {
+    const isSm = size === "sm";
+    const isLg = size === "lg";
+
     return (
       <div
-        className={`relative w-full overflow-hidden rounded-t-2xl ${
-          size === "lg" ? `${cat.tint} h-72 md:h-80` : "h-36 bg-gradient-to-b from-white to-[#F8FAFC] md:h-44"
+        className={`relative w-full overflow-hidden ${
+          isLg
+            ? `${cat.tint} h-72 md:h-80 rounded-3xl`
+            : isSm
+              ? "h-full w-full rounded-xl bg-gradient-to-b from-white to-[#F8FAFC]"
+              : "h-36 bg-gradient-to-b from-white to-[#F8FAFC] md:h-44 rounded-t-2xl"
         }`}
       >
-        {size === "lg" && (
+        {isLg && (
           <>
             <div className="absolute -top-12 -end-12 size-44 rounded-full bg-white/60 blur-xs" />
             <div className="absolute -bottom-14 -start-14 size-48 rounded-full bg-white/50 blur-xs" />
@@ -77,18 +188,27 @@ export function ProductVisual({ product, size = "md" }: { product: Product; size
           src={product.img}
           alt={product.nameEn}
           fill
-          sizes={size === "lg" ? "(max-width:768px) 100vw, 560px" : "280px"}
-          className={size === "lg" ? "object-contain p-4 md:p-6" : "object-contain p-2.5 transition-transform duration-300 group-hover:scale-105"}
+          sizes={isLg ? "(max-width:768px) 100vw, 560px" : isSm ? "130px" : "280px"}
+          className={
+            isLg
+              ? "object-contain p-4 md:p-6"
+              : isSm
+                ? "object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+                : "object-contain p-2.5 transition-transform duration-300 group-hover:scale-105"
+          }
+          onError={() => setImgError(true)}
         />
-        {size !== "lg" && <div className="absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent pointer-events-none" />}
+        {!isLg && <div className="absolute inset-0 bg-gradient-to-t from-black/[0.03] to-transparent pointer-events-none" />}
       </div>
     );
   }
 
+  // Fallback icon visual for non-medicine categories
+  const box = size === "lg" ? "size-36" : size === "sm" ? "size-14" : "size-20";
   return (
     <div
-      className={`${cat.tint} relative flex w-full items-center justify-center overflow-hidden rounded-t-2xl ${
-        size === "lg" ? "h-56" : "h-36"
+      className={`${cat.tint} relative flex w-full items-center justify-center overflow-hidden ${
+        size === "lg" ? "h-56 rounded-3xl" : size === "sm" ? "h-full rounded-xl" : "h-36 rounded-t-2xl"
       }`}
     >
       <div className="absolute -top-8 -end-8 size-28 rounded-full bg-white/50" />
@@ -96,7 +216,7 @@ export function ProductVisual({ product, size = "md" }: { product: Product; size
       <div
         className={`${box} relative flex items-center justify-center rounded-full bg-white shadow-[0_6px_20px_-6px_rgba(11,30,56,0.18)] ring-1 ring-black/5`}
       >
-        <Icon className={`${size === "lg" ? "size-16" : "size-10"} ${cat.color}`} strokeWidth={1.6} />
+        <Icon className={`${size === "lg" ? "size-16" : size === "sm" ? "size-7" : "size-10"} ${cat.color}`} strokeWidth={1.6} />
       </div>
     </div>
   );
@@ -287,18 +407,8 @@ function CozyCard({ product }: { product: Product }) {
         onClick={() => openProduct(product.id)}
         aria-label={name}
       >
-        <div className="relative h-44 w-full overflow-hidden bg-gradient-to-b from-white to-[#F8FAFC]">
-          {product.img ? (
-            <Image
-              src={product.img}
-              alt={product.nameEn}
-              fill
-              sizes="(max-width:768px) 50vw, 260px"
-              className="object-contain p-3 transition-transform duration-300 group-hover:scale-105"
-            />
-          ) : (
-            <ProductVisual product={product} />
-          )}
+        <div className="relative h-44 w-full overflow-hidden">
+          <ProductVisual product={product} size="md" />
         </div>
       </button>
 
@@ -392,21 +502,11 @@ function ListCard({ product }: { product: Product }) {
     <div className="bb-card-hover group relative flex overflow-hidden rounded-2xl border border-border/70 bg-card p-3 shadow-xs transition-all hover:border-[#184C8A]/30">
       {/* 1. صورة الدواء */}
       <button
-        className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl bg-gradient-to-b from-white to-[#F8FAFC] md:h-32 md:w-32"
+        className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl md:h-32 md:w-32"
         onClick={() => openProduct(product.id)}
         aria-label={name}
       >
-        {product.img ? (
-          <Image
-            src={product.img}
-            alt={product.nameEn}
-            fill
-            sizes="130px"
-            className="object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <ProductVisual product={product} />
-        )}
+        <ProductVisual product={product} size="sm" />
       </button>
 
       {/* 2. اسم الدواء وتركيزه + 3. السعر + 4. زر الطلب */}

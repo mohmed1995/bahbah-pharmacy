@@ -20,7 +20,10 @@ import {
   zoneById,
   type DriverStatus,
 } from "@/lib/bahbah/data";
-import { useBahbah, useT, useZones } from "@/lib/bahbah/store";
+import { useBahbah, useT, useZones, useDrivers } from "@/lib/bahbah/store";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { UserPlus, Plus } from "lucide-react";
+import type { Driver } from "@/lib/bahbah/data";
 import { IconScooter, IconVan, IconStorefront, IconRoute, IconClockFast } from "./icons";
 import { fmtPrice } from "./product-card";
 import { AdminCard, SectionTitle, StatusBadge, KpiCard } from "./admin-ui";
@@ -69,6 +72,7 @@ function DeliveryBoard() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const orders = useBahbah((s) => s.adminOrders);
+  const drivers = useDrivers();
   const driverStatus = useBahbah((s) => s.driverStatus);
   const { adminAdvance, adminAssignDriver, adminCancel } = useBahbah();
   const list = (orders ?? []).filter((o) => o.status === "pending" || o.status === "shipping");
@@ -100,7 +104,7 @@ function DeliveryBoard() {
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {list.map((o) => {
-            const driver = demoDrivers.find((d) => d.id === o.delivery?.driverId);
+            const driver = drivers.find((d) => d.id === o.delivery?.driverId);
             return (
               <AdminCard key={o.id} className="p-4">
                 <div className="flex items-center justify-between gap-2">
@@ -160,7 +164,7 @@ function DeliveryBoard() {
                     <option value="" disabled>
                       {t("adm.assign")}
                     </option>
-                    {demoDrivers.map((d) => (
+                    {drivers.map((d) => (
                       <option key={d.id} value={d.id}>
                         {lang === "ar" ? d.nameAr : d.nameEn}
                       </option>
@@ -220,7 +224,52 @@ function DriversPanel() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const driverStatus = useBahbah((s) => s.driverStatus);
-  const { cycleDriverStatus } = useBahbah();
+  const drivers = useDrivers();
+  const zones = useZones();
+  const { cycleDriverStatus, addDriver } = useBahbah();
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [newDriver, setNewDriver] = useState({
+    nameAr: "",
+    nameEn: "",
+    phone: "",
+    vehicle: "scooter" as "scooter" | "van",
+    plate: "",
+    zoneId: "deirout-city",
+  });
+
+  const handleCreateDriver = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDriver.nameAr.trim() || !newDriver.phone.trim()) {
+      toast.error(lang === "ar" ? "برجاء إدخال اسم المندوب ورقم الموبايل" : "Please enter courier name and phone");
+      return;
+    }
+
+    const driverObj: Driver = {
+      id: `dr-${Date.now()}`,
+      nameAr: newDriver.nameAr.trim(),
+      nameEn: newDriver.nameEn.trim() || newDriver.nameAr.trim(),
+      phone: newDriver.phone.trim(),
+      vehicle: newDriver.vehicle,
+      plate: newDriver.plate.trim() || "ط ن ح 1000",
+      rating: 5.0,
+      trips: 0,
+      zoneId: newDriver.zoneId,
+      status: "available",
+    };
+
+    addDriver(driverObj);
+    setAddOpen(false);
+    setNewDriver({
+      nameAr: "",
+      nameEn: "",
+      phone: "",
+      vehicle: "scooter",
+      plate: "",
+      zoneId: "deirout-city",
+    });
+    toast.success(lang === "ar" ? "تمت إضافة المندوب وتفعيله بنجاح في أسطول واصلي ✓" : "New courier added to Wasly fleet");
+  };
 
   const statusMeta: Record<DriverStatus, { label: string; cls: string }> = useMemo(
     () => ({
@@ -232,8 +281,29 @@ function DriversPanel() {
   );
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {demoDrivers.map((d) => {
+    <div className="space-y-4">
+      {/* Header bar with Add Courier button */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/80 bg-card p-4 shadow-xs">
+        <div>
+          <h3 className="font-heading text-base font-black text-foreground">
+            {lang === "ar" ? "إدارة أسطول واصلي (المناديب وسائقي التوصيل)" : "Wasly Courier Fleet"}
+          </h3>
+          <p className="text-xs text-muted-foreground font-semibold">
+            {lang === "ar" ? "إجمالي المناديب المسجلين: " : "Total registered couriers: "}
+            <span className="font-bold text-[#184C8A]">{drivers.length}</span>
+          </p>
+        </div>
+        <Button
+          onClick={() => setAddOpen(true)}
+          className="rounded-full bg-[#184C8A] px-5 font-black text-white hover:bg-[#112D51] text-xs shadow-sm"
+        >
+          <UserPlus className="size-4 me-1.5" />
+          {lang === "ar" ? "إضافة مندوب جديد +" : "Add Courier +"}
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {drivers.map((d) => {
         const st = driverStatus[d.id] ?? d.status;
         const zone = zoneById(d.zoneId);
         const meta = statusMeta[st];
@@ -309,6 +379,110 @@ function DriversPanel() {
           </AdminCard>
         );
       })}
+      </div>
+
+      {/* Add New Courier Modal */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent aria-describedby={undefined} className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg font-black text-[#184C8A]">
+              {lang === "ar" ? "إضافة مندوب جديد لأسطول واصلي" : "Add New Wasly Courier"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateDriver} className="space-y-3.5 pt-2">
+            <div>
+              <label className="block text-xs font-bold text-foreground/80 mb-1">
+                {lang === "ar" ? "اسم المندوب بالعربي *" : "Courier Name (Arabic) *"}
+              </label>
+              <Input
+                value={newDriver.nameAr}
+                onChange={(e) => setNewDriver({ ...newDriver, nameAr: e.target.value })}
+                placeholder="مثال: أحمد عبد الله"
+                className="h-11 rounded-xl"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground/80 mb-1">
+                {lang === "ar" ? "رقم الموبايل / واتساب *" : "Phone Number *"}
+              </label>
+              <Input
+                value={newDriver.phone}
+                onChange={(e) => setNewDriver({ ...newDriver, phone: e.target.value })}
+                placeholder="010XXXXXXXX"
+                className="h-11 rounded-xl"
+                dir="ltr"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-foreground/80 mb-1">
+                  {lang === "ar" ? "وسيلة الانتقال" : "Vehicle"}
+                </label>
+                <select
+                  value={newDriver.vehicle}
+                  onChange={(e) => setNewDriver({ ...newDriver, vehicle: e.target.value as "scooter" | "van" })}
+                  className="h-11 w-full rounded-xl border border-input bg-transparent px-3 text-xs font-bold"
+                >
+                  <option value="scooter">{lang === "ar" ? "موتوسيكل / سكوتر 🛵" : "Scooter / Motorcycle"}</option>
+                  <option value="van">{lang === "ar" ? "سيارة فان 🚐" : "Van / Car"}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-foreground/80 mb-1">
+                  {lang === "ar" ? "رقم اللوحة / الموتوسيكل" : "Plate Number"}
+                </label>
+                <Input
+                  value={newDriver.plate}
+                  onChange={(e) => setNewDriver({ ...newDriver, plate: e.target.value })}
+                  placeholder="ط ن ح 1234"
+                  className="h-11 rounded-xl"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-foreground/80 mb-1">
+                {lang === "ar" ? "المنطقة / القرية الأساسية للتوصيل" : "Assigned Zone"}
+              </label>
+              <select
+                value={newDriver.zoneId}
+                onChange={(e) => setNewDriver({ ...newDriver, zoneId: e.target.value })}
+                className="h-11 w-full rounded-xl border border-input bg-transparent px-3 text-xs font-bold"
+              >
+                {zones.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {lang === "ar" ? z.nameAr : z.nameEn} ({z.fee} ج.م)
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2 pt-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 flex-1 rounded-full text-xs font-bold"
+                onClick={() => setAddOpen(false)}
+              >
+                {lang === "ar" ? "إلغاء" : "Cancel"}
+              </Button>
+              <Button
+                type="submit"
+                className="h-11 flex-1 rounded-full bg-[#184C8A] font-black text-white hover:bg-[#112D51] text-xs"
+              >
+                {lang === "ar" ? "حفظ وتفعيل المندوب" : "Save & Activate"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

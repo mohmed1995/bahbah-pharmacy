@@ -36,7 +36,9 @@ import {
   type Product,
 } from "@/lib/bahbah/data";
 import { useBahbah, useT, useAdminProducts } from "@/lib/bahbah/store";
-import { fmtPrice } from "./product-card";
+import { fmtPrice, ProductVisual } from "./product-card";
+import { Switch } from "@/components/ui/switch";
+import { ImageIcon } from "lucide-react";
 import {
   AdminCard,
   SectionTitle,
@@ -345,7 +347,10 @@ export function ProductsSection() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const products = useAdminProducts();
-  const { setPrice, restock, addAdminProduct } = useBahbah();
+  const { setPrice, restock, addAdminProduct, updateProductImage } = useBahbah();
+  const [imageFor, setImageFor] = useState<Product | null>(null);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageVerified, setImageVerified] = useState(false);
 
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("all");
@@ -491,10 +496,13 @@ export function ProductsSection() {
                 <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30">
                   <td className={TD}>
                     <div className="flex items-center gap-2.5">
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted">
-                        <p.icon className="size-4 text-[#1E4E8F]" />
-                      </span>
-                      <span className="font-bold">{lang === "ar" ? p.nameAr : p.nameEn}</span>
+                      <div className="size-10 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <ProductVisual product={p} size="sm" />
+                      </div>
+                      <div>
+                        <span className="font-bold block leading-snug">{lang === "ar" ? p.nameAr : p.nameEn}</span>
+                        <span className="text-[10px] text-muted-foreground block font-mono" dir="ltr">{p.nameEn}</span>
+                      </div>
                       {p.rx && (
                         <Badge variant="outline" className="rounded-full border-[#B0713A]/40 text-[10px] text-[#B0713A]">
                           Rx
@@ -541,6 +549,19 @@ export function ProductsSection() {
                         variant="outline"
                         className="rounded-full px-3 text-xs font-bold"
                         onClick={() => {
+                          setImageFor(p);
+                          setImageUrl(p.img ?? "");
+                          setImageVerified(Boolean(p.verifiedPhoto));
+                        }}
+                      >
+                        <ImageIcon className="size-3.5 text-[#184C8A]" />
+                        {lang === "ar" ? "تعديل الصورة" : "Edit Photo"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-full px-3 text-xs font-bold"
+                        onClick={() => {
                           setPriceFor(p);
                           setPriceVal(String(p.price));
                         }}
@@ -568,6 +589,121 @@ export function ProductsSection() {
           </tbody>
         </table>
       </TableWrap>
+
+      {/* image edit & verification dialog */}
+      <Dialog open={!!imageFor} onOpenChange={(v) => !v && setImageFor(null)}>
+        <DialogContent aria-describedby={undefined} className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg font-black">
+              {lang === "ar" ? "تعديل وتوثيق صورة الدواء" : "Edit & Verify Product Image"}
+            </DialogTitle>
+          </DialogHeader>
+          {imageFor && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
+                <p className="font-heading text-sm font-black text-foreground">
+                  {lang === "ar" ? imageFor.nameAr : imageFor.nameEn}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {imageFor.ingredientAr} · {imageFor.formAr}
+                </p>
+              </div>
+
+              {/* Live Preview */}
+              <div className="flex flex-col items-center justify-center p-3 border rounded-xl bg-card">
+                <p className="text-xs font-bold text-muted-foreground mb-2">معاينة ظهور الدواء في المتجر:</p>
+                <div className="w-36 h-36 rounded-xl overflow-hidden border shadow-xs">
+                  <ProductVisual
+                    product={{
+                      ...imageFor,
+                      img: imageUrl || undefined,
+                      verifiedPhoto: imageVerified,
+                    }}
+                    size="sm"
+                  />
+                </div>
+              </div>
+
+              {/* Upload from file */}
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-foreground/80">
+                  رفع صورة حقيقية من جهازك:
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="block w-full text-xs file:mr-2 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-[#1E4E8F] file:text-white hover:file:bg-[#16407a]"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = () => {
+                        if (typeof reader.result === "string") {
+                          setImageUrl(reader.result);
+                          setImageVerified(true);
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Direct image url */}
+              <div>
+                <label className="block text-xs font-bold mb-1.5 text-foreground/80">
+                  أو رابط الصورة المباشر:
+                </label>
+                <Input
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://... أو /images/..."
+                  className="h-10 rounded-xl text-xs"
+                  dir="ltr"
+                />
+              </div>
+
+              {/* Verified Switch */}
+              <div className="flex items-center justify-between rounded-xl border border-border/70 p-3 bg-muted/30">
+                <div>
+                  <p className="text-xs font-black">صورة حقيقية موثقة ومعتمدة</p>
+                  <p className="text-[11px] text-muted-foreground">تأكيد أن الصورة مطابقة تماماً للعلبة المصرح بها</p>
+                </div>
+                <Switch
+                  checked={imageVerified}
+                  onCheckedChange={setImageVerified}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  className="h-10 rounded-full text-xs font-bold flex-1"
+                  onClick={() => {
+                    setImageUrl("");
+                    setImageVerified(false);
+                    updateProductImage(imageFor.id, "", false);
+                    setImageFor(null);
+                    toast.success("تم التبديل إلى العلبة الطبية المعتمدة بنجاح");
+                  }}
+                >
+                  استخدام علبة بحبح المعتمدة
+                </Button>
+                <Button
+                  className="h-10 rounded-full font-bold bg-[#184C8A] text-white hover:bg-[#112D51] px-5 text-xs"
+                  onClick={() => {
+                    updateProductImage(imageFor.id, imageUrl, imageVerified);
+                    setImageFor(null);
+                    toast.success("تم حفظ وتحديث صورة الدواء بنجاح ✓");
+                  }}
+                >
+                  حفظ التعديل
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* price dialog */}
       <Dialog open={!!priceFor} onOpenChange={(v) => !v && setPriceFor(null)}>

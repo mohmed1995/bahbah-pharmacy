@@ -51,7 +51,7 @@ import {
   duoOf,
 } from "./icons";
 import { toast } from "sonner";
-import { Copy, Dumbbell } from "lucide-react";
+import { Copy, Dumbbell, Activity } from "lucide-react";
 import Reveal from "./reveal";
 
 /* ------------------------------------------------------------------ */
@@ -392,7 +392,7 @@ function Hero() {
           </h1>
 
           <p className="mt-5 max-w-lg text-base leading-relaxed text-white/80 md:text-lg">
-            {t("hero.sub")}
+            {siteEdits?.heroSubAr || t("hero.sub")}
           </p>
 
           <div className="mt-7 flex flex-wrap gap-3">
@@ -446,7 +446,7 @@ function Hero() {
               <div className="absolute inset-0 rounded-full bg-white/20 blur-2xl" />
               <div className="relative size-44 overflow-hidden rounded-full bg-white p-2 shadow-2xl ring-4 ring-white/60 md:size-64 md:p-3">
                 <Image
-                  src="/images/bahbah-badge.png"
+                  src={siteEdits?.heroImage || "/images/bahbah-badge.png"}
                   alt="Bahbah Pharmacy badge"
                   width={256}
                   height={256}
@@ -760,7 +760,7 @@ function Categories() {
   return (
     <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-16">
       <SectionHead title={t("cat.title")} sub={t("cat.sub")} />
-      <div className="grid grid-cols-3 gap-3 md:grid-cols-6 md:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4">
         {categories.map((c) => {
           const DuoIcon = duoOf(c.icon);
           return (
@@ -1182,6 +1182,7 @@ function PromoBanners() {
 /* ------------------------------------------------------------------ */
 function Services() {
   const t = useT();
+  const lang = useBahbah((s) => s.lang);
   const { setRxOpen, setConsultOpen, go } = useBahbah();
 
   const items = [
@@ -1192,6 +1193,15 @@ function Services() {
       title: "services.uploadT",
       desc: "services.uploadD",
       onClick: () => setRxOpen(true),
+    },
+    {
+      icon: Activity,
+      tint: "bg-[#ECFDF5]",
+      color: "text-[#059669]",
+      title: lang === "ar" ? "بوابة قياسات المريض" : "Health Vitals Portal",
+      desc: lang === "ar" ? "قست السكر أو الضغط أو الوزن بالصيدلية؟ ادخل بكودك وشوف قراءاتك وتطور صحتك فوراً." : "View your blood sugar, pressure and weight records using your code.",
+      onClick: () => go("vitals"),
+      isCustom: true,
     },
     {
       icon: IconPhone,
@@ -1209,12 +1219,12 @@ function Services() {
       desc: "services.trackD",
       onClick: () => go("account"),
     },
-  ] as const;
+  ];
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-16">
       <SectionHead title={t("services.title")} sub={t("services.sub")} />
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {items.map((it) => (
           <button
             key={it.title}
@@ -1224,9 +1234,13 @@ function Services() {
             <span className={`grid size-13 place-items-center rounded-2xl ${it.tint} transition group-hover:scale-105`}>
               <it.icon className={`size-6 ${it.color}`} />
             </span>
-            <h3 className="mt-4 font-heading text-lg font-black">{t(it.title)}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(it.desc)}</p>
-            <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#1E4E8F]">
+            <h3 className="mt-4 font-heading text-base md:text-lg font-black">
+              {"isCustom" in it ? it.title : t(it.title as any)}
+            </h3>
+            <p className="mt-2 text-xs md:text-sm leading-relaxed text-muted-foreground">
+              {"isCustom" in it ? it.desc : t(it.desc as any)}
+            </p>
+            <span className="mt-4 inline-flex items-center gap-1 text-xs md:text-sm font-bold text-[#1E4E8F]">
               {t("hero.cta1")}
               <IconChevronR className="size-4 transition group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
             </span>

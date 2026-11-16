@@ -46,7 +46,7 @@ import {
 } from "@/lib/bahbah/data";
 import { useBahbah, useT, useZones, effStock } from "@/lib/bahbah/store";
 import { IconScooter, IconStorefront, IconClockFast, IconPin, IconWallet, IconPlus, IconWhatsapp } from "./icons";
-import { fmtPrice } from "./product-card";
+import { fmtPrice, ProductVisual } from "./product-card";
 import Reveal from "./reveal";
 import { toast } from "sonner";
 
@@ -116,16 +116,10 @@ export function CartView() {
                 {/* packshot / duotone fallback */}
                 <button
                   onClick={() => openProduct(l.productId)}
-                  className={`relative grid size-16 shrink-0 place-items-center overflow-hidden rounded-2xl md:size-20 ${
-                    l.p.img ? "bg-white ring-1 ring-black/5" : "bg-[#EAF1F9]"
-                  }`}
+                  className="relative size-16 shrink-0 overflow-hidden rounded-2xl md:size-20"
                   aria-label={lang === "ar" ? l.p.nameAr : l.p.nameEn}
                 >
-                  {l.p.img ? (
-                    <Image src={l.p.img} alt={l.p.nameEn} fill sizes="80px" className="object-contain p-1" />
-                  ) : (
-                    <l.p.icon className="size-7 text-[#1E4E8F] md:size-9" strokeWidth={1.6} />
-                  )}
+                  <ProductVisual product={l.p} size="sm" />
                 </button>
                 <div className="min-w-0 flex-1">
                   <button
@@ -361,6 +355,7 @@ export function CheckoutView() {
   /* delivery state */
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
   const [zoneId, setZoneId] = useState<string>("deirout-city");
+  const [customVillageName, setCustomVillageName] = useState("");
   const [slotId, setSlotId] = useState<string>("asap");
   const [slotOpen, setSlotOpen] = useState(false); // hidden by default — ASAP is the fast default
 
@@ -424,7 +419,7 @@ export function CheckoutView() {
   const step1Valid =
     name.trim() &&
     phone.trim().length >= 8 &&
-    (deliveryType === "pickup" || (address.trim() && zoneId));
+    (deliveryType === "pickup" || (address.trim() && zoneId && (zoneId !== "custom-village" || customVillageName.trim())));
 
   const steps = [t("checkout.step1"), t("checkout.step2"), t("checkout.step3")];
   const zoneName = (z: DeliveryZone) => (lang === "ar" ? z.nameAr : z.nameEn);
@@ -433,7 +428,36 @@ export function CheckoutView() {
   /* zone groups — used as optgroups inside one compact dropdown */
   const zoneGroups: { label: string; ids: string[] }[] = [
     { label: t("dv.group.city"), ids: ["deirout-city"] },
-    { label: t("dv.group.villages"), ids: ["deirout-ring", "deshlut", "houta", "nazal", "sunrise", "sunset"] },
+    {
+      label: "قرى ونجوع ديروط (توصيل فوري ⚡)",
+      ids: [
+        "deirout-sharif",
+        "masara",
+        "koudia",
+        "deshlut",
+        "houta",
+        "sanbo",
+        "bawit",
+        "beblaw",
+        "bani-yahya",
+        "kasr-haidar",
+        "amshoul",
+        "abu-karim",
+        "riyad",
+        "mahmoudia",
+        "kom-boha",
+        "aramia",
+        "sharaqwa",
+        "nazal",
+        "deirout-ring",
+        "sunrise",
+        "sunset",
+      ],
+    },
+    {
+      label: "قرية أو نجع آخر — اكتب اسم مكانك ✍️",
+      ids: ["custom-village"],
+    },
     { label: t("dv.group.gov"), ids: ["assiut", "upper-nile", "nationwide"] },
   ];
 
@@ -583,6 +607,22 @@ export function CheckoutView() {
                       })}
                     </SelectContent>
                   </Select>
+                  {zoneId === "custom-village" && (
+                    <div className="mt-3 rounded-2xl border-2 border-[#184C8A]/30 bg-[#EAF1F9]/70 p-3.5 space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                      <label className="block text-xs font-black text-[#184C8A]">
+                        ✍️ اكتب اسم قريتك أو عزبتك أو نجعك بديروط بالتفصيل:
+                      </label>
+                      <Input
+                        value={customVillageName}
+                        onChange={(e) => setCustomVillageName(e.target.value)}
+                        placeholder="مثال: نجع فلان / عزبة كذا / بالقرب من مدرسة..."
+                        className="h-11 rounded-xl bg-white font-bold"
+                      />
+                      <p className="text-[11px] font-bold text-muted-foreground">
+                        سيتم توجيه المندوب إلى مكانك المكتوب مباشرة مع تأكيد الهاتف.
+                      </p>
+                    </div>
+                  )}
                   {zone && (
                     <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold text-muted-foreground">
                       <span className="flex items-center gap-1 text-[#1E4E8F]">
@@ -906,12 +946,22 @@ export function CheckoutView() {
               <Button
                 className="h-12 flex-1 rounded-full text-base font-black bg-gradient-to-r from-[#184C8A] to-[#113665] text-white shadow-md shadow-[#184C8A]/25 hover:shadow-lg hover:shadow-[#184C8A]/35 active:scale-[0.98] transition-all"
                 onClick={() => {
+                  const resolvedCity =
+                    zoneId === "custom-village" && customVillageName.trim()
+                      ? customVillageName.trim()
+                      : zone && deliveryType === "delivery"
+                        ? (lang === "ar" ? zone.nameAr : zone.nameEn)
+                        : lang === "ar" ? BRANCH.nameAr : BRANCH.nameEn;
+                  const resolvedAddress =
+                    zoneId === "custom-village" && customVillageName.trim()
+                      ? `[${customVillageName.trim()}] ${address}`
+                      : address;
                   const id = placeOrder({
-                    address,
+                    address: resolvedAddress,
                     phone,
                     payment,
                     name,
-                    city: zone && deliveryType === "delivery" ? (lang === "ar" ? zone.nameAr : zone.nameEn) : lang === "ar" ? BRANCH.nameAr : BRANCH.nameEn,
+                    city: resolvedCity,
                     deliveryType,
                     zoneId: deliveryType === "delivery" ? zoneId : undefined,
                     slotId: deliveryType === "delivery" ? slotId : undefined,

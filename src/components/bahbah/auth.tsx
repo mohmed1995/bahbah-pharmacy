@@ -23,6 +23,7 @@ import {
   Bike,
   Pill,
   ShieldCheck,
+  Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,7 @@ import { getProduct, PHARMACY, ROLE_META, type Role } from "@/lib/bahbah/data";
 import { signInWithSupabase, signUpWithSupabase } from "@/lib/supabase";
 import { fmtPrice, ProductCard } from "./product-card";
 import CareMembershipCard, { DayPicker } from "./care-card";
-import { IconRefill } from "./icons";
+import { IconRefill, IconWhatsapp } from "./icons";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -163,6 +164,32 @@ export function LoginView() {
                       {lang === "ar" ? "فقط اكتب رقمك واسمك وسيتم تسجيل دخولك ومتابعة طلباتك فوراً" : "Just enter your mobile & name"}
                     </p>
                   </div>
+                </div>
+              </div>
+
+              {/* Quick 1-tap phone chips */}
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold text-muted-foreground block">
+                  {lang === "ar" ? "دخول سريع للتجربة (اضغط لتعبئة الرقم فوراً):" : "Quick 1-tap numbers:"}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "عميل ديروط الشريف", num: "01011500166" },
+                    { label: "عميل دشلوط", num: "01552533484" },
+                    { label: "عميل صنبو", num: "01122334455" },
+                  ].map((chip) => (
+                    <button
+                      key={chip.num}
+                      type="button"
+                      onClick={() => {
+                        setCustomerPhone(chip.num);
+                        setCustomerName(chip.label);
+                      }}
+                      className="rounded-full bg-muted/80 px-2.5 py-1 text-[11px] font-bold text-foreground/75 hover:bg-[#1E4E8F] hover:text-white transition"
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -493,6 +520,74 @@ export function AccountView() {
         </Button>
       </div>
 
+      {/* ================= Upper Egypt (الصعيد) Quick Actions Hub ================= */}
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        {/* Card 1: Repeat Last Order with 1 Click */}
+        {myOrders.length > 0 && (
+          <div className="flex flex-col justify-between rounded-3xl border-2 border-[#184C8A]/30 bg-gradient-to-br from-[#EAF1F9] via-[#F4F8FC] to-white p-5 shadow-xs">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 rounded-full bg-[#184C8A] px-3 py-1 text-[11px] font-black text-white">
+                  <Sparkles className="size-3 text-[#F09428]" />
+                  {lang === "ar" ? "تكرار آخر طلب بضغطة واحدة" : "1-Click Reorder"}
+                </span>
+                <span className="text-xs font-bold text-muted-foreground" dir="ltr">
+                  #{myOrders[0].id}
+                </span>
+              </div>
+              <h3 className="mt-2.5 font-heading text-base font-black text-[#112D51]">
+                {myOrders[0].items.map((i) => lang === "ar" ? i.nameAr : i.nameEn).slice(0, 2).join(" + ")}
+                {myOrders[0].items.length > 2 && " ..."}
+              </h3>
+              <p className="mt-1 text-xs font-bold text-muted-foreground">
+                {lang === "ar" ? "الإجمالي:" : "Total:"} <span className="font-heading font-black text-[#184C8A]">{fmtPrice(myOrders[0].total, t)}</span>
+                <span className="ms-2">({myOrders[0].items.length} أصناف)</span>
+              </p>
+            </div>
+            <Button
+              className="mt-4 h-11 w-full rounded-full bg-[#184C8A] text-xs font-black text-white hover:bg-[#112D51] shadow-md shadow-[#184C8A]/20 active:scale-98 transition"
+              onClick={() => {
+                reorder(myOrders[0].id);
+                toast.success(lang === "ar" ? "تمت إضافة أصناف طلبك السابق للسلة — جاري نقلك لإتمام الطلب" : "Reordered items added to cart");
+                go("checkout");
+              }}
+            >
+              <ShoppingBag className="size-4 me-1.5" />
+              {lang === "ar" ? "تكرار نفس الطلب الآن بضغطة واحدة" : "Reorder Same Order Now"}
+            </Button>
+          </div>
+        )}
+
+        {/* Card 2: Direct WhatsApp with Dr. Hashem */}
+        <div className="flex flex-col justify-between rounded-3xl border-2 border-[#2E9E6B]/30 bg-gradient-to-br from-[#EAF6F1] via-[#F3FAF6] to-white p-5 shadow-xs">
+          <div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 rounded-full bg-[#2E9E6B] px-3 py-1 text-[11px] font-black text-white">
+                <IconWhatsapp className="size-3 text-white" />
+                {lang === "ar" ? "خدمة عملاء الصعيد المباشرة" : "Direct WhatsApp Support"}
+              </span>
+            </div>
+            <h3 className="mt-2.5 font-heading text-base font-black text-[#166534]">
+              {lang === "ar" ? "محادثة فورية مع د. هاشم بحبح" : "Chat with Dr. Hashem Bahbah"}
+            </h3>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              {lang === "ar"
+                ? "ارسل صورة روشتتك أو استشر الصيدلي عن أي دواء أو بديل عبر واتساب مباشرة بدون وسيط."
+                : "Send prescription photos or ask the pharmacist directly via WhatsApp."}
+            </p>
+          </div>
+          <a
+            href="https://wa.me/201011500166?text=%D8%A7%D9%84%D8%B3%D9%84%D8%A7%D9%85%20%D8%B9%D9%84%D9%8A%D9%83%D9%85%20%D8%AF.%20%D9%87%D8%A7%D8%B4%D9%85%D8%8C%20%D9%85%D8%B9%D8%A7%D9%83%20%D8%B9%D9%85%D9%8A%D9%84%20%D9%85%D9%86%20%D8%B5%D9%8A%D8%AF%D9%84%D9%8A%D8%A9%20%D8%A8%D8%AD%D8%A8%D8%AD"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#2E9E6B] text-xs font-black text-white hover:bg-[#258257] shadow-md shadow-[#2E9E6B]/20 active:scale-98 transition"
+          >
+            <IconWhatsapp className="size-4" />
+            {lang === "ar" ? "محادثة واتساب د. هاشم (01011500166)" : "Chat on WhatsApp"}
+          </a>
+        </div>
+      </div>
+
       {/* staff portal shortcut */}
       {isStaff && portalMeta[role] && (
         <button
@@ -522,7 +617,7 @@ export function AccountView() {
         onValueChange={(v) => openAccount(v as AccountTab)}
         className="mt-6"
       >
-        <TabsList className="grid h-12 w-full grid-cols-2 rounded-full md:grid-cols-4">
+        <TabsList className="grid h-12 w-full grid-cols-3 rounded-full md:grid-cols-5">
           <TabsTrigger value="orders" className="gap-1.5 rounded-full font-bold">
             <Package className="size-4" />
             {t("account.orders")}
@@ -534,6 +629,10 @@ export function AccountView() {
           <TabsTrigger value="care" className="gap-1.5 rounded-full font-bold">
             <IconRefill className="size-4" />
             {t("acc.care")}
+          </TabsTrigger>
+          <TabsTrigger value="vitals" className="gap-1.5 rounded-full font-bold">
+            <Activity className="size-4 text-emerald-600" />
+            {lang === "ar" ? "قياساتي" : "Vitals"}
           </TabsTrigger>
           <TabsTrigger value="profile" className="gap-1.5 rounded-full font-bold">
             <UserCircle className="size-4" />
@@ -743,6 +842,35 @@ export function AccountView() {
               </div>
             </div>
           )}
+        </TabsContent>
+
+        {/* vitals */}
+        <TabsContent value="vitals" className="mt-5">
+          <div className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span className="grid size-12 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+                  <Activity className="size-6" />
+                </span>
+                <div>
+                  <h3 className="font-heading text-base font-black text-foreground md:text-lg">
+                    {lang === "ar" ? "بوابة قياساتك الصحية (السكر، الضغط، الوزن)" : "Health & Vitals Portal"}
+                  </h3>
+                  <p className="text-xs text-muted-foreground font-semibold">
+                    {lang === "ar" ? "استعرض سجل قياساتك الصيدلانية السابقة وتطور حالتك الصحية عبر بوابة المريض" : "View your historical vitals recorded at Bahbah Pharmacy"}
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                className="h-10 rounded-full bg-gradient-to-r from-[#184C8A] to-[#113665] px-6 text-xs font-bold text-white shadow-sm"
+                onClick={() => go("vitals")}
+              >
+                {lang === "ar" ? "فتح بوابة القياسات الكاملة" : "Open Vitals Portal"}
+                <ChevronRight className="size-4 rtl:rotate-180 ms-1" />
+              </Button>
+            </div>
+          </div>
         </TabsContent>
 
         {/* profile */}

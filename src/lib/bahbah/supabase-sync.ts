@@ -3,12 +3,14 @@ import {
   mapDbOrderToOrder,
   mapDbRxToRx,
   mapDbCareToSubscriber,
+  mapDbMeasurementToMeasurement,
   type DbOrder,
   type DbRxRequest,
   type DbCareSubscription,
+  type DbPatientMeasurement,
 } from "../supabase";
-import { useBahbah } from "./store";
-import type { Order, RxRequest, CareSubscriber, Role, Product, Coupon } from "./data";
+import { useBahbah, notifyNewOrder } from "./store";
+import type { Order, RxRequest, CareSubscriber, PatientMeasurement, Role, Product, Coupon } from "./data";
 import type { SiteEdits, AdEdit, CareEdit, ZoneEdit } from "./store";
 
 let isInitialized = false;
@@ -157,6 +159,37 @@ export function initSupabaseSync() {
     }
   })();
 
+  // 3b. Initial Data Fetch: Patient Measurements
+  (async () => {
+    try {
+      const { data, error } = await supabase
+        .from("patient_measurements")
+        .select("*")
+        .order("recorded_at", { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.warn("[Supabase Sync] Measurements fetch error:", error.message);
+        return;
+      }
+      if (data && data.length > 0) {
+        const remoteMeas = (data as DbPatientMeasurement[]).map(mapDbMeasurementToMeasurement);
+        const existing = useBahbah.getState().measurements || [];
+        // merge unique by id
+        const merged = [...remoteMeas];
+        for (const m of existing) {
+          if (!merged.some((r) => r.id === m.id)) {
+            merged.push(m);
+          }
+        }
+        useBahbah.setState({ measurements: merged });
+        console.log(`⚡ [Bahbah Supabase Sync] Synced ${remoteMeas.length} measurements.`);
+      }
+    } catch (err) {
+      console.warn("[Supabase Sync] Measurements fetch failed:", err);
+    }
+  })();
+
   // 4. Initial Data Fetch: Admin Settings (Live CMS & Access Control)
   (async () => {
     try {
@@ -211,6 +244,7 @@ export function initSupabaseSync() {
             useBahbah.setState({
               adminOrders: [newOrder, ...currentAdminOrders],
             });
+            notifyNewOrder(newOrder);
           }
         } else if (payload.eventType === "UPDATE") {
           const updatedOrder = mapDbOrderToOrder(payload.new as DbOrder);
@@ -283,6 +317,38 @@ export function initSupabaseSync() {
     )
     .subscribe();
 
+  // 7b. Real-time Subscription: Patient Measurements
+  const measChannel = supabase
+    .channel("bahbah-realtime-measurements")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "patient_measurements" },
+      (payload) => {
+        console.log("⚡ [Supabase Realtime] Measurement event:", payload.eventType, payload.new);
+        const state = useBahbah.getState();
+        const currentMeas = state.measurements || [];
+        if (payload.eventType === "INSERT") {
+          const newM = mapDbMeasurementToMeasurement(payload.new as DbPatientMeasurement);
+          if (!currentMeas.some((m) => m.id === newM.id)) {
+            useBahbah.setState({ measurements: [newM, ...currentMeas] });
+          }
+        } else if (payload.eventType === "UPDATE") {
+          const updatedM = mapDbMeasurementToMeasurement(payload.new as DbPatientMeasurement);
+          useBahbah.setState({
+            measurements: currentMeas.map((m) => (m.id === updatedM.id ? updatedM : m)),
+          });
+        } else if (payload.eventType === "DELETE") {
+          const deletedId = (payload.old as { id?: string })?.id;
+          if (deletedId) {
+            useBahbah.setState({
+              measurements: currentMeas.filter((m) => m.id !== deletedId),
+            });
+          }
+        }
+      }
+    )
+    .subscribe();
+
   // 8. Real-time Subscription: Admin Settings
   const settingsChannel = supabase
     .channel("bahbah-realtime-settings")
@@ -340,6 +406,7 @@ export function initSupabaseSync() {
     supabase.removeChannel(ordersChannel);
     supabase.removeChannel(rxChannel);
     supabase.removeChannel(careChannel);
+    supabase.removeChannel(measChannel);
     supabase.removeChannel(settingsChannel);
     authListener?.subscription.unsubscribe();
   };
