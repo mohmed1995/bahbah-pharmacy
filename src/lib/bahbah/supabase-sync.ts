@@ -4,6 +4,7 @@ import {
   mapDbRxToRx,
   mapDbCareToSubscriber,
   mapDbMeasurementToMeasurement,
+  flushPendingOrders,
   type DbOrder,
   type DbRxRequest,
   type DbCareSubscription,
@@ -14,6 +15,24 @@ import type { Order, RxRequest, CareSubscriber, PatientMeasurement, Role, Produc
 import type { SiteEdits, AdEdit, CareEdit, ZoneEdit } from "./store";
 
 let isInitialized = false;
+
+/**
+ * دمج تحديث قادم من Supabase فوق الطلب المحلي.
+ * بيحدّث الحالة والمندوب والمجموع بس — ما بيلمسش نوع التوصيل (توصيل/استلام)
+ * ولا الميعاد ولا أسماء المنطقة ولا علامة mine، لأن صف القاعدة ما بيحملهاش.
+ */
+function mergeRemoteOrder(local: Order, remote: Order): Order {
+  return {
+    ...local,
+    status: remote.status,
+    total: remote.total || local.total,
+    delivery: {
+      type: "delivery",
+      ...local.delivery,
+      driverId: remote.delivery?.driverId ?? local.delivery?.driverId,
+    },
+  };
+}
 
 export interface DbAdminSettings {
   id: string;
@@ -89,6 +108,13 @@ export function initSupabaseSync() {
   isInitialized = true;
 
   console.log("⚡ [Bahbah Supabase Sync] Initializing live database synchronization...");
+
+  // 0. إعادة إرسال أي طلبات اتعلّقت بسبب انقطاع النت (دلوقتي، وكل ما النت يرجع)
+  flushPendingOrders();
+  const onOnline = () => {
+    flushPendingOrders();
+  };
+  window.addEventListener("online", onOnline);
 
   // 1. Initial Data Fetch: Orders
   (async () => {
@@ -250,10 +276,10 @@ export function initSupabaseSync() {
           const updatedOrder = mapDbOrderToOrder(payload.new as DbOrder);
           useBahbah.setState({
             adminOrders: currentAdminOrders.map((o) =>
-              o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o
+              o.id === updatedOrder.id ? mergeRemoteOrder(o, updatedOrder) : o
             ),
             myOrders: state.myOrders.map((o) =>
-              o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o
+              o.id === updatedOrder.id ? mergeRemoteOrder(o, updatedOrder) : o
             ),
           });
         } else if (payload.eventType === "DELETE") {
@@ -403,6 +429,7 @@ export function initSupabaseSync() {
   });
 
   return () => {
+    window.removeEventListener("online", onOnline);
     supabase.removeChannel(ordersChannel);
     supabase.removeChannel(rxChannel);
     supabase.removeChannel(careChannel);

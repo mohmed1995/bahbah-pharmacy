@@ -1102,7 +1102,7 @@ ${(order.items || []).map((it) => `- ${it.nameAr || it.productId} (عدد ${it.q
       <h1 className="mt-6 font-heading text-3xl font-black">{t("checkout.success")}</h1>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
         {lang === "ar"
-          ? "تم تسجيل طلبك بنجاح في سيستم صيدلية بحبح وحُفظ في قاعدة البيانات."
+          ? "تم تسجيل طلبك في سيستم صيدلية بحبح. للتأكيد السريع ابعته على واتساب الصيدلية من الزر تحت."
           : t("checkout.successD")}
       </p>
 
