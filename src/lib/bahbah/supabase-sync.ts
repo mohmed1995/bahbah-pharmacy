@@ -29,7 +29,9 @@ function mergeRemoteOrder(local: Order, remote: Order): Order {
     delivery: {
       type: "delivery",
       ...local.delivery,
-      driverId: remote.delivery?.driverId ?? local.delivery?.driverId,
+      /* القيمة القادمة من القاعدة هي المرجع حتى لو فاضية — عشان إلغاء تعيين المندوب
+         (courier_id = null) يوصل للعميل. mapDbOrderToOrder دايمًا بترجع كائن delivery. */
+      driverId: remote.delivery?.driverId,
     },
   };
 }
