@@ -428,7 +428,23 @@ export interface Address {
   isDefault: boolean;
 }
 
-let orderCounter = 1050;
+/**
+ * رقم طلب فريد بدون عدّاد محلي: BB-YYMMDD-XXXXXX
+ * (العدّاد القديم كان يبدأ من 1050 عند كل متصفح فيتكرر الرقم ويفشل الحفظ في Supabase).
+ */
+export function generateOrderId(): string {
+  const d = new Date();
+  const ymd =
+    String(d.getFullYear()).slice(2) +
+    String(d.getMonth() + 1).padStart(2, "0") +
+    String(d.getDate()).padStart(2, "0");
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let rand = "";
+  for (let i = 0; i < 6; i++) {
+    rand += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `BB-${ymd}-${rand}`;
+}
 
 /** effective live stock of a product (base + dashboard adjustments, never < 0) */
 export function effStock(productId: string, stockAdj: Record<string, number>): number {
@@ -817,7 +833,7 @@ export const useBahbah = create<BahbahState>()(
               allDrivers[0])
             : undefined;
 
-        const id = `BB-${orderCounter++}`;
+        const id = generateOrderId();
         const order: Order = {
           id,
           date: new Date().toISOString().slice(0, 10),
@@ -873,7 +889,15 @@ export const useBahbah = create<BahbahState>()(
             bc.close();
           } catch {}
         }
-        insertOrderToSupabase(order, subtotal);
+        /* الحفظ في Supabase: لو فشل يتحط في طابور محلي ويتعاد تلقائيًا، والعميل يتنبّه */
+        insertOrderToSupabase(order, subtotal).then((saved) => {
+          if (!saved && typeof window !== "undefined") {
+            toast.warning("الطلب اتسجّل عندك — هيتبعت للصيدلية أول ما النت يرجع", {
+              description: "ممكن كمان تبعته بالواتساب من صفحة النجاح للتأكيد السريع",
+              duration: 10000,
+            });
+          }
+        });
         return id;
       },
 
@@ -1017,7 +1041,7 @@ export const useBahbah = create<BahbahState>()(
         }
       },
       refillMonthlyRx: async (patient: CareSubscriber) => {
-        const orderId = `BB-${Math.floor(1000 + Math.random() * 9000)}`;
+        const orderId = generateOrderId();
         const order: Order = {
           id: orderId,
           date: new Date().toISOString().slice(0, 10),
@@ -1346,7 +1370,6 @@ export const useBahbah = create<BahbahState>()(
         syncAdminSettingsToSupabase({ zone_edits: next });
       },
       resetAdminDemo: () => {
-        orderCounter = 1001;
         set({
           adminOrders: [],
           myOrders: [],

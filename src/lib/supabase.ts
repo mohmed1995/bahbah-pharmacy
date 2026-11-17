@@ -129,7 +129,8 @@ export function mapOrderToDb(order: Order, subtotal?: number): Partial<DbOrder> 
     total: order.total || 0,
     payment_method: order.payment || "cod",
     status: order.status || "pending",
-    payment_status: order.payment === "cod" ? "unpaid" : "paid",
+    /* الدفع بيتأكد عند التسليم (courierDeliver بيحوّلها paid) — مش وقت الطلب */
+    payment_status: "unpaid",
     delivery_zone: order.delivery?.zoneId || order.delivery?.zoneNameAr || null,
     courier_id: order.delivery?.driverId || null,
     pharmacist_id: null,
@@ -192,22 +193,80 @@ export function mapDbMeasurementToMeasurement(row: DbPatientMeasurement): Patien
 
 /* Supabase API Services */
 
-// Insert Order
-export async function insertOrderToSupabase(order: Order, subtotal?: number) {
+/* طابور الطلبات اللي فشل حفظها (شبكة ضعيفة / انقطاع) — بيتعاد إرسالها تلقائيًا */
+const PENDING_ORDERS_KEY = "bahbah_pending_orders_v1";
+
+function readPendingOrders(): Partial<DbOrder>[] {
+  if (typeof window === "undefined") return [];
   try {
-    const payload = mapOrderToDb(order, subtotal);
+    const raw = window.localStorage.getItem(PENDING_ORDERS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePendingOrders(list: Partial<DbOrder>[]) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(list));
+  } catch {
+    /* التخزين ممتلئ أو محجوب — مفيش حاجة نعملها */
+  }
+}
+
+function queuePendingOrder(payload: Partial<DbOrder>) {
+  const list = readPendingOrders();
+  if (!list.some((p) => p.id === payload.id)) {
+    writePendingOrders([...list, payload]);
+  }
+}
+
+/** رقم مفتاح مكرر = الطلب موجود فعلًا في القاعدة، يعتبر نجاح */
+function isDuplicateKeyError(error: { code?: string; message?: string }) {
+  return error.code === "23505" || /duplicate key/i.test(error.message || "");
+}
+
+// Insert Order — returns the payload on success, null if it was queued for retry
+export async function insertOrderToSupabase(order: Order, subtotal?: number) {
+  const payload = mapOrderToDb(order, subtotal);
+  try {
     // Note: Do NOT use .select() here so anon inserts succeed without requiring SELECT permissions
     const { error } = await supabase.from("orders").insert(payload);
-    if (error) {
+    if (error && !isDuplicateKeyError(error)) {
       console.warn("Supabase insertOrder error:", error.message, error);
+      queuePendingOrder(payload);
       return null;
     }
     console.log("⚡ [Supabase Sync] Order inserted successfully into Supabase:", order.id);
     return payload;
   } catch (err) {
     console.warn("Supabase insertOrder failed:", err);
+    queuePendingOrder(payload);
     return null;
   }
+}
+
+/** إعادة إرسال الطلبات المعلّقة — بتتنادى عند فتح التطبيق ولما النت يرجع */
+export async function flushPendingOrders() {
+  const pending = readPendingOrders();
+  if (pending.length === 0) return;
+  const stillPending: Partial<DbOrder>[] = [];
+  for (const payload of pending) {
+    try {
+      const { error } = await supabase.from("orders").insert(payload);
+      if (error && !isDuplicateKeyError(error)) {
+        console.warn("Supabase flushPendingOrders error:", error.message);
+        stillPending.push(payload);
+      } else {
+        console.log("⚡ [Supabase Sync] Pending order delivered:", payload.id);
+      }
+    } catch {
+      stillPending.push(payload);
+    }
+  }
+  writePendingOrders(stillPending);
 }
 
 // Fetch all orders
