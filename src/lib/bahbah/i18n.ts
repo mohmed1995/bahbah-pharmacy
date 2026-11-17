@@ -401,6 +401,11 @@ export const dict = {
     "checkout.track": "تتبع طلباتي",
     "checkout.keep": "متابعة التسوق",
     "checkout.guest": "هتطلب كزائر — تقدر تسجل لاحقًا لتتبع أسهل",
+    "checkout.err.name": "اكتب اسمك عشان المندوب يعرف يناديك",
+    "checkout.err.phone": "اكتب رقم موبايل مصري صحيح (11 رقم يبدأ بـ 010 أو 011 أو 012 أو 015)",
+    "checkout.err.zone": "اختار منطقة التوصيل",
+    "checkout.err.village": "اكتب اسم القرية أو النجع",
+    "checkout.err.address": "اكتب عنوانك بالتفصيل (الشارع أو أقرب علامة مميزة)",
     "checkout.summary": "ملخص الطلب",
 
     "auth.welcome": "أهلًا بيك في بحبح",
@@ -1280,6 +1285,11 @@ export const dict = {
     "checkout.track": "Track my orders",
     "checkout.keep": "Continue shopping",
     "checkout.guest": "You're ordering as a guest — sign up later for easier tracking",
+    "checkout.err.name": "Please enter your name",
+    "checkout.err.phone": "Enter a valid Egyptian mobile number (11 digits starting with 010, 011, 012 or 015)",
+    "checkout.err.zone": "Please choose a delivery area",
+    "checkout.err.village": "Please enter your village name",
+    "checkout.err.address": "Please enter your full address (street or nearest landmark)",
     "checkout.summary": "Order Summary",
 
     "auth.welcome": "Welcome to Bahbah",

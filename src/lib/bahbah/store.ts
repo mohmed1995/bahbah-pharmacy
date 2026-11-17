@@ -429,8 +429,10 @@ export interface Address {
 }
 
 /**
- * رقم طلب فريد بدون عدّاد محلي: BB-YYMMDD-XXXXXX
+ * رقم طلب فريد بدون عدّاد محلي: BB-YYMMDD-XXXXXXXX (8 خانات من 32 حرف/رقم ≈ 1.1 تريليون احتمال في اليوم)
  * (العدّاد القديم كان يبدأ من 1050 عند كل متصفح فيتكرر الرقم ويفشل الحفظ في Supabase).
+ * الطول 8 مقصود: لو حصل تصادم، الداتابيز بترفض الطلب التاني بـ duplicate key وبيتعامل معاه
+ * كأنه نجح (عشان إعادة الإرسال متكررش)، فلازم احتمال التصادم يكون عمليًا صفر.
  */
 export function generateOrderId(): string {
   const d = new Date();
@@ -440,7 +442,7 @@ export function generateOrderId(): string {
     String(d.getDate()).padStart(2, "0");
   const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let rand = "";
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 8; i++) {
     rand += alphabet[Math.floor(Math.random() * alphabet.length)];
   }
   return `BB-${ymd}-${rand}`;
