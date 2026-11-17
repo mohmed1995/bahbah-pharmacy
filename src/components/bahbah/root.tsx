@@ -22,7 +22,7 @@ import CareView from "./care";
 import VitalsPortal from "./vitals";
 import TrackView from "./track";
 import { CartView, CheckoutView, SuccessView } from "./cart";
-import { LoginView, AccountView } from "./auth";
+import { LoginView, AccountView, UnifiedLoginModal } from "./auth";
 import AdminView, { AdminGate } from "./admin";
 import CourierPortal, { StaffGate } from "./courier";
 import PharmacistPortal from "./pharmacist";
@@ -214,6 +214,7 @@ export default function BahbahApp() {
       <RxDialog />
       <ConsultDialog />
       <InstallAppModal />
+      <UnifiedLoginModal />
 
       {!staffView && <FloatingCartBar />}
 

@@ -36,6 +36,7 @@ export default function ProductView() {
   const productId = useBahbah((s) => s.productId);
   const favorites = useBahbah((s) => s.favorites);
   const stockAdj = useBahbah((s) => s.stockAdj);
+  const previousView = useBahbah((s) => s.previousView);
   const { go, addToCart, toggleFavorite, setCartOpen } = useBahbah();
   const [qty, setQty] = useState(1);
 
@@ -76,8 +77,8 @@ export default function ProductView() {
       <div className="mx-auto max-w-7xl px-4 pt-5 md:px-6 md:pt-8">
         {/* breadcrumb */}
         <button
-          onClick={() => useBahbah.setState({ view: "catalog" })}
-          className="mb-4 flex items-center gap-1 text-sm font-bold text-muted-foreground transition hover:text-[#184C8A]"
+          onClick={() => go(previousView && previousView !== "product" ? previousView : "catalog")}
+          className="mb-4 flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1.5 text-xs font-bold text-muted-foreground transition hover:bg-[#184C8A] hover:text-white"
         >
           <ArrowRight className="size-4 rtl:inline ltr:hidden" />
           <ArrowLeft className="size-4 ltr:inline rtl:hidden" />

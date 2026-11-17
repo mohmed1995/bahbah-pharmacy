@@ -245,6 +245,7 @@ export interface CartItem {
 interface BahbahState {
   lang: Lang;
   view: View;
+  previousView?: View;
   productId: string | null;
   catalogCategory: string | null;
   cart: CartItem[];
@@ -257,6 +258,8 @@ interface BahbahState {
   cartOpen: boolean;
   searchOpen: boolean;
   voiceSearchAutoStart?: boolean;
+  loginOpen: boolean;
+  adminAlarmPlaying: boolean;
   rxOpen: boolean;
   consultOpen: boolean;
   icOpen: boolean; // drug-interaction checker dialog
@@ -340,6 +343,9 @@ interface BahbahState {
 
   setCartOpen: (v: boolean) => void;
   setSearchOpen: (v: boolean, autoVoice?: boolean) => void;
+  setLoginOpen: (v: boolean) => void;
+  setAdminAlarmPlaying: (v: boolean) => void;
+  stopAdminAlarm: () => void;
   setRxOpen: (v: boolean) => void;
   setConsultOpen: (v: boolean) => void;
   setIcOpen: (v: boolean) => void;
@@ -461,6 +467,117 @@ const seedOrder: Order = {
 /* ------------------------------------------------------------------ */
 /* Web Audio API Synthesized Chime & Instant Order Notification       */
 /* ------------------------------------------------------------------ */
+let alarmIntervalId: any = null;
+
+/** Continuous loud alert siren/bell for admin until dismissed */
+export function startContinuousAdminAlarm() {
+  if (typeof window === "undefined") return;
+  if (alarmIntervalId) return; // already ringing
+
+  playUrgentAdminAlarm();
+  alarmIntervalId = setInterval(() => {
+    playUrgentAdminAlarm();
+  }, 2400);
+
+  // Update Zustand state
+  try {
+    useBahbah.getState().setAdminAlarmPlaying(true);
+  } catch {}
+}
+
+export function stopContinuousAdminAlarm() {
+  if (alarmIntervalId) {
+    clearInterval(alarmIntervalId);
+    alarmIntervalId = null;
+  }
+  try {
+    useBahbah.getState().setAdminAlarmPlaying(false);
+  } catch {}
+}
+
+/** Loud two-tone alarm for administration order alert */
+export function playUrgentAdminAlarm() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
+    const tones = [
+      { freq: 950, time: 0.0, dur: 0.18, type: "sawtooth" as OscillatorType },
+      { freq: 720, time: 0.22, dur: 0.22, type: "sawtooth" as OscillatorType },
+      { freq: 950, time: 0.48, dur: 0.18, type: "sawtooth" as OscillatorType },
+      { freq: 720, time: 0.70, dur: 0.35, type: "sawtooth" as OscillatorType },
+    ];
+
+    tones.forEach(({ freq, time, dur, type }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + time);
+
+      gain.gain.setValueAtTime(0, ctx.currentTime + time);
+      gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + time + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + time + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(ctx.currentTime + time);
+      osc.stop(ctx.currentTime + time + dur);
+    });
+  } catch (err) {
+    console.warn("Could not play admin alarm:", err);
+  }
+}
+
+/** Familiar ding-dong doorbell sound for courier delivering order */
+export function playDoorbellDingDong() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
+    // Classic Ding-Dong (High bell then low bell)
+    const tones = [
+      { freq: 784, time: 0.0, dur: 0.7 }, // G5 (Ding)
+      { freq: 659.25, time: 0.55, dur: 0.9 }, // E5 (Dong)
+    ];
+
+    tones.forEach(({ freq, time, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + time);
+
+      gain.gain.setValueAtTime(0, ctx.currentTime + time);
+      gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + time + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + time + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(ctx.currentTime + time);
+      osc.stop(ctx.currentTime + time + dur);
+    });
+  } catch (err) {
+    console.warn("Could not play doorbell ding-dong:", err);
+  }
+}
+
 export function playOrderChime() {
   if (typeof window === "undefined") return;
   try {
@@ -503,12 +620,17 @@ export function playOrderChime() {
 }
 
 export function notifyNewOrder(order: Order) {
-  playOrderChime();
+  // Trigger continuous loud alarm for admin
+  startContinuousAdminAlarm();
 
   if (typeof window !== "undefined") {
     toast.success(`🚨 طلب جديد وارد الآن! #${order.id} بقيمة ${order.total} ج.م`, {
       description: `${order.customerAr || order.customerEn} — ${order.address}`,
-      duration: 10000,
+      duration: 15000,
+      action: {
+        label: "إيقاف الجرس 🔕",
+        onClick: () => stopContinuousAdminAlarm(),
+      },
     });
 
     if ("Notification" in window && Notification.permission === "granted") {
@@ -540,6 +662,8 @@ export const useBahbah = create<BahbahState>()(
       accountTab: "orders",
       cartOpen: false,
       searchOpen: false,
+      loginOpen: false,
+      adminAlarmPlaying: false,
       rxOpen: false,
       consultOpen: false,
       icOpen: false,
@@ -583,8 +707,8 @@ export const useBahbah = create<BahbahState>()(
       setLang: (l) => set({ lang: l }),
       toggleLang: () => set({ lang: get().lang === "ar" ? "en" : "ar" }),
 
-      go: (v) => set({ view: v, cartOpen: false, searchOpen: false }),
-      openProduct: (id) => set({ view: "product", productId: id, cartOpen: false, searchOpen: false }),
+      go: (v) => set({ previousView: get().view, view: v, cartOpen: false, searchOpen: false }),
+      openProduct: (id) => set({ previousView: get().view, view: "product", productId: id, cartOpen: false, searchOpen: false }),
       openCatalog: (category = null) =>
         set({ view: "catalog", catalogCategory: category, cartOpen: false, searchOpen: false }),
       openAccount: (tab) =>
@@ -790,6 +914,11 @@ export const useBahbah = create<BahbahState>()(
 
       setCartOpen: (v) => set({ cartOpen: v }),
       setSearchOpen: (v, autoVoice) => set({ searchOpen: v, voiceSearchAutoStart: Boolean(autoVoice) }),
+      setLoginOpen: (v) => set({ loginOpen: v }),
+      setAdminAlarmPlaying: (v) => set({ adminAlarmPlaying: v }),
+      stopAdminAlarm: () => {
+        stopContinuousAdminAlarm();
+      },
       setRxOpen: (v) => set({ rxOpen: v }),
       setConsultOpen: (v) => set({ consultOpen: v }),
       setIcOpen: (v) => set({ icOpen: v }),
@@ -1056,6 +1185,21 @@ export const useBahbah = create<BahbahState>()(
       },
       courierDeliver: (orderId) => {
         updateOrderStatusInSupabase(orderId, { status: "delivered", payment_status: "paid" });
+        playDoorbellDingDong(); // doorbell chime at customer arrival
+        if (typeof window !== "undefined") {
+          toast.success("🔔 تم تسليم الطلب للعميل بنجاح!", {
+            description: "صوت جرس الباب يعمل الآن لتنبيه العميل بوصول الطلب",
+            duration: 6000,
+          });
+          if ("Notification" in window && Notification.permission === "granted") {
+            try {
+              new Notification("صيدلية بحبح — تم تسليم طلبك!", {
+                body: "تم تسليم الطلب بنجاح. نتمنى لكم دوام الصحة والعافية!",
+                icon: "/images/bahbah-badge.png",
+              });
+            } catch {}
+          }
+        }
         const patch = (list: Order[]) =>
           list.map((o) => (o.id === orderId && o.status === "shipping" ? { ...o, status: "delivered" as const } : o));
         set({

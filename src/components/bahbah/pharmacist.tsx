@@ -63,6 +63,7 @@ export default function PharmacistPortal() {
   const adminOrders = useBahbah((s) => s.adminOrders);
   const rxQueue = useBahbah((s) => s.rxQueue);
   const measurements = useBahbah((s) => s.measurements);
+  const careSubs = useBahbah((s) => s.careSubs);
   const allProducts = useAdminProducts();
   const { go, pharmacistReady, adminSetRx, restock, addMeasurement, deleteMeasurement } = useBahbah();
 
@@ -672,6 +673,32 @@ export default function PharmacistPortal() {
           </DialogHeader>
 
           <form onSubmit={handleSaveMeasurement} className="mt-4 space-y-4">
+            {/* Quick Select from Registered Patients & Chronic Care */}
+            {careSubs.length > 0 && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3">
+                <span className="text-[11px] font-bold text-blue-900 block mb-1.5">
+                  ⚡ اختيار سريع من المرضى المسجلين بالصيدلية (أدوية شهرية):
+                </span>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                  {careSubs.slice(0, 8).map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => {
+                        setPatientName(sub.nameAr || sub.nameEn);
+                        setPatientPhone(sub.phone);
+                        setPatientCode(sub.id);
+                        toast.info(`تم اختيار المريض: ${sub.nameAr}`);
+                      }}
+                      className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-blue-800 shadow-2xs border border-blue-200 hover:bg-blue-600 hover:text-white transition"
+                    >
+                      {sub.nameAr} ({sub.id})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Patient Info */}
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block space-y-1">

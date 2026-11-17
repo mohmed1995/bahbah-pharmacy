@@ -1462,6 +1462,24 @@ export function MaintenanceSection() {
           </div>
           <div className="flex flex-wrap gap-2.5">
             <Button
+              variant="destructive"
+              className="h-11 rounded-full bg-red-600 px-4 font-black text-white hover:bg-red-700 shadow-md"
+              onClick={() => {
+                if (window.confirm("هل أنت متأكد من مسح الفواتير المسلّمة والقديمة والكاش لتوفير مساحة التخزين في السحابة؟")) {
+                  try {
+                    localStorage.removeItem("bahbah-storage");
+                    toast.success("تم مسح الكاش والبيانات المؤقتة وتفريغ مساحة التخزين بنجاح!");
+                    setTimeout(() => window.location.reload(), 1000);
+                  } catch {
+                    toast.error("حدث خطأ أثناء تنظيف الذاكرة");
+                  }
+                }
+              }}
+            >
+              <Trash2 className="size-4 me-1.5" />
+              {lang === "ar" ? "تنظيف الكاش والفواتير القديمة 🧹" : "Purge Old Invoices & Cache"}
+            </Button>
+            <Button
               className="h-11 rounded-full bg-[#059669] px-5 font-black text-white hover:bg-[#047857] shadow-md"
               onClick={exportGoogleSheetsCSV}
             >

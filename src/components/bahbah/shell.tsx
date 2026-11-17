@@ -16,6 +16,8 @@ import {
   CalendarClock,
   MessageCircle,
   ArrowUpRight,
+  Bell,
+  Lock as LockIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useRef, useSyncExternalStore } from "react";
 import Image from "next/image";
@@ -102,7 +104,8 @@ export function Header() {
   const user = useBahbah((s) => s.user);
   const view = useBahbah((s) => s.view);
   const siteEdits = useBahbah((s) => s.siteEdits);
-  const { go, openCatalog, setCartOpen, setSearchOpen, toggleLang, openAccount, setConsultOpen, setInstallAppOpen, setRxOpen } = useBahbah();
+  const adminAlarmPlaying = useBahbah((s) => s.adminAlarmPlaying);
+  const { go, openCatalog, setCartOpen, setSearchOpen, setLoginOpen, stopAdminAlarm, toggleLang, openAccount, setConsultOpen, setInstallAppOpen, setRxOpen } = useBahbah();
   const count = cartCount(cart);
 
   const navItems: { label: string; onClick: () => void; active: boolean }[] = [
@@ -246,14 +249,35 @@ export function Header() {
             )}
           </button>
 
-          {/* account */}
+          {/* account / login button */}
           <button
-            onClick={() => go(user ? "account" : "login")}
-            className="hidden size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted hover:text-[#184C8A] active:scale-95 md:grid"
+            onClick={() => {
+              if (user) {
+                go("account");
+              } else {
+                setLoginOpen(true);
+              }
+            }}
+            className="flex h-10 items-center gap-1.5 rounded-full border border-[#184C8A]/30 bg-[#184C8A]/5 px-3.5 text-xs font-black text-[#184C8A] transition hover:bg-[#184C8A] hover:text-white active:scale-95 shadow-xs"
             aria-label={t("nav.account")}
           >
-            <IconUserRound className="size-5" />
+            <IconUserRound className="size-4" />
+            <span className="hidden sm:inline">
+              {user ? (user.name.split(" ")[0] || t("nav.account")) : (lang === "ar" ? "تسجيل الدخول" : "Login")}
+            </span>
           </button>
+
+          {/* Alarm dismiss bar (if ringing in background) */}
+          {adminAlarmPlaying && (
+            <button
+              onClick={() => stopAdminAlarm()}
+              className="flex h-10 animate-bounce items-center gap-1.5 rounded-full bg-red-600 px-3.5 text-xs font-black text-white shadow-lg transition hover:bg-red-700 active:scale-95"
+              title="إيقاف جرس الطلب الجديد"
+            >
+              <Bell className="size-4 animate-spin" />
+              <span>إيقاف الرنين 🔕</span>
+            </button>
+          )}
 
           {/* install app (mobile) */}
           <button
@@ -1472,7 +1496,7 @@ export function Footer() {
   const lang = useBahbah((s) => s.lang);
   const view = useBahbah((s) => s.view);
   const site = useSiteInfo();
-  const { go, openCatalog, setInstallAppOpen } = useBahbah();
+  const { go, openCatalog, setInstallAppOpen, setLoginOpen } = useBahbah();
   if (view === "admin" || view === "courier" || view === "pharmacist") return null;
 
   return (
@@ -1527,26 +1551,17 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* staff portals — every role has its own dashboard */}
+          {/* Customer support & quick access */}
           <div>
             <h4 className="mb-4 font-heading font-black text-[#F59E0B]">{t("footer.team")}</h4>
             <ul className="space-y-2.5 text-sm text-white/75">
               <li>
-                <button className="flex items-center gap-1.5 hover:text-white transition" onClick={() => go("courier")}>
-                  <Bike className="size-3.5" />
-                  {t("port.courier")}
-                </button>
-              </li>
-              <li>
-                <button className="flex items-center gap-1.5 hover:text-white transition" onClick={() => go("pharmacist")}>
-                  <Pill className="size-3.5" />
-                  {t("port.pharmacist")}
-                </button>
-              </li>
-              <li>
-                <button className="flex items-center gap-1.5 hover:text-white transition" onClick={() => go("admin")}>
-                  <ShieldCheck className="size-3.5" />
-                  {t("port.admin")}
+                <button
+                  className="flex items-center gap-1.5 hover:text-white transition font-bold text-amber-300"
+                  onClick={() => setLoginOpen(true)}
+                >
+                  <LockIcon className="size-3.5 text-amber-400" />
+                  <span>{lang === "ar" ? "بوابة تسجيل الدخول الموحدة" : "Unified Login Portal"}</span>
                 </button>
               </li>
               <li>

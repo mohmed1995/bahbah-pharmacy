@@ -1004,20 +1004,42 @@ export function registerCustomDriversGetter(fn: () => Driver[]) {
 const mappedRealProducts: Product[] = (realCatalogData as any[]).map((p) => {
   let cat = p.category;
   const name = (p.nameAr || "").toLowerCase();
-  // Clean up miscategorized items
-  if (name.includes("ميسلار") || name.includes("غسول") || name.includes("مرطب") || name.includes("شعر") || name.includes("بشرة") || name.includes("كريم تفتيح")) {
-    if (cat === "medicines") cat = "skincare";
-  } else if (name.includes("معجون") || name.includes("شاور") || name.includes("صابون") || name.includes("فرشاة") || name.includes("مبرد") || name.includes("مزيل")) {
-    if (cat === "medicines") cat = "personal";
-  } else if (name.includes("بامبرز") || name.includes("حفاض") || name.includes("لهاية") || name.includes("ببرونة") || name.includes("أطفال")) {
-    if (cat === "medicines") cat = "baby";
-  } else if (name.includes("جهاز") || name.includes("ضغط") || name.includes("سكر") || name.includes("حرارة") || name.includes("ميزان") || name.includes("شرائط")) {
-    if (cat === "medicines") cat = "devices";
-  } else if (name.includes("بروتين") || name.includes("كرياتين") || name.includes("واي") || name.includes("جيم") || name.includes("bcaa")) {
-    if (cat === "medicines") cat = "fitness";
-  } else if (name.includes("فيتامين") || name.includes("كالسيوم") || name.includes("حديد") || name.includes("زنك") || name.includes("أوميجا") || name.includes("مكمل")) {
-    if (cat === "medicines") cat = "vitamins";
+
+  // 1. Medicines (Syrups, tablets, capsules, drops, inhalers)
+  const isMedicine = /شراب|أقراص|كبسول|نقط|أمبول|حقن|مرهم|جل|سبراي|لبوس|فوار|محلول استنشاق|جرعة/i.test(name) && !/فيتامين|كالسيوم|حديد|زنك|أوميجا|مكمل|شاور|غسول/i.test(name);
+
+  // 2. Strict Medical Devices & Hospital Supplies
+  const isMedDevice = /اوكسيميتر|جهاز ضغط|قياس ضغط|جهاز سكر|جهاز قياس|ترمومتر|نيبولايزر|قناع جهاز استنشاق|شريط قياس|شرائط قياس|شرائط سكر|شاش طبي|شاش فازلين|قطن طبي|بلاستر طبي|ميزان رقمي|ميزان ديجيتال/i.test(name) && !isMedicine;
+
+  // 3. Personal Care (Hygiene, Bath, Hair Removal, Deodorants, Oral Care)
+  const isPersonal = /مزيل عرق|رول اون|معجون اسنان|فرشاة اسنان|فرشاة أسنان|فرشاة تنظيف|شاور|لوفة|حلاقة|فوط صحية|مناديل|مبرد|إزالة الشعر|سويت|شرائح شمع|شمع/i.test(name) || /صابون(ة)?\s*(ديتول|نابلسي|فنيك|كبريت|مغربي)/i.test(name);
+
+  // 4. Baby & Mother Care
+  const isBaby = /بامبرز|حفاض|لهاية|ببرونة|سوبر كيدز|أطفال|طفل|شامبو أطفال|زيت أطفال/i.test(name) && !/لوفة/i.test(name);
+
+  // 5. Vitamins & Sports Nutrition
+  const isVitamins = /فيتامين|كالسيوم|حديد|زنك|أوميجا|ماغنسيوم|مكمل|رويال جيلي/i.test(name);
+  const isFitness = /بروتين|كرياتين|واي بروتين|bcaa|ماس جينر|جلوتامين/i.test(name);
+
+  // 6. Skincare / Hair Cosmetics
+  const isSkincare = /غسول|ميسلار|مرطب|سيروم|كريم تفتيح|واقي شمس|صن بلوك|اسكراب|ماسكرا|ماسك|تونر|شعر|بشرة/i.test(name) && !isPersonal && !isBaby;
+
+  if (isMedDevice) {
+    cat = "devices";
+  } else if (isPersonal) {
+    cat = "personal";
+  } else if (isBaby) {
+    cat = "baby";
+  } else if (isFitness) {
+    cat = "fitness";
+  } else if (isVitamins) {
+    cat = "vitamins";
+  } else if (isSkincare) {
+    cat = "skincare";
+  } else if (isMedicine) {
+    cat = "medicines";
   }
+
   return {
     ...p,
     category: cat,
