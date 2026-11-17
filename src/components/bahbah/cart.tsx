@@ -45,10 +45,31 @@ import {
   type DeliveryZone,
 } from "@/lib/bahbah/data";
 import { useBahbah, useT, useZones, effStock } from "@/lib/bahbah/store";
+import type { DictKey } from "@/lib/bahbah/i18n";
 import { IconScooter, IconStorefront, IconClockFast, IconPin, IconWallet, IconPlus, IconWhatsapp } from "./icons";
 import { fmtPrice, ProductVisual } from "./product-card";
 import Reveal from "./reveal";
 import { toast } from "sonner";
+
+/* ------------------------------------------------------------------ */
+/* Egyptian mobile validation                                          */
+/* ------------------------------------------------------------------ */
+/**
+ * يحوّل الأرقام العربية/الفارسية (٠١٢…) لإنجليزية، ويشيل المسافات والشرطات والرموز،
+ * ويقبل الصيغ الدولية (+20 / 0020) ويرجّعها لشكل 01xxxxxxxxx.
+ */
+export function normalizeEgPhone(raw: string): string {
+  const latin = raw
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+  let digits = latin.replace(/\D/g, "");
+  if (digits.startsWith("0020")) digits = "0" + digits.slice(4);
+  else if (digits.startsWith("20") && digits.length === 12) digits = "0" + digits.slice(2);
+  return digits;
+}
+
+/** موبايل مصري: 11 رقم يبدأ بـ 010 أو 011 أو 012 أو 015 */
+const EG_MOBILE = /^01[0125]\d{8}$/;
 
 /* ------------------------------------------------------------------ */
 /* Cart page — packshots + free-shipping progress + coupon + savings   */
@@ -417,10 +438,21 @@ export function CheckoutView() {
     );
   }
 
-  const step1Valid =
-    name.trim() &&
-    phone.trim().length >= 8 &&
-    (deliveryType === "pickup" || (address.trim() && zoneId && (zoneId !== "custom-village" || customVillageName.trim())));
+  /* رقم الموبايل بعد التنظيف — ده اللي بيتخزن ويتبعت للمندوب */
+  const phoneNorm = normalizeEgPhone(phone);
+
+  /* أول حقل ناقص بيرجع رسالته المخصصة، و null معناها كله تمام */
+  const step1Error: DictKey | null = !name.trim()
+    ? "checkout.err.name"
+    : !EG_MOBILE.test(phoneNorm)
+      ? "checkout.err.phone"
+      : deliveryType === "delivery" && !zoneId
+        ? "checkout.err.zone"
+        : deliveryType === "delivery" && zoneId === "custom-village" && !customVillageName.trim()
+          ? "checkout.err.village"
+          : deliveryType === "delivery" && !address.trim()
+            ? "checkout.err.address"
+            : null;
 
   const steps = [t("checkout.step1"), t("checkout.step2"), t("checkout.step3")];
   const zoneName = (z: DeliveryZone) => (lang === "ar" ? z.nameAr : z.nameEn);
@@ -751,8 +783,8 @@ export function CheckoutView() {
               size="lg"
               className="h-12 w-full rounded-full text-base font-bold"
               onClick={() => {
-                if (!step1Valid) {
-                  toast.error(t("auth.invalid"));
+                if (step1Error) {
+                  toast.error(t(step1Error));
                   return;
                 }
                 setStep(2);
@@ -1040,7 +1072,7 @@ export function CheckoutView() {
                   const resolvedAddress = `${villagePart}${address.trim()}${notesPart}${changePart}`.trim();
                   const id = placeOrder({
                     address: resolvedAddress,
-                    phone,
+                    phone: phoneNorm,
                     payment,
                     name,
                     city: resolvedCity,
