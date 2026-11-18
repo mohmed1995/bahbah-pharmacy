@@ -1,5 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
-import type { Order, RxRequest, CareSubscriber, PatientMeasurement } from "./bahbah/data";
+import type { Order, RxRequest, CareSubscriber, PatientMeasurement, Role } from "./bahbah/data";
+
+/**
+ * الدور الموثّق للمستخدم. بنقراه من app_metadata فقط (بيتكتب من السيرفر/لوحة Supabase بس).
+ * user_metadata يقدر أي مستخدم يعدّله بنفسه (signUp / updateUser) فمينفعش نثق فيه أبدًا
+ * لأي صلاحية أعلى من "patient".
+ */
+const STAFF_ROLES: Role[] = ["courier", "pharmacist", "admin"];
+export function roleFromSupabaseUser(
+  user: { app_metadata?: Record<string, unknown> | null } | null | undefined
+): Role {
+  const r = user?.app_metadata?.role;
+  return typeof r === "string" && (STAFF_ROLES as string[]).includes(r) ? (r as Role) : "patient";
+}
+export function driverIdFromSupabaseUser(
+  user: { app_metadata?: Record<string, unknown> | null } | null | undefined
+): string | undefined {
+  const d = user?.app_metadata?.driverId;
+  return typeof d === "string" ? d : undefined;
+}
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.invalid";
@@ -193,10 +212,35 @@ export function mapDbMeasurementToMeasurement(row: DbPatientMeasurement): Patien
 
 /* Supabase API Services */
 
-/* طابور الطلبات اللي فشل حفظها (شبكة ضعيفة / انقطاع) — بيتعاد إرسالها تلقائيًا */
-const PENDING_ORDERS_KEY = "bahbah_pending_orders_v1";
+/* ------------------------------------------------------------------ */
+/* الطلبات: بتتبعت للسيرفر (place_order) اللي بيحسب الأسعار والخصم والتوصيل بنفسه —   */
+/* أي أرقام جاية من المتصفح بتتجاهل.                                              */
+/* ------------------------------------------------------------------ */
+export interface PlaceOrderPayload {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  payment: string;
+  deliveryType: "delivery" | "pickup";
+  zoneId?: string;
+  slotId?: string;
+  coupon?: string;
+  driverId?: string;
+  items: { productId: string; qty: number; nameAr: string; nameEn: string }[];
+}
+export interface PlaceOrderResult {
+  id: string;
+  subtotal: number;
+  discount: number;
+  delivery_fee: number;
+  total: number;
+  duplicate?: boolean;
+}
 
-function readPendingOrders(): Partial<DbOrder>[] {
+const PENDING_ORDERS_KEY = "bahbah_pending_orders_v2";
+
+function readPendingOrders(): PlaceOrderPayload[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(PENDING_ORDERS_KEY);
@@ -207,7 +251,7 @@ function readPendingOrders(): Partial<DbOrder>[] {
   }
 }
 
-function writePendingOrders(list: Partial<DbOrder>[]) {
+function writePendingOrders(list: PlaceOrderPayload[]) {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(PENDING_ORDERS_KEY, JSON.stringify(list));
@@ -216,57 +260,71 @@ function writePendingOrders(list: Partial<DbOrder>[]) {
   }
 }
 
-function queuePendingOrder(payload: Partial<DbOrder>) {
+function queuePendingOrder(payload: PlaceOrderPayload) {
   const list = readPendingOrders();
-  if (!list.some((p) => p.id === payload.id)) {
-    writePendingOrders([...list, payload]);
-  }
+  if (!list.some((p) => p.id === payload.id)) writePendingOrders([...list, payload]);
 }
 
-/** رقم مفتاح مكرر = الطلب موجود فعلًا في القاعدة، يعتبر نجاح */
-function isDuplicateKeyError(error: { code?: string; message?: string }) {
-  return error.code === "23505" || /duplicate key/i.test(error.message || "");
+/** رفض نهائي من السيرفر (بيانات غلط) — إعادة المحاولة مش هتفيد */
+function isPermanentRejection(error: { code?: string; message?: string }) {
+  return /bad_|unknown_product/.test(error.message || "");
 }
 
-// Insert Order — returns the payload on success, null if it was queued for retry
-export async function insertOrderToSupabase(order: Order, subtotal?: number) {
-  const payload = mapOrderToDb(order, subtotal);
+async function sendOrder(payload: PlaceOrderPayload): Promise<"ok" | "retry" | "rejected"> {
   try {
-    // Note: Do NOT use .select() here so anon inserts succeed without requiring SELECT permissions
-    const { error } = await supabase.from("orders").insert(payload);
-    if (error && !isDuplicateKeyError(error)) {
-      console.warn("Supabase insertOrder error:", error.message, error);
-      queuePendingOrder(payload);
-      return null;
+    const { data, error } = await supabase.rpc("place_order", { p: payload });
+    if (error) {
+      console.warn("Supabase place_order error:", error.message);
+      return isPermanentRejection(error) ? "rejected" : "retry";
     }
-    console.log("⚡ [Supabase Sync] Order inserted successfully into Supabase:", order.id);
-    return payload;
+    lastOrderResults.set(payload.id, data as PlaceOrderResult);
+    return "ok";
   } catch (err) {
-    console.warn("Supabase insertOrder failed:", err);
-    queuePendingOrder(payload);
-    return null;
+    console.warn("Supabase place_order failed:", err);
+    return "retry";
   }
+}
+const lastOrderResults = new Map<string, PlaceOrderResult>();
+
+/**
+ * ينشئ الطلب على السيرفر. بيرجّع الأرقام النهائية المحسوبة هناك،
+ * أو null لو اتحط في الطابور (شبكة) أو اترفض.
+ */
+export async function submitOrderToSupabase(
+  payload: PlaceOrderPayload
+): Promise<{ result: PlaceOrderResult | null; rejected: boolean }> {
+  const r = await sendOrder(payload);
+  if (r === "ok") return { result: lastOrderResults.get(payload.id) ?? null, rejected: false };
+  if (r === "retry") queuePendingOrder(payload);
+  return { result: null, rejected: r === "rejected" };
 }
 
 /** إعادة إرسال الطلبات المعلّقة — بتتنادى عند فتح التطبيق ولما النت يرجع */
 export async function flushPendingOrders() {
   const pending = readPendingOrders();
   if (pending.length === 0) return;
-  const stillPending: Partial<DbOrder>[] = [];
+  const stillPending: PlaceOrderPayload[] = [];
   for (const payload of pending) {
-    try {
-      const { error } = await supabase.from("orders").insert(payload);
-      if (error && !isDuplicateKeyError(error)) {
-        console.warn("Supabase flushPendingOrders error:", error.message);
-        stillPending.push(payload);
-      } else {
-        console.log("⚡ [Supabase Sync] Pending order delivered:", payload.id);
-      }
-    } catch {
-      stillPending.push(payload);
-    }
+    if ((await sendOrder(payload)) === "retry") stillPending.push(payload);
   }
   writePendingOrders(stillPending);
+}
+
+/** طلب تكرار علاج شهري (بدون أسعار — الصيدلية بتراجعه وتسعّره) */
+export async function submitRefillToSupabase(p: { id: string; name: string; phone: string; address: string }) {
+  try {
+    const { error } = await supabase.rpc("place_refill", { p });
+    if (error) console.warn("Supabase place_refill error:", error.message);
+  } catch (err) {
+    console.warn("Supabase place_refill failed:", err);
+  }
+}
+
+/** حد الشحن المجاني — الأدمن بس (RLS) */
+export async function syncFreeThresholdToSupabase(value: number) {
+  try {
+    await supabase.from("shop_settings").update({ free_threshold: Math.max(0, value) }).eq("id", "global");
+  } catch {}
 }
 
 // Fetch all orders
@@ -564,5 +622,16 @@ export async function signOutFromSupabase() {
     await supabase.auth.signOut();
   } catch (err) {
     console.warn("[Supabase Auth] signOut error:", err);
+  }
+}
+
+/** تتبع حالة طلب برقمه فقط (RPC آمنة — بتتعرّف في supabase/security.sql) */
+export async function trackOrderStatus(orderId: string) {
+  try {
+    const { data, error } = await supabase.rpc("track_order", { p_id: orderId });
+    if (error || !Array.isArray(data) || data.length === 0) return null;
+    return data[0] as { id: string; status: string; courier_id: string | null; updated_at: string };
+  } catch {
+    return null;
   }
 }

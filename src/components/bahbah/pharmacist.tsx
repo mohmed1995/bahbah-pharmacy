@@ -60,6 +60,7 @@ export default function PharmacistPortal() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const user = useBahbah((s) => s.user);
+  const sessionRole = useBahbah((s) => s.sessionRole);
   const adminOrders = useBahbah((s) => s.adminOrders);
   const rxQueue = useBahbah((s) => s.rxQueue);
   const measurements = useBahbah((s) => s.measurements);
@@ -183,7 +184,7 @@ export default function PharmacistPortal() {
     }
   };
 
-  if (!user || user.role !== "pharmacist") return <StaffGatePharm />;
+  if (!user || sessionRole !== "pharmacist") return <StaffGatePharm />;
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-24 pt-5 md:px-6 md:pb-12">

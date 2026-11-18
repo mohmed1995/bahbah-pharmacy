@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -21,6 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useBahbah, useT } from "@/lib/bahbah/store";
+import { trackOrderStatus } from "@/lib/supabase";
 import { zoneById, driverById, BRANCH, PHARMACY } from "@/lib/bahbah/data";
 import { IconScooter, IconStorefront, IconPin, IconClockFast, IconOtpBox, IconStarRate } from "./icons";
 import { fmtPrice } from "./product-card";
@@ -61,6 +62,34 @@ export default function TrackView() {
     () => myOrders.find((o) => o.id === trackOrderId) ?? myOrders[0],
     [myOrders, trackOrderId]
   );
+
+  /* تحديث حالة طلب العميل نفسه كل 15 ثانية عبر RPC آمنة (بدل قراءة كل الطلبات) */
+  const orderId = order?.id;
+  useEffect(() => {
+    if (!orderId) return;
+    let stop = false;
+    const tick = async () => {
+      const r = await trackOrderStatus(orderId);
+      if (stop || !r) return;
+      useBahbah.setState((st) => ({
+        myOrders: st.myOrders.map((o) =>
+          o.id === orderId
+            ? {
+                ...o,
+                status: r.status as typeof o.status,
+                delivery: { type: "delivery", ...o.delivery, driverId: r.courier_id ?? undefined },
+              }
+            : o
+        ),
+      }));
+    };
+    tick();
+    const h = setInterval(tick, 15000);
+    return () => {
+      stop = true;
+      clearInterval(h);
+    };
+  }, [orderId]);
 
   if (!order) {
     return (

@@ -18,7 +18,15 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CORE_CACHE)
-      .then((cache) => cache.addAll(CORE_ASSETS))
+      /* addAll بيفشل كله لو ملف واحد مش موجود (404) فالـ SW ما بيتثبتش أبدًا —
+         فبنخزّن كل ملف لوحده ونتجاهل الغايب */
+      .then((cache) =>
+        Promise.all(
+          CORE_ASSETS.map((u) =>
+            cache.add(u).catch(() => undefined)
+          )
+        )
+      )
       .then(() => self.skipWaiting())
   );
 });

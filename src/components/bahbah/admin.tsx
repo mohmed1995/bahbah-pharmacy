@@ -696,9 +696,8 @@ function SettingsSection() {
   const careEdits = useBahbah((s) => s.careEdits);
   const zoneEdits = useBahbah((s) => s.zoneEdits);
   const setSection = useBahbah((s) => s.setAdminSection);
-  const { updateSettings, updateSiteEdits, updateCareEdit, updateZoneEdit, setAdminPass, resetAdminDemo } =
+  const { updateSettings, updateSiteEdits, updateCareEdit, updateZoneEdit, resetAdminDemo } =
     useBahbah();
-  const [newPass, setNewPass] = useState("");
 
   return (
     <div className="grid max-w-4xl gap-4 lg:grid-cols-2">
@@ -895,39 +894,6 @@ function SettingsSection() {
         </p>
       </AdminCard>
 
-      {/* admin panel password */}
-      <AdminCard>
-        <SectionTitle
-          icon={<LockKeyhole className="size-5 text-[#F09428]" />}
-          title={t("adm.pass.title")}
-        />
-        <p className="mt-1 text-xs font-semibold text-muted-foreground">{t("adm.pass.d")}</p>
-        <div className="mt-4 flex gap-2">
-          <Input
-            type="password"
-            value={newPass}
-            onChange={(e) => setNewPass(e.target.value)}
-            placeholder={t("adm.pass.new")}
-            className="h-11 flex-1 rounded-xl"
-            dir="ltr"
-          />
-          <Button
-            className="h-11 rounded-xl px-5 font-bold"
-            onClick={() => {
-              if (newPass.trim().length < 3) {
-                toast.error(t("adm.gate.wrong"));
-                return;
-              }
-              setAdminPass(newPass);
-              setNewPass("");
-              toast.success(t("adm.pass.ok"));
-            }}
-          >
-            {t("adm.pass.save")}
-          </Button>
-        </div>
-      </AdminCard>
-
       {/* شعارات ووعود المتجر ونصوص الهيرو — تحكم سهل وسريع */}
       <AdminCard className="lg:col-span-2">
         <SectionTitle
@@ -1115,7 +1081,7 @@ function SettingsSection() {
               </h3>
             </div>
             <p className="text-xs text-rose-800/80 dark:text-rose-300 font-semibold max-w-xl">
-              تصفير كافة الطلبات والروشتات والاشتراكات التجريبية السابقة تماماً، وبدء العدادات والإحصائيات من صفر لبدء استقبال طلبات العملاء الحقيقية في صيدلية بحبح ديروط.
+              تصفير نسخة اللوحة المحلية على هذا الجهاز (الطلبات والروشتات والاشتراكات والعدادات). لا يمسح قاعدة البيانات السحابية — أي حذف من السحابة يتم من لوحة Supabase فقط.
             </p>
           </div>
 
@@ -1123,7 +1089,7 @@ function SettingsSection() {
             className="h-11 rounded-full bg-rose-600 px-6 font-black text-white hover:bg-rose-700 shadow-md shadow-rose-600/25 active:scale-95 transition-all text-xs"
             onClick={() => {
               const ok = window.confirm(
-                "تأكيد التصفير الشامل:\n\nهل تريد تصفير جميع الطلبات والروشتات التجريبية وتصفير العدادات لبدء التشغيل الفعلي على نظيف؟"
+                "تأكيد التصفير المحلي:\n\nسيتم تصفير نسخة اللوحة على هذا الجهاز فقط ولن يتم حذف أي بيانات من السحابة. متابعة؟"
               );
               if (ok) {
                 resetAdminDemo();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Mail,
   Lock,
@@ -42,7 +42,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBahbah, useT, useCarePlans, roleHome, type AccountTab } from "@/lib/bahbah/store";
 import { getProduct, PHARMACY, ROLE_META, type Role } from "@/lib/bahbah/data";
-import { signInWithSupabase, signUpWithSupabase } from "@/lib/supabase";
+import { biometricSupported, biometricEnrolled, enrollBiometric, biometricLogin, forgetBiometric, BioError } from "@/lib/bahbah/biometric";
+import { signInWithSupabase, signUpWithSupabase, signOutFromSupabase, roleFromSupabaseUser, driverIdFromSupabaseUser } from "@/lib/supabase";
 import { fmtPrice, ProductCard } from "./product-card";
 import CareMembershipCard, { DayPicker } from "./care-card";
 import { IconRefill, IconWhatsapp } from "./icons";
@@ -119,6 +120,56 @@ export function UnifiedLoginModal() {
     }
   };
 
+  /* ---- بصمة الجهاز مربوطة بـ Supabase ---- */
+  const [bioOk, setBioOk] = useState(false);
+  const [bioOn, setBioOn] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+  useEffect(() => {
+    biometricSupported().then(setBioOk);
+    setBioOn(biometricEnrolled());
+  }, [open]);
+
+  const bioMsg = (code: string) =>
+    ({
+      unsupported: lang === "ar" ? "جهازك أو متصفحك لا يدعم البصمة" : "Biometrics not supported here",
+      no_session: lang === "ar" ? "تعذّر ربط الجهاز بالسحابة — حاول لاحقًا" : "Could not link this device",
+      cancelled: lang === "ar" ? "لم تكتمل عملية البصمة" : "Biometric check cancelled",
+      not_enrolled: lang === "ar" ? "البصمة غير مفعّلة على هذا الجهاز" : "Biometrics not enabled",
+      session_expired: lang === "ar" ? "انتهت الجلسة — ادخل برقمك وفعّل البصمة من جديد" : "Session expired — log in again",
+      save_failed: lang === "ar" ? "تعذّر حفظ البصمة في حسابك" : "Could not save your biometric",
+    } as Record<string, string>)[code] ?? (lang === "ar" ? "حدث خطأ" : "Error");
+
+  const handleBiometric = async () => {
+    setBioBusy(true);
+    try {
+      if (bioOn) {
+        const p = await biometricLogin();
+        const nm = p.name || (lang === "ar" ? "عميل بحبح" : "Bahbah Customer");
+        finish({ name: nm, phone: p.phone, email: `${p.phone}@bahbah.eg`, role: "patient" }, nm);
+      } else {
+        const phone = customerPhone.trim().replace(/\s+/g, "");
+        if (phone.length < 8) {
+          toast.error(lang === "ar" ? "اكتب رقم موبايلك أولًا ثم فعّل البصمة" : "Enter your phone first");
+          return;
+        }
+        const nm = customerName.trim() || (lang === "ar" ? "عميل بحبح" : "Bahbah Customer");
+        await enrollBiometric({ name: nm, phone });
+        setBioOn(true);
+        toast.success(lang === "ar" ? "تم تفعيل البصمة على هذا الجهاز" : "Biometrics enabled");
+        finish({ name: nm, phone, email: `${phone}@bahbah.eg`, role: "patient" }, nm);
+      }
+    } catch (e) {
+      const code = e instanceof BioError ? e.code : "cancelled";
+      if (code === "session_expired") {
+        forgetBiometric();
+        setBioOn(false);
+      }
+      toast.error(bioMsg(code));
+    } finally {
+      setBioBusy(false);
+    }
+  };
+
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffEmail.includes("@") || staffPassword.length < 3) {
@@ -130,10 +181,17 @@ export function UnifiedLoginModal() {
       const { data, error } = await signInWithSupabase(staffEmail, staffPassword);
       if (!error && data?.user) {
         const meta = data.user.user_metadata || {};
-        const role = (meta.role as Role) || staffRole;
+        /* الدور من app_metadata بس (مش من user_metadata ولا من اختيار الشاشة) */
+        const role = roleFromSupabaseUser(data.user);
+        if (role === "patient") {
+          await signOutFromSupabase();
+          toast.error(lang === "ar" ? "هذا الحساب غير مصرح له بدخول بوابة الطاقم" : "This account is not authorised for the staff portal");
+          return;
+        }
+        useBahbah.getState().setSessionRole(role);
         const name = meta.name || staffEmail.split("@")[0];
         finish(
-          { name, email: staffEmail, role, driverId: meta.driverId },
+          { name, email: staffEmail, role, driverId: driverIdFromSupabaseUser(data.user) },
           name
         );
         return;
@@ -141,35 +199,6 @@ export function UnifiedLoginModal() {
     } catch {}
 
     toast.error(lang === "ar" ? "بيانات الدخول غير صحيحة" : "Invalid staff credentials");
-  };
-
-  const handleBiometricAuth = async () => {
-    if (typeof window !== "undefined" && window.PublicKeyCredential) {
-      try {
-        toast.info(lang === "ar" ? "جاري التحقق من البصمة / Touch ID..." : "Verifying Biometrics...");
-        // Fallback simulate or check WebAuthn
-        setTimeout(() => {
-          if (customerPhone.trim()) {
-            finish(
-              {
-                name: customerName || (lang === "ar" ? "عميل موثق بالبصمة" : "Biometric Customer"),
-                phone: customerPhone,
-                email: `${customerPhone}@bahbah.eg`,
-                role: "patient",
-              },
-              customerName || "عميل بحبح"
-            );
-            toast.success(lang === "ar" ? "تم التحقق بالبصمة وتأكيد هوية الجهاز بنجاح!" : "Biometrics verified!");
-          } else {
-            toast.success(lang === "ar" ? "تم تفعيل بصمة جهازك بنجاح! اكتب رقمك للمرة الأولى فقط." : "Device biometric ready!");
-          }
-        }, 1200);
-      } catch {
-        toast.error(lang === "ar" ? "لم تكتمل عملية البصمة" : "Biometric auth cancelled");
-      }
-    } else {
-      toast.info(lang === "ar" ? "البصمة مدعومة على متصفحات الهواتف الذكية الحديثة" : "Biometrics supported on mobile browsers");
-    }
   };
 
   return (
@@ -269,15 +298,21 @@ export function UnifiedLoginModal() {
                   <span>{lang === "ar" ? "تذكر هذا الجهاز دائماً" : "Remember this device"}</span>
                 </label>
 
-                <button
-                  type="button"
-                  onClick={handleBiometricAuth}
-                  className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-200 transition"
-                  title="الدخول بالبصمة"
-                >
-                  <Fingerprint className="size-4 text-[#184C8A]" />
-                  <span>{lang === "ar" ? "بصمة الجهاز" : "Biometrics"}</span>
-                </button>
+                {bioOk && (
+                  <button
+                    type="button"
+                    onClick={handleBiometric}
+                    disabled={bioBusy}
+                    className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 transition hover:bg-slate-200 disabled:opacity-60"
+                  >
+                    <Fingerprint className="size-4 text-[#184C8A]" />
+                    <span>
+                      {bioOn
+                        ? lang === "ar" ? "دخول بالبصمة" : "Sign in with biometrics"
+                        : lang === "ar" ? "فعّل البصمة" : "Enable biometrics"}
+                    </span>
+                  </button>
+                )}
               </div>
 
               <Button
@@ -445,10 +480,17 @@ export function LoginView() {
       const { data, error } = await signInWithSupabase(staffEmail, staffPassword);
       if (!error && data?.user) {
         const meta = data.user.user_metadata || {};
-        const role = (meta.role as Role) || staffRole;
+        /* الدور من app_metadata بس (مش من user_metadata ولا من اختيار الشاشة) */
+        const role = roleFromSupabaseUser(data.user);
+        if (role === "patient") {
+          await signOutFromSupabase();
+          toast.error(lang === "ar" ? "هذا الحساب غير مصرح له بدخول بوابة الطاقم" : "This account is not authorised for the staff portal");
+          return;
+        }
+        useBahbah.getState().setSessionRole(role);
         const name = meta.name || staffEmail.split("@")[0];
         finish(
-          { name, email: staffEmail, role, driverId: meta.driverId },
+          { name, email: staffEmail, role, driverId: driverIdFromSupabaseUser(data.user) },
           name
         );
         return;

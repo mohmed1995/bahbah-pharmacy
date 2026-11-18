@@ -34,7 +34,9 @@ import {
 } from "./data";
 import { toast } from "sonner";
 import {
-  insertOrderToSupabase,
+  submitOrderToSupabase,
+  submitRefillToSupabase,
+  syncFreeThresholdToSupabase,
   updateOrderStatusInSupabase,
   insertRxRequestToSupabase,
   updateRxStatusInSupabase,
@@ -283,9 +285,10 @@ interface BahbahState {
   sortDir: SortDir;
   filters: CatalogFilters;
 
-  /* ---- admin password gate ---- */
+  /* ---- verified staff session (NOT persisted — comes from the live Supabase session) ---- */
   adminUnlocked: boolean;
-  adminPass: string;
+  sessionRole: Role | null;
+  setSessionRole: (r: Role | null) => void;
 
   /* ---- CMS layers edited from the dashboard ---- */
   siteEdits: SiteEdits;
@@ -399,7 +402,6 @@ interface BahbahState {
 
   /* ---- admin password gate & CMS editors ---- */
   lockAdmin: () => void;
-  setAdminPass: (p: string) => void;
   updateSiteEdits: (patch: SiteEdits) => void;
   updateAdEdit: (id: string, patch: AdEdit) => void;
   updateOfferEdit: (id: string, patch: OfferEdit) => void;
@@ -698,7 +700,8 @@ export const useBahbah = create<BahbahState>()(
       filters: DEFAULT_FILTERS,
 
       adminUnlocked: false,
-      adminPass: "",
+      sessionRole: null,
+      setSessionRole: (r) => set({ sessionRole: r, adminUnlocked: r === "admin" }),
       siteEdits: {},
       adEdits: {},
       offerEdits: {},
@@ -782,7 +785,7 @@ export const useBahbah = create<BahbahState>()(
 
       login: (user) => set({ user }),
       logout: () => {
-        set({ user: null, adminUnlocked: false, view: "home" });
+        set({ user: null, adminUnlocked: false, sessionRole: null, view: "home" });
         signOutFromSupabase();
       },
 
@@ -892,8 +895,41 @@ export const useBahbah = create<BahbahState>()(
           } catch {}
         }
         /* الحفظ في Supabase: لو فشل يتحط في طابور محلي ويتعاد تلقائيًا، والعميل يتنبّه */
-        insertOrderToSupabase(order, subtotal).then((saved) => {
-          if (!saved && typeof window !== "undefined") {
+        submitOrderToSupabase({
+          id,
+          name: order.customerAr,
+          phone,
+          address: order.address,
+          payment,
+          deliveryType,
+          zoneId: zone?.id,
+          slotId: deliveryType === "delivery" ? slotId : undefined,
+          coupon: state.appliedCoupon ?? undefined,
+          driverId: driver?.id,
+          items: items.map((i) => ({ productId: i.productId, qty: i.qty, nameAr: i.nameAr, nameEn: i.nameEn })),
+        }).then(({ result, rejected }) => {
+          if (typeof window === "undefined") return;
+          if (result) {
+            /* السيرفر هو المرجع في الأسعار: لو اختلف عن حسابنا نعدّل الطلب المحلي ونعرّف العميل */
+            if (Math.abs(result.total - order.total) >= 0.5) {
+              const fix = (o: Order): Order =>
+                o.id === id
+                  ? {
+                      ...o,
+                      total: result.total,
+                      discount: result.discount > 0 ? result.discount : undefined,
+                      delivery: { type: "delivery", ...o.delivery, fee: result.delivery_fee },
+                    }
+                  : o;
+              useBahbah.setState((st) => ({
+                myOrders: st.myOrders.map(fix),
+                adminOrders: st.adminOrders ? st.adminOrders.map(fix) : null,
+              }));
+              toast.warning(`تم تحديث إجمالي طلبك إلى ${result.total} ج.م حسب الأسعار الحالية`);
+            }
+          } else if (rejected) {
+            toast.error("الصيدلية ما قدرتش تسجّل الطلب — راجع السلة وحاول تاني أو كلمنا بالواتساب", { duration: 10000 });
+          } else {
             toast.warning("الطلب اتسجّل عندك — هيتبعت للصيدلية أول ما النت يرجع", {
               description: "ممكن كمان تبعته بالواتساب من صفحة النجاح للتأكيد السريع",
               duration: 10000,
@@ -1071,7 +1107,12 @@ export const useBahbah = create<BahbahState>()(
             fee: 0,
           },
         };
-        await insertOrderToSupabase(order, 0);
+        await submitRefillToSupabase({
+          id: orderId,
+          name: patient.nameAr,
+          phone: patient.phone,
+          address: order.address,
+        });
         set((s) => ({
           myOrders: [order, ...s.myOrders],
           adminOrders: [order, ...(s.adminOrders || [])],
@@ -1282,7 +1323,12 @@ export const useBahbah = create<BahbahState>()(
             : [...list, zoneId],
         });
       },
-      updateSettings: (patch) => set({ settings: { ...get().settings, ...patch } }),
+      updateSettings: (patch) => {
+        set({ settings: { ...get().settings, ...patch } });
+        if (typeof patch.freeThreshold === "number" && get().sessionRole === "admin") {
+          syncFreeThresholdToSupabase(patch.freeThreshold);
+        }
+      },
       toggleCouponActive: (code) => {
         const next = get().coupons.map((c) =>
           c.code === code ? { ...c, active: !c.active } : c
@@ -1339,13 +1385,8 @@ export const useBahbah = create<BahbahState>()(
 
       /* ---- admin password gate & CMS editors ---- */
       lockAdmin: () => {
-        set({ adminUnlocked: false });
+        set({ adminUnlocked: false, sessionRole: null, user: null });
         signOutFromSupabase();
-      },
-      setAdminPass: (p) => {
-        const next = p.trim();
-        set({ adminPass: next });
-        syncAdminSettingsToSupabase({ admin_pass: next });
       },
       updateSiteEdits: (patch) => {
         const next = { ...get().siteEdits, ...patch };
@@ -1372,6 +1413,8 @@ export const useBahbah = create<BahbahState>()(
         syncAdminSettingsToSupabase({ zone_edits: next });
       },
       resetAdminDemo: () => {
+        /* صلاحية حقيقية بس: جلسة Supabase موثّقة بدور admin (مش مجرد state محلي) */
+        if (get().sessionRole !== "admin") return;
         set({
           adminOrders: [],
           myOrders: [],
@@ -1394,15 +1437,9 @@ export const useBahbah = create<BahbahState>()(
           price_override: {},
           custom_products: [],
         });
-        /* Also wipe remote Supabase tables so production starts with zero test orders */
-        if (typeof window !== "undefined") {
-          import("../supabase").then(({ supabase }) => {
-            supabase.from("orders").delete().neq("id", "none").then(() => {});
-            supabase.from("rx_requests").delete().neq("id", "none").then(() => {});
-            supabase.from("care_subscriptions").delete().neq("id", "none").then(() => {});
-            supabase.from("patient_measurements").delete().neq("id", "none").then(() => {});
-          }).catch(() => {});
-        }
+        /* ⚠️ الزر ده بيصفّر الحالة المحلية بس. كان زمان بيمسح جداول الطلبات والروشتات
+           والاشتراكات والقياسات من قاعدة الإنتاج مباشرة من المتصفح (فقدان بيانات عملاء
+           حقيقيين بضغطة). أي مسح من السحابة لازم يتعمل من لوحة Supabase بشكل واعي. */
       },
     }),
     {
@@ -1466,8 +1503,6 @@ export const useBahbah = create<BahbahState>()(
         adsOff: s.adsOff,
         careSubs: s.careSubs,
         measurements: s.measurements,
-        adminUnlocked: s.adminUnlocked,
-        adminPass: s.adminPass,
         siteEdits: s.siteEdits,
         adEdits: s.adEdits,
         careEdits: s.careEdits,

@@ -118,7 +118,7 @@ function PharmacistFab() {
 export default function BahbahApp() {
   const view = useBahbah((s) => s.view);
   const user = useBahbah((s) => s.user);
-  const adminUnlocked = useBahbah((s) => s.adminUnlocked);
+  const sessionRole = useBahbah((s) => s.sessionRole);
   const mounted = useMounted();
 
   /* scroll to top whenever the view changes */
@@ -176,12 +176,13 @@ export default function BahbahApp() {
     );
   }
 
-  /* ---- role guards: staff portals only open for the matching role ----
-     admin = dedicated password gate (2026 by default) OR an admin account */
-  const adminLocked = !adminUnlocked && (!user || user.role !== "admin");
+  /* ---- role guards: staff portals only open for a VERIFIED Supabase session ----
+     الدور بيجي من app_metadata في جلسة Supabase الحية (sessionRole) — مش من localStorage
+     اللي أي حد يقدر يعدّله. وكل صلاحية فعلية لازم تتأكد برضه بسياسات RLS في القاعدة. */
+  const adminLocked = sessionRole !== "admin";
   const staffView = view === "admin" || view === "courier" || view === "pharmacist";
   const requiredRole = view === "courier" ? "courier" : "pharmacist";
-  const gate = (view === "courier" || view === "pharmacist") && (!user || user.role !== requiredRole);
+  const gate = (view === "courier" || view === "pharmacist") && sessionRole !== requiredRole;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

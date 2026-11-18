@@ -33,6 +33,7 @@ export default function CourierPortal() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
   const user = useBahbah((s) => s.user);
+  const sessionRole = useBahbah((s) => s.sessionRole);
   const adminOrders = useBahbah((s) => s.adminOrders);
   const driverStatus = useBahbah((s) => s.driverStatus);
   const { go, courierPickup, courierDeliver, cycleDriverStatus } = useBahbah();
@@ -53,7 +54,7 @@ export default function CourierPortal() {
   const myStatus = driverStatus[myDriverId] ?? driver?.status ?? "available";
 
   /* ---- not signed in / wrong role ---- */
-  if (!user || user.role !== "courier") return <StaffGate role="courier" />;
+  if (!user || sessionRole !== "courier") return <StaffGate role="courier" />;
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-24 pt-5 md:px-6 md:pb-12">
@@ -324,39 +325,12 @@ function ShipmentCard({
 export function StaffGate({ role }: { role: "courier" | "pharmacist" | "admin" }) {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
-  const drivers = useDrivers();
-  const { go, login } = useBahbah();
+  const { go } = useBahbah();
 
   const portalKey: DictKey = role === "courier" ? "port.courier" : role === "pharmacist" ? "port.pharmacist" : "port.admin";
-  const quickKey: DictKey = role === "courier" ? "auth.quickCourier" : role === "pharmacist" ? "auth.quickPharmacist" : "auth.quickAdmin";
-  const email = role === "courier" ? "courier@bahbah.eg" : role === "pharmacist" ? "pharmacist@bahbah.eg" : "admin@bahbah.eg";
 
-  const loginAsSpecificDriver = (d: { id: string; nameAr: string; nameEn: string; phone: string }) => {
-    login({
-      name: `${lang === "ar" ? d.nameAr : d.nameEn} — أسطول واصلي`,
-      email: `${d.id}@wasly.bahbah.eg`,
-      phone: d.phone,
-      role: "courier",
-      driverId: d.id,
-    });
-    go("courier");
-  };
-
-  const loginAsStaff = () => {
-    login({
-      name:
-        role === "courier"
-          ? "محمود سيد — مندوب واصلي"
-          : role === "pharmacist"
-            ? "د. سارة إبراهيم — صيدلية بحبح"
-            : "إدارة صيدلية بحبح",
-      email,
-      role,
-      driverId: role === "courier" ? (drivers[0]?.id || "dr-1") : undefined,
-    });
-    go(role);
-  };
-
+  /* دخول الطاقم بحساب Supabase حقيقي بس — اتشالت أزرار «دخول سريع» اللي كانت بتفتح
+     بوابة الصيدلي/المندوب (بيانات العملاء والعناوين والروشتات) من غير أي تحقق. */
   return (
     <main className="mx-auto max-w-xl px-4 py-16 text-center">
       <div className="flex flex-col items-center gap-4">
@@ -366,56 +340,18 @@ export function StaffGate({ role }: { role: "courier" | "pharmacist" | "admin" }
         <div>
           <h1 className="font-heading text-xl font-black md:text-2xl">{t(portalKey)}</h1>
           <p className="mt-1.5 text-xs font-bold text-muted-foreground md:text-sm">
-            {role === "courier"
-              ? (lang === "ar" ? "اختر اسمك أو رقم هاتفك من قائمة مناديب أسطول واصلي للدخول المباشر:" : "Select your courier profile:")
-              : t("port.forbidden")}
+            {t("port.forbidden")}
           </p>
         </div>
 
-        {role === "courier" ? (
-          <div className="w-full space-y-2.5 pt-2">
-            <div className="grid gap-2 sm:grid-cols-2">
-              {drivers.map((d) => (
-                <button
-                  key={d.id}
-                  onClick={() => loginAsSpecificDriver(d)}
-                  className="flex items-center justify-between gap-2.5 rounded-2xl border border-border/80 bg-card p-3 text-start shadow-xs transition hover:border-[#1E4E8F] hover:bg-[#EAF1F9]/40 active:scale-98"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#1E4E8F] font-heading font-black text-white text-sm">
-                      {(lang === "ar" ? d.nameAr : d.nameEn).charAt(0)}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="font-heading text-xs font-black truncate">{lang === "ar" ? d.nameAr : d.nameEn}</p>
-                      <p className="text-[10px] text-muted-foreground font-mono" dir="ltr">{d.phone}</p>
-                    </div>
-                  </div>
-                  <Badge className="shrink-0 bg-[#2E9E6B]/15 text-[#2E9E6B] border-0 text-[10px]">
-                    {lang === "ar" ? "دخول" : "Login"}
-                  </Badge>
-                </button>
-              ))}
-            </div>
-
-            <div className="pt-3 flex flex-wrap items-center justify-center gap-2 border-t border-border/60">
-              <Button size="sm" variant="outline" className="rounded-full px-6 font-bold" onClick={() => go("login")}>
-                {t("auth.login")}
-              </Button>
-              <Button size="sm" variant="ghost" className="rounded-full px-4 text-xs font-bold text-muted-foreground" onClick={() => go("home")}>
-                ← {t("nav.home")}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-            <Button size="lg" className="rounded-full px-8 font-black" onClick={loginAsStaff}>
-              {t(quickKey)}
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 font-bold" onClick={() => go("login")}>
-              {t("auth.login")}
-            </Button>
-          </div>
-        )}
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          <Button size="lg" className="rounded-full px-8 font-black" onClick={() => go("login")}>
+            {t("auth.login")}
+          </Button>
+          <Button size="lg" variant="ghost" className="rounded-full px-6 text-xs font-bold text-muted-foreground" onClick={() => go("home")}>
+            ← {t("nav.home")}
+          </Button>
+        </div>
       </div>
     </main>
   );
