@@ -25,6 +25,7 @@ import {
   ChevronRight,
   QrCode,
   Share2,
+  Plus,
 } from "lucide-react";
 import {
   LineChart,
@@ -43,6 +44,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useBahbah, useT, type PatientMeasurement } from "@/lib/bahbah/store";
 import { TableWrap, TH, TD } from "./admin-ui";
 import { toast } from "sonner";
+import { NewVitalsDialog } from "./vitals-dialog";
 
 /* ------------------------------------------------------------------ */
 /* Helpers for health classification                                   */
@@ -122,6 +124,7 @@ export default function VitalsPortal() {
   const [inputCode, setInputCode] = useState(user?.phone || "");
   const [activeCode, setActiveCode] = useState<string | null>(user?.phone || null);
   const [selectedMetric, setSelectedMetric] = useState<"sugar" | "bp" | "weight">("sugar");
+  const [openAddModal, setOpenAddModal] = useState(false);
 
   // Lookup results
   const patientRecords = useMemo(() => {
@@ -183,10 +186,21 @@ export default function VitalsPortal() {
           <span className="text-[#184C8A] font-black">{lang === "ar" ? "بوابة قياسات المريض" : "Patient Vitals Portal"}</span>
         </button>
 
-        <Badge className="gap-1.5 rounded-full bg-emerald-50 text-emerald-800 border-emerald-200 px-3 py-1 text-[11px] font-bold">
-          <ShieldCheck className="size-3.5 text-emerald-600" />
-          <span>{lang === "ar" ? "خدمة طبية مجانية لعملاء الصيدلية" : "Free Health Monitoring"}</span>
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => setOpenAddModal(true)}
+            className="h-9 rounded-full bg-[#2E9E6B] px-4 text-xs font-black text-white hover:bg-[#238156] shadow-sm flex items-center gap-1.5"
+          >
+            <Plus className="size-3.5" />
+            <span>{lang === "ar" ? "+ تسجيل قياس جديد" : "+ Record Vitals"}</span>
+          </Button>
+
+          <Badge className="gap-1.5 rounded-full bg-emerald-50 text-emerald-800 border-emerald-200 px-3 py-1 text-[11px] font-bold">
+            <ShieldCheck className="size-3.5 text-emerald-600" />
+            <span>{lang === "ar" ? "خدمة طبية مجانية لعملاء الصيدلية" : "Free Health Monitoring"}</span>
+          </Badge>
+        </div>
       </div>
 
       {/* Hero Banner */}
@@ -227,6 +241,14 @@ export default function VitalsPortal() {
             >
               <Search className="size-4 me-1.5" />
               {lang === "ar" ? "عرض قياساتي الصحية" : "View My Records"}
+            </Button>
+            <Button
+              type="button"
+              onClick={() => setOpenAddModal(true)}
+              className="h-12 rounded-2xl bg-[#2E9E6B] hover:bg-[#238156] px-5 text-xs font-black text-white shadow-lg transition active:scale-95 flex items-center gap-1.5"
+            >
+              <Plus className="size-4" />
+              <span>{lang === "ar" ? "+ تسجيل قياس جديد" : "+ Record Vitals"}</span>
             </Button>
           </form>
 
@@ -747,9 +769,17 @@ export default function VitalsPortal() {
                   ? "تأكد من كتابة كود المريض أو رقم الهاتف المسجل في صيدلية بحبح بشكل صحيح. كما يمكنك زيارة الصيدلية لقياس السكر والضغط مجاناً وسيقوم الصيدلي بإضافتها لملفك."
                   : "Please verify your patient code or visit Bahbah Pharmacy to record your vitals.")}
           </p>
-          <div className="mt-5 flex flex-wrap gap-3">
+          <div className="mt-5 flex flex-wrap gap-3 justify-center">
             <Button
-              className="rounded-full bg-[#184C8A] text-xs font-bold text-white hover:bg-[#112D51]"
+              className="rounded-full bg-[#2E9E6B] text-xs font-bold text-white hover:bg-[#238156] gap-1.5"
+              onClick={() => setOpenAddModal(true)}
+            >
+              <Plus className="size-4" />
+              <span>{lang === "ar" ? "تسجيل قياس جديد الآن" : "Record First Measurement"}</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-full text-xs font-bold"
               onClick={() => go("care")}
             >
               {lang === "ar" ? "الاشتراك في رعاية الأدوية الشهرية" : "Chronic Care Subscription"}
@@ -757,6 +787,15 @@ export default function VitalsPortal() {
           </div>
         </div>
       )}
+
+      {/* Shared Record Vitals Dialog */}
+      <NewVitalsDialog
+        open={openAddModal}
+        onOpenChange={setOpenAddModal}
+        initialPhone={user?.phone || activeCode || ""}
+        initialName={latest?.patientName || user?.name || ""}
+        initialCode={activeCode || ""}
+      />
     </main>
   );
 }
