@@ -552,6 +552,31 @@ export async function fetchMeasurementsFromSupabase(): Promise<PatientMeasuremen
   }
 }
 
+export async function fetchPatientMeasurements(identifier: string): Promise<PatientMeasurement[]> {
+  const clean = identifier.trim();
+  if (!clean) return [];
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc("get_patient_measurements", {
+      p_identifier: clean,
+    });
+    if (!rpcError && rpcData && Array.isArray(rpcData) && rpcData.length > 0) {
+      return (rpcData as DbPatientMeasurement[]).map(mapDbMeasurementToMeasurement);
+    }
+    const { data, error } = await supabase
+      .from("patient_measurements")
+      .select("*")
+      .or(`patient_phone.eq.${clean},patient_code.eq.${clean}`)
+      .order("recorded_at", { ascending: false });
+    if (!error && data) {
+      return (data as DbPatientMeasurement[]).map(mapDbMeasurementToMeasurement);
+    }
+    return [];
+  } catch (err) {
+    console.warn("[Supabase] fetchPatientMeasurements failed:", err);
+    return [];
+  }
+}
+
 // -------------------------------------------------------------
 // Admin Settings & Realtime Store Sync
 // -------------------------------------------------------------

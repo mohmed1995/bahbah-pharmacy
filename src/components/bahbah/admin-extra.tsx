@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef } from "react";
 import Image from "next/image";
-import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap, Camera, Upload, Trash2, Tag, Percent, Sparkles, Check, Activity, Heart, Scale } from "lucide-react";
+import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap, Camera, Upload, Trash2, Tag, Percent, Sparkles, Check, Activity, Heart, Scale, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useBahbah, useT, useAdminProducts, useOffers, type PatientMeasurement } from "@/lib/bahbah/store";
 import { adSlides, carePlans, planById, getProduct, type CareSubscriber } from "@/lib/bahbah/data";
 import { AdminCard, SectionTitle, KpiCard, TableWrap, TH, TD } from "./admin-ui";
@@ -1119,10 +1126,86 @@ export function CareAdminSection() {
 export function VitalsAdminSection() {
   const lang = useBahbah((s) => s.lang);
   const measurements = useBahbah((s) => s.measurements);
+  const addMeasurement = useBahbah((s) => s.addMeasurement);
   const deleteMeasurement = useBahbah((s) => s.deleteMeasurement);
+  const careSubs = useBahbah((s) => s.careSubs);
+  const user = useBahbah((s) => s.user);
   const go = useBahbah((s) => s.go);
 
   const [q, setQ] = useState("");
+  const [openMeasModal, setOpenMeasModal] = useState(false);
+  const [patientName, setPatientName] = useState("");
+  const [patientPhone, setPatientPhone] = useState("");
+  const [patientCode, setPatientCode] = useState("");
+  const [bloodSugar, setBloodSugar] = useState("");
+  const [sugarTiming, setSugarTiming] = useState<PatientMeasurement["sugarTiming"]>("fasting");
+  const [systolic, setSystolic] = useState("");
+  const [diastolic, setDiastolic] = useState("");
+  const [pulse, setPulse] = useState("");
+  const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
+  const [pharmacistNotes, setPharmacistNotes] = useState("");
+  const [savingMeas, setSavingMeas] = useState(false);
+
+  const handleSaveMeasurement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!patientName.trim()) {
+      toast.error(lang === "ar" ? "برجاء كتابة اسم المريض" : "Please enter patient name");
+      return;
+    }
+    if (!patientCode.trim() && !patientPhone.trim()) {
+      toast.error(lang === "ar" ? "برجاء كتابة كود المريض أو رقم الهاتف" : "Please enter code or phone");
+      return;
+    }
+
+    const code = patientCode.trim() || `BB-${patientPhone.trim().slice(-4) || "P"}`;
+    const sugarNum = bloodSugar ? Number(bloodSugar) : undefined;
+    const sysNum = systolic ? Number(systolic) : undefined;
+    const diaNum = diastolic ? Number(diastolic) : undefined;
+    const pulseNum = pulse ? Number(pulse) : undefined;
+    const weightNum = weight ? Number(weight) : undefined;
+    const heightNum = height ? Number(height) : undefined;
+
+    setSavingMeas(true);
+    try {
+      await addMeasurement({
+        patientCode: code,
+        patientName: patientName.trim(),
+        patientPhone: patientPhone.trim(),
+        bloodSugar: sugarNum,
+        sugarTiming,
+        systolic: sysNum,
+        diastolic: diaNum,
+        pulse: pulseNum,
+        weight: weightNum,
+        height: heightNum,
+        pharmacistNotes: pharmacistNotes.trim() || undefined,
+        recordedBy: user?.name ? `إدارة صيدلية بحبح (${user.name})` : "إدارة صيدلية بحبح",
+      });
+
+      toast.success(
+        lang === "ar"
+          ? `تم حفظ قياسات المريض (${patientName}) بنجاح وإرسالها لملفه!`
+          : "Measurement recorded and saved to patient profile!"
+      );
+
+      setBloodSugar("");
+      setSystolic("");
+      setDiastolic("");
+      setPulse("");
+      setWeight("");
+      setHeight("");
+      setPharmacistNotes("");
+      setPatientName("");
+      setPatientPhone("");
+      setPatientCode("");
+      setOpenMeasModal(false);
+    } catch {
+      toast.error(lang === "ar" ? "حدث خطأ أثناء الحفظ في قاعدة البيانات" : "Failed to record measurement");
+    } finally {
+      setSavingMeas(false);
+    }
+  };
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -1187,7 +1270,15 @@ export function VitalsAdminSection() {
                 : "Manage and monitor recorded vital signs for all pharmacy patients."}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              className="h-10 rounded-xl bg-[#2E9E6B] text-xs font-black text-white hover:bg-[#238156] shadow-sm gap-1.5"
+              onClick={() => setOpenMeasModal(true)}
+            >
+              <Plus className="size-4" />
+              <span>{lang === "ar" ? "تسجيل قياس جديد" : "Record New Vitals"}</span>
+            </Button>
             <Button
               size="sm"
               variant="outline"
@@ -1344,6 +1435,228 @@ export function VitalsAdminSection() {
           </tbody>
         </table>
       </TableWrap>
+
+      {/* ================= MODAL: RECORD NEW PATIENT MEASUREMENT ================= */}
+      <Dialog open={openMeasModal} onOpenChange={setOpenMeasModal}>
+        <DialogContent className="max-w-lg rounded-3xl p-6">
+          <DialogHeader className="border-b border-border/80 pb-3">
+            <DialogTitle className="flex items-center gap-2 font-heading text-lg font-black text-foreground">
+              <Stethoscope className="size-5 text-[#2E9E6B]" />
+              {lang === "ar" ? "تسجيل قياسات طبية جديدة للمريض" : "Record Patient Health Vitals"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveMeasurement} className="mt-4 space-y-4">
+            {/* Quick Select from Registered Patients & Chronic Care */}
+            {careSubs.length > 0 && (
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3">
+                <span className="text-[11px] font-bold text-blue-900 block mb-1.5">
+                  ⚡ اختيار سريع من مرضى الصيدلية المسجلين (رعاية شهرية):
+                </span>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                  {careSubs.slice(0, 8).map((sub) => (
+                    <button
+                      key={sub.id}
+                      type="button"
+                      onClick={() => {
+                        setPatientName(sub.nameAr || sub.nameEn);
+                        setPatientPhone(sub.phone);
+                        setPatientCode(sub.id);
+                        toast.info(`تم اختيار المريض: ${sub.nameAr || sub.nameEn}`);
+                      }}
+                      className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-blue-800 shadow-2xs border border-blue-200 hover:bg-blue-600 hover:text-white transition"
+                    >
+                      {sub.nameAr || sub.nameEn} ({sub.id})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Patient Info */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-foreground">اسم المريض *</span>
+                <Input
+                  required
+                  value={patientName}
+                  onChange={(e) => setPatientName(e.target.value)}
+                  placeholder="مثال: الحاج أحمد عبد الرحمن"
+                  className="h-10 rounded-xl text-xs"
+                />
+              </label>
+
+              <label className="block space-y-1">
+                <span className="text-xs font-bold text-foreground">رقم الهاتف *</span>
+                <Input
+                  required
+                  value={patientPhone}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setPatientPhone(val);
+                    if (!patientCode && val.length >= 4) {
+                      setPatientCode(`BB-${val.slice(-4)}`);
+                    }
+                  }}
+                  placeholder="01011500166"
+                  className="h-10 rounded-xl text-xs"
+                  dir="ltr"
+                />
+              </label>
+
+              <label className="block space-y-1 sm:col-span-2">
+                <span className="text-xs font-bold text-foreground">كود المريض الخاص (للدخول به في البوابة أو ملفه)</span>
+                <Input
+                  value={patientCode}
+                  onChange={(e) => setPatientCode(e.target.value)}
+                  placeholder="مثال: BB-C-105 أو رقم الموبايل"
+                  className="h-10 rounded-xl text-xs"
+                  dir="ltr"
+                />
+              </label>
+            </div>
+
+            {/* Blood Sugar Group */}
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 space-y-2.5">
+              <p className="font-heading text-xs font-black text-amber-900 flex items-center gap-1.5">
+                <Activity className="size-4 text-amber-600" />
+                <span>قياس السكر في الدم</span>
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-amber-950">نسبة السكر (mg/dL)</span>
+                  <Input
+                    type="number"
+                    step="1"
+                    value={bloodSugar}
+                    onChange={(e) => setBloodSugar(e.target.value)}
+                    placeholder="مثال: 120"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-amber-950">توقيت القياس</span>
+                  <Select
+                    value={sugarTiming}
+                    onValueChange={(v) => setSugarTiming(v as PatientMeasurement["sugarTiming"])}
+                  >
+                    <SelectTrigger className="h-9 rounded-xl bg-white text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fasting">صائم (8 ساعات)</SelectItem>
+                      <SelectItem value="random">عشوائي</SelectItem>
+                      <SelectItem value="postprandial">بعد الأكل بساعتين</SelectItem>
+                      <SelectItem value="bedtime">قبل النوم</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </label>
+              </div>
+            </div>
+
+            {/* Blood Pressure Group */}
+            <div className="rounded-2xl border border-red-200 bg-red-50/50 p-3.5 space-y-2.5">
+              <p className="font-heading text-xs font-black text-red-900 flex items-center gap-1.5">
+                <Heart className="size-4 text-red-600" />
+                <span>قياس ضغط الدم والنبض</span>
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-red-950">الانقباضي (العالي)</span>
+                  <Input
+                    type="number"
+                    value={systolic}
+                    onChange={(e) => setSystolic(e.target.value)}
+                    placeholder="120"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-red-950">الانبساطي (الواطي)</span>
+                  <Input
+                    type="number"
+                    value={diastolic}
+                    onChange={(e) => setDiastolic(e.target.value)}
+                    placeholder="80"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-red-950">النبض (bpm)</span>
+                  <Input
+                    type="number"
+                    value={pulse}
+                    onChange={(e) => setPulse(e.target.value)}
+                    placeholder="75"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Weight & Height Group */}
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2.5">
+              <p className="font-heading text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                <Scale className="size-4 text-emerald-600" />
+                <span>الوزن والطول</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-emerald-950">الوزن (كجم)</span>
+                  <Input
+                    type="number"
+                    step="0.1"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    placeholder="مثال: 78.5"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+                <label className="block space-y-1">
+                  <span className="text-[11px] font-bold text-emerald-950">الطول (سم) - لحساب BMI</span>
+                  <Input
+                    type="number"
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                    placeholder="مثال: 170"
+                    className="h-9 rounded-xl bg-white text-xs"
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <label className="block space-y-1">
+              <span className="text-xs font-bold text-foreground">توصيات وملاحظات الإدارة / الصيدلي للمريض</span>
+              <textarea
+                value={pharmacistNotes}
+                onChange={(e) => setPharmacistNotes(e.target.value)}
+                placeholder="اكتب أي نصائح أو ملاحظات تظهر في ملف المريض..."
+                className="w-full rounded-xl border border-input bg-transparent px-3 py-2 text-xs shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-18 resize-none"
+              />
+            </label>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/80">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-xl text-xs font-bold"
+                onClick={() => setOpenMeasModal(false)}
+              >
+                إلغاء
+              </Button>
+              <Button
+                type="submit"
+                disabled={savingMeas}
+                className="h-10 rounded-xl bg-[#2E9E6B] px-6 text-xs font-black text-white hover:bg-[#238156]"
+              >
+                {savingMeas ? "جاري الحفظ..." : "حفظ وإرسال لملف المريض"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

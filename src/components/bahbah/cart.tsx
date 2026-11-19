@@ -69,7 +69,7 @@ export function normalizeEgPhone(raw: string): string {
 }
 
 /** موبايل مصري: 11 رقم يبدأ بـ 010 أو 011 أو 012 أو 015 */
-const EG_MOBILE = /^01[0125]\d{8}$/;
+export const EG_MOBILE = /^01[0125]\d{8}$/;
 
 /* ------------------------------------------------------------------ */
 /* Cart page — packshots + free-shipping progress + coupon + savings   */

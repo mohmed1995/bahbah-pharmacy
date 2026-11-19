@@ -29,6 +29,8 @@ import {
   BellRing,
   Volume2,
   VolumeX,
+  Scale,
+  Stethoscope,
 } from "lucide-react";
 import {
   Dialog,
@@ -43,19 +45,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBahbah, useT, useCarePlans, roleHome, type AccountTab } from "@/lib/bahbah/store";
 import { getProduct, PHARMACY, ROLE_META, type Role } from "@/lib/bahbah/data";
 import { biometricSupported, biometricEnrolled, enrollBiometric, biometricLogin, forgetBiometric, BioError } from "@/lib/bahbah/biometric";
-import { signInWithSupabase, signUpWithSupabase, signOutFromSupabase, roleFromSupabaseUser, driverIdFromSupabaseUser } from "@/lib/supabase";
+import { signInWithSupabase, signUpWithSupabase, signOutFromSupabase, roleFromSupabaseUser, driverIdFromSupabaseUser, fetchPatientMeasurements } from "@/lib/supabase";
 import { fmtPrice, ProductCard } from "./product-card";
 import CareMembershipCard, { DayPicker } from "./care-card";
+import { getSugarStatus, getBPStatus, getBmiStatus, timingArabic } from "./vitals";
 import { IconRefill, IconWhatsapp } from "./icons";
 import { toast } from "sonner";
+import { normalizeEgPhone, EG_MOBILE } from "./cart";
 
 /* ------------------------------------------------------------------ */
 /* Login / Signup — role-aware (patient / courier / pharmacist / admin) */
 /* ------------------------------------------------------------------ */
-const ROLE_CHIPS: { role: Role; labelKey: "role.patient" | "role.courier" | "role.pharmacist" | "role.admin"; quickKey: "auth.quickPatient" | "auth.quickCourier" | "auth.quickPharmacist" | "auth.quickAdmin"; email: string; color: string; icon: React.ReactNode }[] = [
-  { role: "courier", labelKey: "role.courier", quickKey: "auth.quickCourier", email: "courier@bahbah.eg", color: "#F09428", icon: <Bike className="size-4" /> },
-  { role: "pharmacist", labelKey: "role.pharmacist", quickKey: "auth.quickPharmacist", email: "hashem@bahbah.eg", color: "#2E9E6B", icon: <Pill className="size-4" /> },
-  { role: "admin", labelKey: "role.admin", quickKey: "auth.quickAdmin", email: "admin@bahbah.eg", color: "#112D51", icon: <ShieldCheck className="size-4" /> },
+const ROLE_CHIPS: { role: Role; labelKey: "role.patient" | "role.courier" | "role.pharmacist" | "role.admin"; quickKey: "auth.quickPatient" | "auth.quickCourier" | "auth.quickPharmacist" | "auth.quickAdmin"; color: string; icon: React.ReactNode }[] = [
+  { role: "courier", labelKey: "role.courier", quickKey: "auth.quickCourier", color: "#F09428", icon: <Bike className="size-4" /> },
+  { role: "pharmacist", labelKey: "role.pharmacist", quickKey: "auth.quickPharmacist", color: "#2E9E6B", icon: <Pill className="size-4" /> },
+  { role: "admin", labelKey: "role.admin", quickKey: "auth.quickAdmin", color: "#112D51", icon: <ShieldCheck className="size-4" /> },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -88,18 +92,23 @@ export function UnifiedLoginModal() {
 
   const handleCustomerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPhone = customerPhone.trim().replace(/\s+/g, "");
-    if (cleanPhone.length < 8) {
-      toast.error(lang === "ar" ? "برجاء كتابة رقم موبايل صحيح" : "Please enter a valid phone number");
+    const cleanPhone = normalizeEgPhone(customerPhone.trim());
+    if (!EG_MOBILE.test(cleanPhone)) {
+      toast.error(
+        lang === "ar"
+          ? "برجاء إدخال رقم موبايل مصري صحيح مكون من 11 رقماً (مثال: 01012345678)"
+          : "Please enter a valid 11-digit Egyptian phone number"
+      );
       return;
     }
 
     setSubmittingCustomer(true);
     const dispName = customerName.trim() || (lang === "ar" ? "عميل بحبح" : "Bahbah Customer");
-    const syntheticEmail = `${cleanPhone}@bahbah.eg`;
+    const patientEmail = `${cleanPhone}@patient.bahbah.eg`;
 
     try {
-      await signUpWithSupabase(syntheticEmail, `${globalThis.crypto.randomUUID()}-Patient!`, {
+      // Keep patient session clean and recorded
+      await signUpWithSupabase(patientEmail, `${cleanPhone}-Patient-2026!`, {
         name: dispName,
         phone: cleanPhone,
         role: "patient",
@@ -112,7 +121,7 @@ export function UnifiedLoginModal() {
         {
           name: dispName,
           phone: cleanPhone,
-          email: syntheticEmail,
+          email: patientEmail,
           role: "patient",
         },
         dispName
@@ -234,32 +243,6 @@ export function UnifiedLoginModal() {
                 </p>
               </div>
 
-              {/* Quick phone chips */}
-              <div className="space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground block">
-                  {lang === "ar" ? "أرقام سريعة للتجربة:" : "Quick test accounts:"}
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { label: "عميل ديروط", num: "01011500166" },
-                    { label: "عميل دشلوط", num: "01552533484" },
-                    { label: "عميل صنبو", num: "01122334455" },
-                  ].map((chip) => (
-                    <button
-                      key={chip.num}
-                      type="button"
-                      onClick={() => {
-                        setCustomerPhone(chip.num);
-                        setCustomerName(chip.label);
-                      }}
-                      className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-bold text-foreground/80 hover:bg-[#1E4E8F] hover:text-white transition"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="space-y-1.5">
                 <span className="text-xs font-bold text-foreground/85">
                   {lang === "ar" ? "رقم الموبايل / واتساب *" : "Phone / WhatsApp *"}
@@ -339,7 +322,7 @@ export function UnifiedLoginModal() {
             <form onSubmit={handleStaffLogin} className="space-y-4">
               <div className="flex items-center justify-between pb-1 border-b border-border">
                 <span className="text-xs font-bold text-muted-foreground">
-                  {lang === "ar" ? "اختر الحساب المصرح:" : "Select Staff Account:"}
+                  {lang === "ar" ? "تسجيل دخول الطاقم والإدارة" : "Staff & Admin Authentication"}
                 </span>
                 <button
                   type="button"
@@ -350,27 +333,13 @@ export function UnifiedLoginModal() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                {ROLE_CHIPS.map((c) => (
-                  <button
-                    type="button"
-                    key={c.role}
-                    onClick={() => {
-                      setStaffRole(c.role);
-                      setStaffEmail(c.email);
-                      setStaffPassword("");
-                    }}
-                    className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-[11px] font-black transition ${
-                      staffRole === c.role
-                        ? "border-transparent text-white shadow-md"
-                        : "border-border/70 bg-muted/40 text-muted-foreground hover:border-[#1E4E8F]/30"
-                    }`}
-                    style={staffRole === c.role ? { backgroundColor: c.color } : undefined}
-                  >
-                    {c.icon}
-                    {t(c.labelKey)}
-                  </button>
-                ))}
+              <div className="rounded-2xl border border-sky-500/20 bg-sky-50/70 p-3 text-sky-950 text-xs flex items-center gap-2.5">
+                <ShieldCheck className="size-4 shrink-0 text-[#184C8A]" />
+                <p className="leading-snug">
+                  {lang === "ar"
+                    ? "تسجيل دخول آمن مخصص لمسؤولي الصيدلية، الصيادلة، ومندوبي التوصيل فقط عبر حسابات Supabase المعتمدة."
+                    : "Authorized access only for verified pharmacy staff and admins."}
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -435,19 +404,22 @@ export function LoginView() {
   /* Patient One-Tap Login (No Email, No Password) */
   const handleCustomerLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPhone = customerPhone.trim().replace(/\s+/g, "");
-    if (cleanPhone.length < 8) {
-      toast.error(lang === "ar" ? "برجاء كتابة رقم موبايل أو واتساب صحيح" : "Please enter a valid phone number");
+    const cleanPhone = normalizeEgPhone(customerPhone.trim());
+    if (!EG_MOBILE.test(cleanPhone)) {
+      toast.error(
+        lang === "ar"
+          ? "برجاء إدخال رقم موبايل مصري صحيح مكون من 11 رقماً (مثال: 01012345678)"
+          : "Please enter a valid 11-digit Egyptian phone number"
+      );
       return;
     }
 
     setSubmittingCustomer(true);
     const dispName = customerName.trim() || (lang === "ar" ? "عميل بحبح" : "Bahbah Customer");
-    const syntheticEmail = `${cleanPhone}@bahbah.eg`;
+    const patientEmail = `${cleanPhone}@patient.bahbah.eg`;
 
     try {
-      // Background Supabase signup/signin without email requirement
-      await signUpWithSupabase(syntheticEmail, `${globalThis.crypto.randomUUID()}-Patient!`, {
+      await signUpWithSupabase(patientEmail, `${cleanPhone}-Patient-2026!`, {
         name: dispName,
         phone: cleanPhone,
         role: "patient",
@@ -460,7 +432,7 @@ export function LoginView() {
         {
           name: dispName,
           phone: cleanPhone,
-          email: syntheticEmail,
+          email: patientEmail,
           role: "patient",
         },
         dispName
@@ -529,38 +501,12 @@ export function LoginView() {
                   </span>
                   <div className="text-xs">
                     <p className="font-bold">
-                      {lang === "ar" ? "دخول فوري مباشر بدون إيميل ولا كلمة سر" : "No email or password needed!"}
+                      {lang === "ar" ? "دخول فوري مباشر برقم الموبايل" : "Instant Login with Phone"}
                     </p>
                     <p className="text-[11px] opacity-80">
                       {lang === "ar" ? "فقط اكتب رقمك واسمك وسيتم تسجيل دخولك ومتابعة طلباتك فوراً" : "Just enter your mobile & name"}
                     </p>
                   </div>
-                </div>
-              </div>
-
-              {/* Quick 1-tap phone chips */}
-              <div className="space-y-1">
-                <span className="text-[11px] font-bold text-muted-foreground block">
-                  {lang === "ar" ? "دخول سريع للتجربة (اضغط لتعبئة الرقم فوراً):" : "Quick 1-tap numbers:"}
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { label: "عميل ديروط الشريف", num: "01011500166" },
-                    { label: "عميل دشلوط", num: "01552533484" },
-                    { label: "عميل صنبو", num: "01122334455" },
-                  ].map((chip) => (
-                    <button
-                      key={chip.num}
-                      type="button"
-                      onClick={() => {
-                        setCustomerPhone(chip.num);
-                        setCustomerName(chip.label);
-                      }}
-                      className="rounded-full bg-muted/80 px-2.5 py-1 text-[11px] font-bold text-foreground/75 hover:bg-[#1E4E8F] hover:text-white transition"
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -619,7 +565,7 @@ export function LoginView() {
             <form onSubmit={handleStaffLogin} className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-border">
                 <span className="text-xs font-bold text-muted-foreground">
-                  {lang === "ar" ? "اختر الحساب المصرح:" : "Select Staff Account:"}
+                  {lang === "ar" ? "تسجيل دخول الطاقم والإدارة" : "Staff & Admin Authentication"}
                 </span>
                 <button
                   type="button"
@@ -630,28 +576,13 @@ export function LoginView() {
                 </button>
               </div>
 
-              {/* Role Chips */}
-              <div className="grid grid-cols-3 gap-2">
-                {ROLE_CHIPS.map((c) => (
-                  <button
-                    type="button"
-                    key={c.role}
-                    onClick={() => {
-                      setStaffRole(c.role);
-                      setStaffEmail(c.email);
-                      setStaffPassword("");
-                    }}
-                    className={`flex flex-col items-center gap-1.5 rounded-2xl border p-2.5 text-[11px] font-black transition ${
-                      staffRole === c.role
-                        ? "border-transparent text-white shadow-md"
-                        : "border-border/70 bg-muted/40 text-muted-foreground hover:border-[#1E4E8F]/30"
-                    }`}
-                    style={staffRole === c.role ? { backgroundColor: c.color } : undefined}
-                  >
-                    {c.icon}
-                    {t(c.labelKey)}
-                  </button>
-                ))}
+              <div className="rounded-2xl border border-sky-500/20 bg-sky-50/70 p-3.5 text-sky-950 text-xs flex items-center gap-2.5">
+                <ShieldCheck className="size-4 shrink-0 text-[#184C8A]" />
+                <p className="leading-snug">
+                  {lang === "ar"
+                    ? "بوابة الطاقم تتطلب بريداً إلكترونياً معتمداً وكلمة مرور موثقة في Supabase."
+                    : "Staff portal requires an authorized email and password registered in Supabase."}
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -818,8 +749,22 @@ export function AccountView() {
   const favorites = useBahbah((s) => s.favorites);
   const accountTab = useBahbah((s) => s.accountTab);
   const careSub = useBahbah((s) => s.careSub);
+  const measurements = useBahbah((s) => s.measurements);
   const livePlans = useCarePlans();
   const { logout, reorder, go, openAccount, openTrack, pauseCare, resumeCare, cancelCare, changeCareDay, openCareWizard } = useBahbah();
+
+  const myMeasurements = useMemo(() => {
+    if (!user) return [];
+    const phoneNorm = (user.phone || "").replace(/\D/g, "");
+    return measurements.filter((m) => {
+      const mPhone = (m.patientPhone || "").replace(/\D/g, "");
+      return (
+        (phoneNorm && mPhone && (mPhone === phoneNorm || mPhone.endsWith(phoneNorm) || phoneNorm.endsWith(mPhone))) ||
+        (m.patientName && user.name && m.patientName.trim().toLowerCase() === user.name.trim().toLowerCase())
+      );
+    });
+  }, [measurements, user]);
+  const latestVitals = myMeasurements[0];
 
   if (!user) {
     return (
@@ -1216,7 +1161,7 @@ export function AccountView() {
         </TabsContent>
 
         {/* vitals */}
-        <TabsContent value="vitals" className="mt-5">
+        <TabsContent value="vitals" className="mt-5 space-y-4">
           <div className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -1225,23 +1170,153 @@ export function AccountView() {
                 </span>
                 <div>
                   <h3 className="font-heading text-base font-black text-foreground md:text-lg">
-                    {lang === "ar" ? "بوابة قياساتك الصحية (السكر، الضغط، الوزن)" : "Health & Vitals Portal"}
+                    {lang === "ar" ? "بوابة قياساتي ومؤشراتي الصحية" : "Health & Vitals Portal"}
                   </h3>
                   <p className="text-xs text-muted-foreground font-semibold">
-                    {lang === "ar" ? "استعرض سجل قياساتك الصيدلانية السابقة وتطور حالتك الصحية عبر بوابة المريض" : "View your historical vitals recorded at Bahbah Pharmacy"}
+                    {lang === "ar"
+                      ? "قياسات السكر، ضغط الدم، والوزن المسجلة لك في الصيدلية مع توجيهات الصيدلي"
+                      : "Blood sugar, pressure, and weight logged by the pharmacy team"}
                   </p>
                 </div>
               </div>
 
               <Button
-                className="h-10 rounded-full bg-gradient-to-r from-[#184C8A] to-[#113665] px-6 text-xs font-bold text-white shadow-sm"
+                className="h-10 rounded-full bg-gradient-to-r from-[#184C8A] to-[#113665] px-6 text-xs font-bold text-white shadow-sm hover:brightness-110 active:scale-95 transition"
                 onClick={() => go("vitals")}
               >
-                {lang === "ar" ? "فتح بوابة القياسات الكاملة" : "Open Vitals Portal"}
+                {lang === "ar" ? "سجل القياسات الكامل والرسوم البيانية" : "Full Vitals & Charts"}
                 <ChevronRight className="size-4 rtl:rotate-180 ms-1" />
               </Button>
             </div>
           </div>
+
+          {latestVitals ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-muted-foreground">
+                  {lang === "ar" ? "آخر قياس تم تسجيله:" : "Latest recorded vital:"}
+                </span>
+                <span className="text-xs font-black text-[#1E4E8F]" dir="ltr">
+                  {latestVitals.recordedAt}
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                {/* Blood Sugar */}
+                <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Activity className="size-3.5 text-rose-500" />
+                      {lang === "ar" ? "سكر الدم" : "Blood Sugar"}
+                    </span>
+                    {latestVitals.sugarTiming && (
+                      <Badge variant="outline" className="text-[10px] py-0 px-2">
+                        {timingArabic[latestVitals.sugarTiming] ?? latestVitals.sugarTiming}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-heading text-2xl font-black text-foreground">
+                      {latestVitals.bloodSugar ?? "—"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">mg/dL</span>
+                  </div>
+                  {(() => {
+                    const st = getSugarStatus(latestVitals.bloodSugar, latestVitals.sugarTiming);
+                    return st ? (
+                      <Badge className={`mt-2 border text-[10px] font-bold ${st.color}`}>
+                        {st.label}
+                      </Badge>
+                    ) : null;
+                  })()}
+                </div>
+
+                {/* Blood Pressure */}
+                <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Heart className="size-3.5 text-red-500" />
+                      {lang === "ar" ? "ضغط الدم والنبض" : "Blood Pressure"}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-heading text-2xl font-black text-foreground">
+                      {latestVitals.systolic && latestVitals.diastolic
+                        ? `${latestVitals.systolic}/${latestVitals.diastolic}`
+                        : "—"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">mmHg</span>
+                    {latestVitals.pulse && (
+                      <span className="ms-2 text-xs font-semibold text-muted-foreground">
+                        ({latestVitals.pulse} bpm)
+                      </span>
+                    )}
+                  </div>
+                  {(() => {
+                    const bp = getBPStatus(latestVitals.systolic, latestVitals.diastolic);
+                    return bp ? (
+                      <Badge className={`mt-2 border text-[10px] font-bold ${bp.color}`}>
+                        {bp.label}
+                      </Badge>
+                    ) : null;
+                  })()}
+                </div>
+
+                {/* Weight & BMI */}
+                <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-bold flex items-center gap-1.5">
+                      <Scale className="size-3.5 text-blue-500" />
+                      {lang === "ar" ? "الوزن ومؤشر الكتلة" : "Weight & BMI"}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="font-heading text-2xl font-black text-foreground">
+                      {latestVitals.weight ?? "—"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">kg</span>
+                    {latestVitals.height && (
+                      <span className="ms-2 text-xs text-muted-foreground">
+                        / {latestVitals.height} cm
+                      </span>
+                    )}
+                  </div>
+                  {(() => {
+                    const bmi = getBmiStatus(latestVitals.bmi);
+                    return bmi ? (
+                      <Badge className={`mt-2 border text-[10px] font-bold ${bmi.color}`}>
+                        {bmi.label} {latestVitals.bmi ? `(BMI ${latestVitals.bmi})` : ""}
+                      </Badge>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+
+              {latestVitals.pharmacistNotes && (
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-50/70 p-4 text-xs text-amber-900 flex items-start gap-3">
+                  <Stethoscope className="size-4 text-amber-700 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block mb-0.5">
+                      {lang === "ar" ? "ملاحظات وتوجيهات الصيدلي المعالج:" : "Pharmacist Advice:"}
+                    </span>
+                    <p className="leading-relaxed">{latestVitals.pharmacistNotes}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+              <Activity className="size-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-sm font-bold text-foreground">
+                {lang === "ar" ? "لا توجد قياسات مسجلة حتى الآن" : "No vitals recorded yet"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+                {lang === "ar"
+                  ? "قم بزيارة صيدلية بحبح لقياس السكر والضغط والوزن مجاناً وسيتم تسجيلها في ملفك فوراً."
+                  : "Visit Bahbah Pharmacy to record your vitals."}
+              </p>
+            </div>
+          )}
         </TabsContent>
 
         {/* profile */}

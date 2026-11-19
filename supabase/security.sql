@@ -71,6 +71,49 @@ $$ select o.id::text, o.status::text, o.courier_id::text, o.updated_at from publ
 revoke all on function public.track_order(text) from public;
 grant execute on function public.track_order(text) to anon, authenticated;
 
+-- استرجاع قياسات المريض بأمان برقم الهاتف أو الكود الخاص به فقط
+create or replace function public.get_patient_measurements(p_identifier text)
+returns table(
+  id text,
+  patient_code text,
+  patient_name text,
+  patient_phone text,
+  recorded_at timestamptz,
+  blood_sugar numeric,
+  sugar_timing text,
+  systolic integer,
+  diastolic integer,
+  pulse integer,
+  weight numeric,
+  height numeric,
+  bmi numeric,
+  pharmacist_notes text,
+  recorded_by text
+)
+language sql security definer set search_path = public as $$
+  select
+    m.id::text,
+    m.patient_code::text,
+    m.patient_name::text,
+    m.patient_phone::text,
+    m.recorded_at,
+    m.blood_sugar,
+    m.sugar_timing::text,
+    m.systolic,
+    m.diastolic,
+    m.pulse,
+    m.weight,
+    m.height,
+    m.bmi,
+    m.pharmacist_notes::text,
+    m.recorded_by::text
+  from public.patient_measurements m
+  where m.patient_phone = p_identifier or m.patient_code = p_identifier
+  order by m.recorded_at desc;
+$$;
+revoke all on function public.get_patient_measurements(text) from public;
+grant execute on function public.get_patient_measurements(text) to anon, authenticated;
+
 -- 6) تسجيل جديد: ماحدش يقدر يحط role في app_metadata من العميل (Supabase بيمنع ده أصلًا)،
 --    لكن اقفل تسجيل المستخدمين العاديين لو مش محتاجه: Auth › Providers › Email › Disable sign ups.
 --
