@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
-import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap, Camera, Upload, Trash2, Tag, Percent, Sparkles, Check, Activity, Heart, Scale, Stethoscope } from "lucide-react";
+import { BadgeCheck, Ticket, Megaphone, Plus, RefreshCcw, CalendarClock, Users2, Repeat2, Wrench, Download, FileSpreadsheet, Search, Zap, Camera, Upload, Trash2, Tag, Percent, Sparkles, Check, Activity, Heart, Scale, Ban } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -13,16 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useBahbah, useT, useAdminProducts, useOffers, type PatientMeasurement } from "@/lib/bahbah/store";
+import { syncCatalogToSupabase } from "@/lib/supabase";
 import { adSlides, carePlans, planById, getProduct, type CareSubscriber } from "@/lib/bahbah/data";
 import { AdminCard, SectionTitle, KpiCard, TableWrap, TH, TD } from "./admin-ui";
+import { RxPhotoImg, RxPhotoLink } from "./rx-photo";
 import { fmtPrice } from "./product-card";
 import { getSugarStatus, getBPStatus, getBmiStatus, timingArabic } from "./vitals";
 import { toast } from "sonner";
@@ -33,12 +28,12 @@ import { toast } from "sonner";
 export function CouponsSection() {
   const t = useT();
   const coupons = useBahbah((s) => s.coupons);
-  const { toggleCouponActive, addCoupon } = useBahbah();
+  const { toggleCouponActive, addCoupon, removeCoupon } = useBahbah();
   const [code, setCode] = useState("");
   const [percent, setPercent] = useState("10");
   const [minTotal, setMinTotal] = useState("200");
 
-  const create = () => {
+  const create = async () => {
     const norm = code.trim().toUpperCase();
     const pct = Math.min(90, Math.max(1, Number(percent) || 0));
     const min = Math.max(0, Number(minTotal) || 0);
@@ -50,7 +45,7 @@ export function CouponsSection() {
       toast.error(t("coupon.invalid"));
       return;
     }
-    addCoupon({ code: norm, percent: pct, minTotal: min, uses: 0, active: true });
+    if (!(await addCoupon({ code: norm, percent: pct, minTotal: min, uses: 0, active: true }))) return;
     setCode("");
     setPercent("10");
     setMinTotal("200");
@@ -147,7 +142,21 @@ export function CouponsSection() {
                 <td className={`${TD} font-bold`}>{c.minTotal.toLocaleString("en-US")}</td>
                 <td className={`${TD} font-bold`}>{c.uses}</td>
                 <td className={TD}>
-                  <Switch checked={c.active} onCheckedChange={() => toggleCouponActive(c.code)} />
+                  <div className="flex items-center gap-2">
+                    <Switch checked={c.active} onCheckedChange={() => toggleCouponActive(c.code)} />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 rounded-full border-[#DC4B4B]/40 px-2.5 text-xs font-bold text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
+                      onClick={async () => {
+                        if (!window.confirm(`حذف كوبون «${c.code}» نهائيًا؟`)) return;
+                        if (await removeCoupon(c.code)) toast.success("تم حذف الكوبون");
+                      }}
+                    >
+                      <Trash2 className="size-3.5" />
+                      حذف
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -322,8 +331,8 @@ export function AdsSection() {
 
   const clicks = [1240, 980, 640, 520, 410];
 
-  const handleToggleAd = (id: string, currentOn: boolean) => {
-    toggleAd(id);
+  const handleToggleAd = async (id: string, currentOn: boolean) => {
+    if (!(await toggleAd(id))) return;
     toast.success(
       currentOn
         ? (lang === "ar" ? "تم إخفاء الإعلان من الصفحة الرئيسية بنجاح" : "Ad banner hidden from homepage")
@@ -341,7 +350,7 @@ export function AdsSection() {
     }
   };
 
-  const handleSaveOffer = () => {
+  const handleSaveOffer = async () => {
     if (!offerProdId) {
       toast.error("برجاء اختيار الصنف المراد إضافته للعروض");
       return;
@@ -351,7 +360,7 @@ export function AdsSection() {
       return;
     }
 
-    updateOfferEdit(offerProdId, {
+    const ok = await updateOfferEdit(offerProdId, {
       price: Number(offerPrice),
       oldPrice: Number(offerOldPrice) || Number(offerPrice) * 1.25,
       badgeAr: offerBadge || "عرض خاص",
@@ -359,6 +368,7 @@ export function AdsSection() {
       img: offerImg,
       active: true,
     });
+    if (!ok) return;
 
     toast.success("تم تفعيل ونشر العرض في شاشات العملاء بنجاح ✓");
     setShowAddOffer(false);
@@ -497,18 +507,19 @@ export function AdsSection() {
                 <Button
                   size="sm"
                   className="h-8 rounded-lg bg-[#2E9E6B] text-xs font-bold text-white hover:bg-[#238156]"
-                  onClick={() => {
+                  onClick={async () => {
                     if (!newTitle.trim()) {
                       toast.error("برجاء كتابة عنوان الإعلان");
                       return;
                     }
-                    updateAdEdit("ad-gym", {
+                    const ok = await updateAdEdit("ad-gym", {
                       titleAr: newTitle,
                       subAr: newSub,
                       badgeAr: newBadge,
                       ctaAr: newCta,
                       img: newImg,
                     });
+                    if (!ok) return;
                     toast.success("تم حفظ وتحديث الإعلان في الصفحة الرئيسية بنجاح!");
                     setShowAddBanner(false);
                   }}
@@ -646,6 +657,44 @@ export function AdsSection() {
                             className="h-9 rounded-lg text-xs"
                           />
                         </label>
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">
+                            {lang === "ar" ? "يظهر من الساعة (اختياري)" : "Show from hour (optional)"}
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={23}
+                            value={e.showFrom ?? ""}
+                            onChange={(ev) =>
+                              updateAdEdit(s.id, {
+                                showFrom: ev.target.value === "" ? undefined : Math.min(23, Math.max(0, Number(ev.target.value))),
+                              })
+                            }
+                            placeholder={s.showFrom !== undefined ? String(s.showFrom) : "0–23"}
+                            className="h-9 rounded-lg text-xs"
+                            dir="ltr"
+                          />
+                        </label>
+                        <label className="block space-y-1">
+                          <span className="text-[10px] font-bold text-muted-foreground">
+                            {lang === "ar" ? "يختفي عند الساعة (اختياري — ممكن بعد منتصف الليل)" : "Hide at hour (optional — may wrap past midnight)"}
+                          </span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={23}
+                            value={e.showTo ?? ""}
+                            onChange={(ev) =>
+                              updateAdEdit(s.id, {
+                                showTo: ev.target.value === "" ? undefined : Math.min(23, Math.max(0, Number(ev.target.value))),
+                              })
+                            }
+                            placeholder={s.showTo !== undefined ? String(s.showTo) : "0–23"}
+                            className="h-9 rounded-lg text-xs"
+                            dir="ltr"
+                          />
+                        </label>
 
                         {/* Image Uploader for this specific banner */}
                         <div className="sm:col-span-2 pt-1 border-t border-border/40">
@@ -664,9 +713,13 @@ export function AdsSection() {
                         <Button
                           size="sm"
                           className="h-8 rounded-lg bg-[#1E4E8F] px-4 text-xs font-bold text-white hover:bg-[#112D51]"
-                          onClick={() => {
-                            toast.success("تم حفظ وتحديث الإعلان بنجاح ✓");
-                            setEditingAd(null);
+                          onClick={async () => {
+                            /* تأكيد حفظ فعلي: بنعيد مزامنة تعديلات البنر الحالية
+                               وبنقفل بس لو السيرفر أكّد الكتابة */
+                            if (await updateAdEdit(s.id, {})) {
+                              toast.success("تم حفظ وتحديث الإعلان بنجاح ✓");
+                              setEditingAd(null);
+                            }
                           }}
                         >
                           تم الحفظ
@@ -895,6 +948,7 @@ export function CareAdminSection() {
   const lang = useBahbah((s) => s.lang);
   const careSubs = useBahbah((s) => s.careSubs);
   const toggleCareSubStatus = useBahbah((s) => s.toggleCareSubStatus);
+  const cancelCareSub = useBahbah((s) => s.cancelCareSub);
   const refillMonthlyRx = useBahbah((s) => s.refillMonthlyRx);
 
   const [previewImg, setPreviewImg] = useState<string | null>(null);
@@ -1048,15 +1102,23 @@ export function CareAdminSection() {
                   </td>
                   <td className={TD}>
                     {s.prescriptionUrl ? (
-                      <button
-                        onClick={() => setPreviewImg(s.prescriptionUrl || null)}
+                      <RxPhotoLink
+                        value={s.prescriptionUrl}
+                        onOpen={(url) => setPreviewImg(url)}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2 py-1 text-xs font-bold text-[#1E4E8F] shadow-xs hover:bg-muted"
+                        fallbackText={
+                          <span className="text-[11px] text-muted-foreground">صورة مرفقة</span>
+                        }
                       >
-                        <div className="relative size-5 overflow-hidden rounded bg-muted">
-                          <Image src={s.prescriptionUrl} alt="Rx" fill className="object-cover" />
-                        </div>
+                        <span className="relative block size-5 overflow-hidden rounded bg-muted">
+                          <RxPhotoImg
+                            value={s.prescriptionUrl}
+                            alt="Rx"
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        </span>
                         عرض
-                      </button>
+                      </RxPhotoLink>
                     ) : (
                       <span className="text-[11px] text-muted-foreground">بدون صورة</span>
                     )}
@@ -1065,6 +1127,10 @@ export function CareAdminSection() {
                     {s.status === "active" ? (
                       <Badge className="rounded-full border-0 bg-[#EAF6F1] text-[#2E9E6B]">
                         نشط
+                      </Badge>
+                    ) : s.status === "cancelled" ? (
+                      <Badge className="rounded-full border-0 bg-[#FDECEC] text-[#C0392B]">
+                        ملغي
                       </Badge>
                     ) : (
                       <Badge className="rounded-full border-0 bg-[#FFF4E5] text-[#B45E0A]">
@@ -1083,15 +1149,35 @@ export function CareAdminSection() {
                         <Zap className="size-3" />
                         تكرار العلاج
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 rounded-full px-2.5 text-xs font-bold"
-                        onClick={() => toggleCareSubStatus(s.id)}
-                      >
-                        <RefreshCcw className="size-3" />
-                        {s.status === "active" ? "إيقاف" : "استئناف"}
-                      </Button>
+                      {s.status !== "cancelled" && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-full px-2.5 text-xs font-bold"
+                            onClick={async () => {
+                              if (await toggleCareSubStatus(s.id)) toast.success("تم حفظ حالة الاشتراك");
+                            }}
+                          >
+                            <RefreshCcw className="size-3" />
+                            {s.status === "active" ? "إيقاف" : "استئناف"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-full border-[#DC4B4B]/40 px-2.5 text-xs font-bold text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
+                            onClick={async () => {
+                              /* إلغاء اشتراك من المدير/الطاقم — بيوقف استحقاق
+                                 التوصيل المجاني على السيرفر فور تأكيده */
+                              if (!window.confirm(`إلغاء اشتراك «${s.nameAr}» نهائيًا؟ هيتوقف استحقاقه للتوصيل المجاني.`)) return;
+                              if (await cancelCareSub(s.id)) toast.success("تم إلغاء الاشتراك");
+                            }}
+                          >
+                            <Ban className="size-3" />
+                            إلغاء الاشتراك
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1126,86 +1212,10 @@ export function CareAdminSection() {
 export function VitalsAdminSection() {
   const lang = useBahbah((s) => s.lang);
   const measurements = useBahbah((s) => s.measurements);
-  const addMeasurement = useBahbah((s) => s.addMeasurement);
   const deleteMeasurement = useBahbah((s) => s.deleteMeasurement);
-  const careSubs = useBahbah((s) => s.careSubs);
-  const user = useBahbah((s) => s.user);
   const go = useBahbah((s) => s.go);
 
   const [q, setQ] = useState("");
-  const [openMeasModal, setOpenMeasModal] = useState(false);
-  const [patientName, setPatientName] = useState("");
-  const [patientPhone, setPatientPhone] = useState("");
-  const [patientCode, setPatientCode] = useState("");
-  const [bloodSugar, setBloodSugar] = useState("");
-  const [sugarTiming, setSugarTiming] = useState<PatientMeasurement["sugarTiming"]>("fasting");
-  const [systolic, setSystolic] = useState("");
-  const [diastolic, setDiastolic] = useState("");
-  const [pulse, setPulse] = useState("");
-  const [weight, setWeight] = useState("");
-  const [height, setHeight] = useState("");
-  const [pharmacistNotes, setPharmacistNotes] = useState("");
-  const [savingMeas, setSavingMeas] = useState(false);
-
-  const handleSaveMeasurement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!patientName.trim()) {
-      toast.error(lang === "ar" ? "برجاء كتابة اسم المريض" : "Please enter patient name");
-      return;
-    }
-    if (!patientCode.trim() && !patientPhone.trim()) {
-      toast.error(lang === "ar" ? "برجاء كتابة كود المريض أو رقم الهاتف" : "Please enter code or phone");
-      return;
-    }
-
-    const code = patientCode.trim() || `BB-${patientPhone.trim().slice(-4) || "P"}`;
-    const sugarNum = bloodSugar ? Number(bloodSugar) : undefined;
-    const sysNum = systolic ? Number(systolic) : undefined;
-    const diaNum = diastolic ? Number(diastolic) : undefined;
-    const pulseNum = pulse ? Number(pulse) : undefined;
-    const weightNum = weight ? Number(weight) : undefined;
-    const heightNum = height ? Number(height) : undefined;
-
-    setSavingMeas(true);
-    try {
-      await addMeasurement({
-        patientCode: code,
-        patientName: patientName.trim(),
-        patientPhone: patientPhone.trim(),
-        bloodSugar: sugarNum,
-        sugarTiming,
-        systolic: sysNum,
-        diastolic: diaNum,
-        pulse: pulseNum,
-        weight: weightNum,
-        height: heightNum,
-        pharmacistNotes: pharmacistNotes.trim() || undefined,
-        recordedBy: user?.name ? `إدارة صيدلية بحبح (${user.name})` : "إدارة صيدلية بحبح",
-      });
-
-      toast.success(
-        lang === "ar"
-          ? `تم حفظ قياسات المريض (${patientName}) بنجاح وإرسالها لملفه!`
-          : "Measurement recorded and saved to patient profile!"
-      );
-
-      setBloodSugar("");
-      setSystolic("");
-      setDiastolic("");
-      setPulse("");
-      setWeight("");
-      setHeight("");
-      setPharmacistNotes("");
-      setPatientName("");
-      setPatientPhone("");
-      setPatientCode("");
-      setOpenMeasModal(false);
-    } catch {
-      toast.error(lang === "ar" ? "حدث خطأ أثناء الحفظ في قاعدة البيانات" : "Failed to record measurement");
-    } finally {
-      setSavingMeas(false);
-    }
-  };
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -1270,15 +1280,7 @@ export function VitalsAdminSection() {
                 : "Manage and monitor recorded vital signs for all pharmacy patients."}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              size="sm"
-              className="h-10 rounded-xl bg-[#2E9E6B] text-xs font-black text-white hover:bg-[#238156] shadow-sm gap-1.5"
-              onClick={() => setOpenMeasModal(true)}
-            >
-              <Plus className="size-4" />
-              <span>{lang === "ar" ? "تسجيل قياس جديد" : "Record New Vitals"}</span>
-            </Button>
+          <div className="flex items-center gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -1435,228 +1437,6 @@ export function VitalsAdminSection() {
           </tbody>
         </table>
       </TableWrap>
-
-      {/* ================= MODAL: RECORD NEW PATIENT MEASUREMENT ================= */}
-      <Dialog open={openMeasModal} onOpenChange={setOpenMeasModal}>
-        <DialogContent className="max-w-lg rounded-3xl p-6">
-          <DialogHeader className="border-b border-border/80 pb-3">
-            <DialogTitle className="flex items-center gap-2 font-heading text-lg font-black text-foreground">
-              <Stethoscope className="size-5 text-[#2E9E6B]" />
-              {lang === "ar" ? "تسجيل قياسات طبية جديدة للمريض" : "Record Patient Health Vitals"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <form onSubmit={handleSaveMeasurement} className="mt-4 space-y-4">
-            {/* Quick Select from Registered Patients & Chronic Care */}
-            {careSubs.length > 0 && (
-              <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-3">
-                <span className="text-[11px] font-bold text-blue-900 block mb-1.5">
-                  ⚡ اختيار سريع من مرضى الصيدلية المسجلين (رعاية شهرية):
-                </span>
-                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                  {careSubs.slice(0, 8).map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => {
-                        setPatientName(sub.nameAr || sub.nameEn);
-                        setPatientPhone(sub.phone);
-                        setPatientCode(sub.id);
-                        toast.info(`تم اختيار المريض: ${sub.nameAr || sub.nameEn}`);
-                      }}
-                      className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-blue-800 shadow-2xs border border-blue-200 hover:bg-blue-600 hover:text-white transition"
-                    >
-                      {sub.nameAr || sub.nameEn} ({sub.id})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Patient Info */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-foreground">اسم المريض *</span>
-                <Input
-                  required
-                  value={patientName}
-                  onChange={(e) => setPatientName(e.target.value)}
-                  placeholder="مثال: الحاج أحمد عبد الرحمن"
-                  className="h-10 rounded-xl text-xs"
-                />
-              </label>
-
-              <label className="block space-y-1">
-                <span className="text-xs font-bold text-foreground">رقم الهاتف *</span>
-                <Input
-                  required
-                  value={patientPhone}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setPatientPhone(val);
-                    if (!patientCode && val.length >= 4) {
-                      setPatientCode(`BB-${val.slice(-4)}`);
-                    }
-                  }}
-                  placeholder="01011500166"
-                  className="h-10 rounded-xl text-xs"
-                  dir="ltr"
-                />
-              </label>
-
-              <label className="block space-y-1 sm:col-span-2">
-                <span className="text-xs font-bold text-foreground">كود المريض الخاص (للدخول به في البوابة أو ملفه)</span>
-                <Input
-                  value={patientCode}
-                  onChange={(e) => setPatientCode(e.target.value)}
-                  placeholder="مثال: BB-C-105 أو رقم الموبايل"
-                  className="h-10 rounded-xl text-xs"
-                  dir="ltr"
-                />
-              </label>
-            </div>
-
-            {/* Blood Sugar Group */}
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-3.5 space-y-2.5">
-              <p className="font-heading text-xs font-black text-amber-900 flex items-center gap-1.5">
-                <Activity className="size-4 text-amber-600" />
-                <span>قياس السكر في الدم</span>
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block space-y-1">
-                  <span className="text-[11px] font-bold text-amber-950">نسبة السكر (mg/dL)</span>
-                  <Input
-                    type="number"
-                    step="1"
-                    value={bloodSugar}
-                    onChange={(e) => setBloodSugar(e.target.value)}
-                    placeholder="مثال: 120"
-                    className="h-9 rounded-xl bg-white text-xs"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[11px] font-bold text-amber-950">توقيت القياس</span>
-                  <Select
-                    value={sugarTiming}
-                    onValueChange={(v) => setSugarTiming(v as PatientMeasurement["sugarTiming"])}
-                  >
-                    <SelectTrigger className="h-9 rounded-xl bg-white text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fasting">صائم (8 ساعات)</SelectItem>
-                      <SelectItem value="random">عشوائي</SelectItem>
-                      <SelectItem value="postprandial">بعد الأكل بساعتين</SelectItem>
-                      <SelectItem value="bedtime">قبل النوم</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </label>
-              </div>
-            </div>
-
-            {/* Blood Pressure Group */}
-            <div className="rounded-2xl border border-red-200 bg-red-50/50 p-3.5 space-y-2.5">
-              <p className="font-heading text-xs font-black text-red-900 flex items-center gap-1.5">
-                <Heart className="size-4 text-red-600" />
-                <span>قياس ضغط الدم والنبض</span>
-              </p>
-              <div className="grid grid-cols-3 gap-2">
-                <label className="block space-y-1">
-                  <span className="text-[11px] font-bold text-red-950">الانقباضي (العالي)</span>
-                  <Input
-                    type="number"
-                    value={systolic}
-                    onChange={(e) => setSystolic(e.target.value)}
-                    placeholder="120"
-                    className="h-9 rounded-xl bg-white text-xs"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[11px] font-bold text-red-950">الانبساطي (الواطي)</span>
-                  <Input
-                    type="number"
-                    value={diastolic}
-                    onChange={(e) => setDiastolic(e.target.value)}
-                    placeholder="80"
-                    className="h-9 rounded-xl bg-white text-xs"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[11px] font-bold text-red-950">النبض (bpm)</span>
-                  <Input
-                    type="number"
-                    value={pulse}
-                    onChange={(e) => setPulse(e.target.value)}
-                    placeholder="75"
-                    className="h-9 rounded-xl bg-white text-xs"
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Weight & Height Group */}
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3.5 space-y-2.5">
-              <p className="font-heading text-xs font-black text-emerald-900 flex items-center gap-1.5">
-                <Scale className="size-4 text-emerald-600" />
-                <span>الوزن والطول</span>
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="block space-y-1">
-                  <span className="text-[11px] font-bold text-emerald-950">الوزن (كجم)</span>
-                  <Input
-                    type="number"
-                    step="0.1"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    placeholder="مثال: 78.5"
-                    className="h-9 rounded-xl bg-white text-xs"
-                  />
-                </label>
-                <label className="block space-y-1">
-                  <span className="text-[11px] font-bold text-emerald-950">الطول (سم) - لحساب BMI</span>
-                  <Input
-                    type="number"
-                    value={height}
-                    onChange={(e) => setHeight(e.target.value)}
-                    placeholder="مثال: 170"
-                    className="h-9 rounded-xl bg-white text-xs"
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Notes */}
-            <label className="block space-y-1">
-              <span className="text-xs font-bold text-foreground">توصيات وملاحظات الإدارة / الصيدلي للمريض</span>
-              <textarea
-                value={pharmacistNotes}
-                onChange={(e) => setPharmacistNotes(e.target.value)}
-                placeholder="اكتب أي نصائح أو ملاحظات تظهر في ملف المريض..."
-                className="w-full rounded-xl border border-input bg-transparent px-3 py-2 text-xs shadow-xs placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring h-18 resize-none"
-              />
-            </label>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/80">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 rounded-xl text-xs font-bold"
-                onClick={() => setOpenMeasModal(false)}
-              >
-                إلغاء
-              </Button>
-              <Button
-                type="submit"
-                disabled={savingMeas}
-                className="h-10 rounded-xl bg-[#2E9E6B] px-6 text-xs font-black text-white hover:bg-[#238156]"
-              >
-                {savingMeas ? "جاري الحفظ..." : "حفظ وإرسال لملف المريض"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -1672,6 +1452,89 @@ export function MaintenanceSection() {
   const restock = useBahbah((s) => s.restock);
   const adminOrders = useBahbah((s) => s.adminOrders);
   const orders = adminOrders ?? [];
+  const lastSyncAt = useBahbah((s) => s.lastSyncAt);
+
+  /* ---- مؤشرات حقيقية محسوبة (كانت نصوص ثابتة وهمية قبل كده) ---- */
+  const [storageInfo, setStorageInfo] = useState("—");
+  useEffect(() => {
+    try {
+      let bytes = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i) ?? "";
+        bytes += (k.length + (localStorage.getItem(k)?.length ?? 0)) * 2;
+      }
+      setStorageInfo(
+        bytes >= 1024 * 1024
+          ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+          : `${Math.max(1, Math.round(bytes / 1024))} KB`
+      );
+      if (navigator.storage?.estimate) {
+        navigator.storage
+          .estimate()
+          .then((est) => {
+            if (est.usage != null) setStorageInfo(`${(est.usage / (1024 * 1024)).toFixed(1)} MB`);
+          })
+          .catch(() => {});
+      }
+    } catch {}
+  }, []);
+  const lastSyncLabel = lastSyncAt
+    ? new Date(lastSyncAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : lang === "ar"
+      ? "لا يوجد في هذه الجلسة"
+      : "None this session";
+
+  /* مسح بيانات التطبيق المحلية — بالمفتاح الصحيح "bahbah-store" (الكود القديم
+     كان بيمسح مفتاح وهمي "bahbah-storage" فالزر ماكانش بيعمل أي حاجة فعلًا) */
+  const purgeLocalData = () => {
+    const msg =
+      lang === "ar"
+        ? "تحذير: ده هيمسح بيانات التطبيق المحلية على الجهاز ده (السلة، الإعدادات المحلية، تسجيل الدخول) وكاش المتصفح، وهيعمل إعادة تحميل. الطلبات والبيانات المحفوظة في السحابة مش هتتمس. متأكد؟"
+        : "Warning: this clears this device's local app data (cart, local settings, sign-in) and the browser cache, then reloads. Cloud data is NOT touched. Continue?";
+    if (!window.confirm(msg)) return;
+    try {
+      localStorage.removeItem("bahbah-store");
+      if ("caches" in window) {
+        caches
+          .keys()
+          .then((keys) => keys.forEach((k) => void caches.delete(k)))
+          .catch(() => {});
+      }
+      toast.success(
+        lang === "ar"
+          ? "تم مسح البيانات المحلية والكاش — جارٍ إعادة التحميل"
+          : "Local data & cache cleared — reloading"
+      );
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      toast.error(lang === "ar" ? "حدث خطأ أثناء تنظيف الذاكرة" : "Failed to clear local data");
+    }
+  };
+
+  const [syncingCatalog, setSyncingCatalog] = useState(false);
+  const handleSyncCatalog = async () => {
+    setSyncingCatalog(true);
+    const ok = await syncCatalogToSupabase(
+      products.map((p) => ({ id: p.id, price: p.price, stock: p.stock }))
+    );
+    setSyncingCatalog(false);
+    if (ok) {
+      toast.success(
+        lang === "ar" ? "تم رفع الكتالوج (الأسعار + المخزون) للسيرفر بنجاح" : "Catalog synced to server"
+      );
+    } else {
+      toast.error(
+        lang === "ar"
+          ? "مزامنة الكتالوج مش متاحة على السيرفر لسه — الأسعار محفوظة ومتزامنة محليًا"
+          : "Catalog sync is not available on the server yet"
+      );
+    }
+  };
   
   const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1687,17 +1550,21 @@ export function MaintenanceSection() {
       ).slice(0, 30)
     : products.slice(0, 15);
 
-  const handleSavePrice = (id: string) => {
+  const handleSavePrice = async (id: string) => {
     const p = Number(editPrice);
     if (!p || p <= 0) {
       toast.error(lang === "ar" ? "يرجى إدخال سعر صحيح" : "Please enter a valid price");
       return;
     }
-    setPrice(id, p);
+    /* «اتحدّث» ما بتتقالش غير لو السعر (والمخزون لو مكتوب) اتأكد حفظهم على
+       السيرفر — عند أي فشل سطر التعديل بيفضل مفتوح والقيم بترجع للمحفوظ */
+    const okPrice = await setPrice(id, p);
+    let okStock = true;
     if (editStock) {
       const s = Number(editStock);
-      if (s > 0) restock(id, s);
+      if (s > 0) okStock = await restock(id, s);
     }
+    if (!okPrice || !okStock) return;
     setEditingId(null);
     toast.success(lang === "ar" ? "تم تحديث السعر والمخزون فوراً بنجاح!" : "Price updated live!");
   };
@@ -1756,7 +1623,7 @@ export function MaintenanceSection() {
           <div>
             <div className="flex items-center gap-2">
               <Badge className="bg-[#F09428] font-black text-white hover:bg-[#e08317]">
-                {lang === "ar" ? "جاهز للتشغيل الحي 100%" : "Production Ready"}
+                {lang === "ar" ? "مركز الصيانة والمزامنة" : "Maintenance & Sync Center"}
               </Badge>
               <span className="text-xs font-bold text-white/80">
                 {lang === "ar" ? "صيدلية بحبح — ديروط" : "Bahbah Pharmacy"}
@@ -1777,20 +1644,24 @@ export function MaintenanceSection() {
             <Button
               variant="destructive"
               className="h-11 rounded-full bg-red-600 px-4 font-black text-white hover:bg-red-700 shadow-md"
-              onClick={() => {
-                if (window.confirm("هل أنت متأكد من مسح الفواتير المسلّمة والقديمة والكاش لتوفير مساحة التخزين في السحابة؟")) {
-                  try {
-                    localStorage.removeItem("bahbah-storage");
-                    toast.success("تم مسح الكاش والبيانات المؤقتة وتفريغ مساحة التخزين بنجاح!");
-                    setTimeout(() => window.location.reload(), 1000);
-                  } catch {
-                    toast.error("حدث خطأ أثناء تنظيف الذاكرة");
-                  }
-                }
-              }}
+              onClick={purgeLocalData}
             >
               <Trash2 className="size-4 me-1.5" />
-              {lang === "ar" ? "تنظيف الكاش والفواتير القديمة 🧹" : "Purge Old Invoices & Cache"}
+              {lang === "ar" ? "مسح بيانات الجهاز المحلية والكاش 🧹" : "Purge Local Data & Cache"}
+            </Button>
+            <Button
+              className="h-11 rounded-full bg-[#1E4E8F] px-5 font-black text-white hover:bg-[#18406f] shadow-md"
+              onClick={handleSyncCatalog}
+              disabled={syncingCatalog}
+            >
+              <RefreshCcw className="size-4 me-2" />
+              {syncingCatalog
+                ? lang === "ar"
+                  ? "جارٍ الرفع…"
+                  : "Syncing…"
+                : lang === "ar"
+                  ? "رفع الكتالوج للسيرفر"
+                  : "Sync Catalog to Server"}
             </Button>
             <Button
               className="h-11 rounded-full bg-[#059669] px-5 font-black text-white hover:bg-[#047857] shadow-md"
@@ -1809,31 +1680,35 @@ export function MaintenanceSection() {
           </div>
         </div>
 
-        {/* Health indicators */}
+        {/* Health indicators — قيم حقيقية محسوبة من الحالة الحالية، مش نصوص ثابتة */}
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
-            <span className="text-[11px] font-bold text-white/70">
-              {lang === "ar" ? "دقة الحسابات المالية" : "Financial Accuracy"}
-            </span>
-            <p className="mt-1 font-heading text-lg font-black text-[#4ADE80]">100% بالقرش</p>
-          </div>
-          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
-            <span className="text-[11px] font-bold text-white/70">
-              {lang === "ar" ? "حالة الأزرار والروابط" : "System Buttons"}
-            </span>
-            <p className="mt-1 font-heading text-lg font-black text-[#4ADE80]">شغالة بالكامل</p>
-          </div>
-          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
-            <span className="text-[11px] font-bold text-white/70">
-              {lang === "ar" ? "مواعيد العمل والدليفري" : "Working Hours"}
-            </span>
-            <p className="mt-1 font-heading text-lg font-black text-[#F09428]">24 ساعة يومياً</p>
-          </div>
           <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
             <span className="text-[11px] font-bold text-white/70">
               {lang === "ar" ? "إجمالي المنتجات المربوطة" : "Active Products"}
             </span>
-            <p className="mt-1 font-heading text-lg font-black text-white">{products.length} صنف</p>
+            <p className="mt-1 font-heading text-lg font-black text-white">
+              {products.length} {lang === "ar" ? "صنف" : "items"}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
+            <span className="text-[11px] font-bold text-white/70">
+              {lang === "ar" ? "طلبات مسجلة في اللوحة" : "Orders in Dashboard"}
+            </span>
+            <p className="mt-1 font-heading text-lg font-black text-white">
+              {orders.length} {lang === "ar" ? "طلب" : "orders"}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
+            <span className="text-[11px] font-bold text-white/70">
+              {lang === "ar" ? "التخزين المحلي على هذا الجهاز" : "Local Storage (this device)"}
+            </span>
+            <p className="mt-1 font-heading text-lg font-black text-white">{storageInfo}</p>
+          </div>
+          <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur">
+            <span className="text-[11px] font-bold text-white/70">
+              {lang === "ar" ? "آخر مزامنة ناجحة مع السيرفر" : "Last Successful Sync"}
+            </span>
+            <p className="mt-1 font-heading text-sm font-black leading-7 text-white">{lastSyncLabel}</p>
           </div>
         </div>
       </div>

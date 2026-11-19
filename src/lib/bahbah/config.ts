@@ -23,7 +23,6 @@ export const siteConfig = {
 
   // إعدادات المتجر والشحن
   shipping: {
-    freeShippingThreshold: 500, // الشحن مجاني فوق 500 ج.م
     defaultShippingCost: 25,
     deliveryEstimateHours: 2,
   },

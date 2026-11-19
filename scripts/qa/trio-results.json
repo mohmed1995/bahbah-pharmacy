@@ -1,0 +1,134 @@
+[
+  {
+    "battery": "migration",
+    "name": "platform stubs + pre-existing-table stand-ins created",
+    "pass": true,
+    "evidence": "same harness as post_delivery_check.mjs"
+  },
+  {
+    "battery": "migration",
+    "name": "full chain executes with NO new trio migration (18 files)",
+    "pass": true,
+    "evidence": "trio is read-only over existing tables"
+  },
+  {
+    "battery": "seed",
+    "name": "seeded 5 orders / 4 collections / 4 queue tables across two days",
+    "pass": true,
+    "evidence": "day=2026-11-19"
+  },
+  {
+    "battery": "day-range",
+    "name": "orders for the day = exactly the 3 created that day (prev/next day excluded)",
+    "pass": true,
+    "evidence": "ids=T-D1,T-D2,T-D3"
+  },
+  {
+    "battery": "day-range",
+    "name": "revenue (non-cancelled sum) = 300, delivered = 1, cancelled = 1",
+    "pass": true,
+    "evidence": "revenue=300"
+  },
+  {
+    "battery": "day-range",
+    "name": "collections for the day = 3 rows, cash 150 / wallet 80 / bank 20 (yesterday's 999 excluded)",
+    "pass": true,
+    "evidence": "{\"wallet\":80,\"cash\":150,\"bank\":20}"
+  },
+  {
+    "battery": "day-range",
+    "name": "active-orders filter = pending/ready/shipping across days (T-D3, T-P1, T-N1), oldest update first",
+    "pass": true,
+    "evidence": "ids=T-P1,T-D3,T-N1"
+  },
+  {
+    "battery": "queues",
+    "name": "queue snapshot counters: whatsapp(sent)=2, shortage(pending)=3, nursing(new)=1, rx(new)=2",
+    "pass": true,
+    "evidence": "{\"whatsapp\":2,\"shortage\":3,\"nursing\":1,\"rx\":2}"
+  },
+  {
+    "battery": "live-board",
+    "name": "dr-1: 1 active (shipping from yesterday still counts), 1 delivered today, 1 assigned today (only B2 was created today)",
+    "pass": true,
+    "evidence": "active=1 delivered=1 assigned=1"
+  },
+  {
+    "battery": "live-board",
+    "name": "dr-1: collections today = 150 (2 records); rating avg 4.5 over 2 ratings",
+    "pass": true,
+    "evidence": "sum=150 avg=4.5"
+  },
+  {
+    "battery": "live-board",
+    "name": "dr-2: delivered YESTERDAY does not count today; no ratings → avg null (never a fake number)",
+    "pass": true,
+    "evidence": "delivered=0 avg=null"
+  },
+  {
+    "battery": "live-board",
+    "name": "rows sorted busiest-first (dr-1 before dr-2)",
+    "pass": true,
+    "evidence": "dr-1,dr-2"
+  },
+  {
+    "battery": "daily-report",
+    "name": "totals: 3 orders, revenue 300 (cancelled excluded), delivered 1, cancelled 1, active 1",
+    "pass": true,
+    "evidence": "{\"n\":3,\"rev\":300}"
+  },
+  {
+    "battery": "daily-report",
+    "name": "collections by method: cash 100×1, wallet 50×1, bank 20×1, total 170",
+    "pass": true,
+    "evidence": "{\"cash\":{\"count\":1,\"sum\":100},\"wallet\":{\"count\":1,\"sum\":50},\"bank\":{\"count\":1,\"sum\":20}}"
+  },
+  {
+    "battery": "daily-report",
+    "name": "top couriers: dr-1 first with 2 deliveries + avg 4.5; dr-2 has 1 (shipping doesn't count)",
+    "pass": true,
+    "evidence": "[{\"courierId\":\"dr-1\",\"delivered\":2,\"ratingAvg\":4.5,\"ratingCount\":2},{\"courierId\":\"dr-2\",\"delivered\":1,\"ratingAvg\":null,\"ratingCount\":0}]"
+  },
+  {
+    "battery": "stuck",
+    "name": "stuck = S1(pending 61m), S3(ready 46m), S4(shipping 91m), S8(pending via createdAt) — sorted worst first",
+    "pass": true,
+    "evidence": "S8:120m>60, S4:91m>90, S1:61m>60, S3:46m>45"
+  },
+  {
+    "battery": "stuck",
+    "name": "thresholds are the documented ones (60/45/90)",
+    "pass": true,
+    "evidence": "{\"pending\":60,\"ready\":45,\"shipping\":90}"
+  },
+  {
+    "battery": "notify-plan",
+    "name": "first sight: unchanged order silent; order that moved while away → 1 patch + 1 notification",
+    "pass": true,
+    "evidence": "{\"patches\":[\"N2\"],\"notify\":[\"N2\"]}"
+  },
+  {
+    "battery": "notify-plan",
+    "name": "same server state next poll → nothing fires again",
+    "pass": true,
+    "evidence": "quiet"
+  },
+  {
+    "battery": "notify-plan",
+    "name": "next real transition (pending → ready) notifies once with the new status",
+    "pass": true,
+    "evidence": "[\"N1:ready\"]"
+  },
+  {
+    "battery": "notify-plan",
+    "name": "already notified by another path → patch still applies, notification suppressed",
+    "pass": true,
+    "evidence": "{\"patches\":[{\"id\":\"N9\",\"status\":\"ready\"}],\"toNotify\":[]}"
+  },
+  {
+    "battery": "notify-plan",
+    "name": "order missing from server response → untouched (no guessing)",
+    "pass": true,
+    "evidence": "untouched"
+  }
+]

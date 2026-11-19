@@ -44,12 +44,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { adminOrders as adminDemoOrders, categories, discountPct } from "@/lib/bahbah/data";
-import { useBahbah, useT, useAdminProducts, type Product, type PatientMeasurement } from "@/lib/bahbah/store";
+import { useBahbah, useT, useAdminProducts, hasPermission, type Product, type PatientMeasurement } from "@/lib/bahbah/store";
 import { fmtPrice, ProductVisual } from "./product-card";
+import { CustomerContactMenu } from "./contact-menu";
+import { RxPhotoLink } from "./rx-photo";
 import { KpiCard, daysUntil, TableWrap, TH, TD } from "./admin-ui";
 import { StaffGate } from "./courier";
-import { IconPharmacist, IconRxClipboard } from "./icons";
+import { IconPharmacist, IconRxClipboard, IconWhatsapp } from "./icons";
 import { getSugarStatus, getBPStatus, getBmiStatus, timingArabic } from "./vitals";
+import PatientTimeline, { phonesMatch } from "./patient-timeline";
+import { NursingQueue } from "./admin-nursing";
+import { isNightOrder } from "@/lib/bahbah/curation";
 import { toast } from "sonner";
 
 /* ------------------------------------------------------------------ */
@@ -66,10 +71,41 @@ export default function PharmacistPortal() {
   const measurements = useBahbah((s) => s.measurements);
   const careSubs = useBahbah((s) => s.careSubs);
   const allProducts = useAdminProducts();
-  const { go, pharmacistReady, adminSetRx, restock, addMeasurement, deleteMeasurement } = useBahbah();
+  const { go, pharmacistReady, adminSetRx, restock, addMeasurement, deleteMeasurement, setWhatsappOrderStatus, setShortageRequestStatus } = useBahbah();
+  /* تحديثات الحالات بقت بترجّع نتيجة مؤكدة من السيرفر — الفشل لازم
+     يبان للطاقم بتنبيه بدل ما الزرار «يشتغل» والحالة ما تتغيرش (D9) */
+  const waStatus = async (id: string, status: Parameters<typeof setWhatsappOrderStatus>[1]) => {
+    const ok = await setWhatsappOrderStatus(id, status);
+    if (!ok) toast.error(lang === "ar" ? "تعذّر تحديث حالة طلب الواتساب على السيرفر — حاول تاني" : "Could not update the WhatsApp order on the server — try again");
+  };
+  const shortageStatus = async (id: string, status: Parameters<typeof setShortageRequestStatus>[1]) => {
+    const ok = await setShortageRequestStatus(id, status);
+    if (!ok) toast.error(lang === "ar" ? "تعذّر تحديث حالة طلب الناقص على السيرفر — حاول تاني" : "Could not update the shortage request on the server — try again");
+  };
+  const whatsappOrders = useBahbah((s) => s.whatsappOrders);
+  const shortageRequests = useBahbah((s) => s.shortageRequests);
 
-  const [portalTab, setPortalTab] = useState<"orders" | "vitals">("orders");
+  /* صلاحيات المدير الموزعة على الصيدلي ده (افتراضات الدور لو مفيش صف مخصص) */
+  const canOrders = useBahbah((s) => hasPermission(s, "orders"));
+  const canRx = useBahbah((s) => hasPermission(s, "prescriptions"));
+  const canMedicines = useBahbah((s) => hasPermission(s, "medicines"));
+  const canWhatsapp = useBahbah((s) => hasPermission(s, "whatsapp_orders"));
+  const canShortages = useBahbah((s) => hasPermission(s, "shortages"));
+  const canNursing = useBahbah((s) => hasPermission(s, "nursing"));
+  const canMeasurements = useBahbah((s) => hasPermission(s, "measurements"));
+  const canOrdersTab = canOrders || canRx || canMedicines || canWhatsapp || canShortages || canNursing;
+
+  const [portalTab, setPortalTab] = useState<"orders" | "vitals" | "file">("orders");
+  const visibleTabs = [
+    ...(canOrdersTab ? ["orders" as const] : []),
+    ...(canMeasurements ? ["vitals" as const, "file" as const] : []),
+  ];
+  const effectiveTab = visibleTabs.includes(portalTab) ? portalTab : (visibleTabs[0] ?? "orders");
   const [q, setQ] = useState("");
+
+  // Patient file lookup (by phone)
+  const [filePhoneInput, setFilePhoneInput] = useState("");
+  const [filePhone, setFilePhone] = useState<string | null>(null);
 
   // Measurement Modal & Form
   const [openMeasModal, setOpenMeasModal] = useState(false);
@@ -89,8 +125,12 @@ export default function PharmacistPortal() {
   // Vitals filter search
   const [vitalsSearch, setVitalsSearch] = useState("");
 
+  // Unified patient timeline dialog (by phone)
+  const [timelinePhone, setTimelinePhone] = useState<string | null>(null);
+
   const orders = adminOrders ?? [];
   const pending = orders.filter((o) => o.status === "pending");
+  const readyOrders = orders.filter((o) => o.status === "ready");
   const lowStock = allProducts.filter((p) => p.stock > 0 && p.stock < 30);
   const outStock = allProducts.filter((p) => p.stock === 0);
   const expiring = allProducts.filter((p) => {
@@ -220,40 +260,58 @@ export default function PharmacistPortal() {
       {/* Navigation Tabs */}
       <div className="mt-5 flex items-center justify-between border-b border-border/80 pb-2">
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPortalTab("orders")}
-            className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition ${
-              portalTab === "orders"
-                ? "bg-[#184C8A] text-white shadow-sm"
-                : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <Package className="size-4" />
-            <span>{lang === "ar" ? "الطلبات والمخزون والروشتات" : "Orders & Stock"}</span>
-            {pending.length > 0 && (
-              <span className="rounded-full bg-amber-400 px-1.5 py-0.2 text-[10px] font-black text-slate-900">
-                {pending.length}
-              </span>
-            )}
-          </button>
+          {canOrdersTab && (
+            <button
+              onClick={() => setPortalTab("orders")}
+              className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition ${
+                effectiveTab === "orders"
+                  ? "bg-[#184C8A] text-white shadow-sm"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Package className="size-4" />
+              <span>{lang === "ar" ? "الطلبات والمخزون والروشتات" : "Orders & Stock"}</span>
+              {pending.length > 0 && (
+                <span className="rounded-full bg-amber-400 px-1.5 py-0.2 text-[10px] font-black text-slate-900">
+                  {pending.length}
+                </span>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => setPortalTab("vitals")}
-            className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition ${
-              portalTab === "vitals"
-                ? "bg-[#2E9E6B] text-white shadow-sm"
-                : "text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            <Activity className="size-4" />
-            <span>{lang === "ar" ? "قياسات السكر والضغط والوزن" : "Vitals & Measurements"}</span>
-            <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[10px] font-bold text-emerald-800">
-              {measurements.length}
-            </span>
-          </button>
+          {canMeasurements && (
+            <button
+              onClick={() => setPortalTab("vitals")}
+              className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition ${
+                effectiveTab === "vitals"
+                  ? "bg-[#2E9E6B] text-white shadow-sm"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <Activity className="size-4" />
+              <span>{lang === "ar" ? "قياسات السكر والضغط والوزن" : "Vitals & Measurements"}</span>
+              <span className="rounded-full bg-emerald-100 px-1.5 py-0.2 text-[10px] font-bold text-emerald-800">
+                {measurements.length}
+              </span>
+            </button>
+          )}
+
+          {canMeasurements && (
+            <button
+              onClick={() => setPortalTab("file")}
+              className={`flex items-center gap-2 rounded-2xl px-4 py-2 text-xs font-black transition ${
+                effectiveTab === "file"
+                  ? "bg-[#B45E0A] text-white shadow-sm"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              <User className="size-4" />
+              <span>{lang === "ar" ? "ملف المريض" : "Patient File"}</span>
+            </button>
+          )}
         </div>
 
-        {portalTab === "vitals" && (
+        {effectiveTab === "vitals" && (
           <Button
             size="sm"
             className="rounded-full bg-[#2E9E6B] text-xs font-black text-white hover:bg-[#238156]"
@@ -266,7 +324,7 @@ export default function PharmacistPortal() {
       </div>
 
       {/* ================= TAB 1: ORDERS & INVENTORY ================= */}
-      {portalTab === "orders" && (
+      {effectiveTab === "orders" && (
         <div className="space-y-6 pt-2">
           {/* KPIs */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -276,7 +334,8 @@ export default function PharmacistPortal() {
             <KpiCard icon={<Clock className="size-5" />} tint="bg-[#EAF6F1]" color="text-[#2E9E6B]" value={String(expiring.length)} label={t("pharm.kpiExp")} />
           </div>
 
-          {/* ---- product search ---- */}
+          {/* ---- product search (صلاحية الأدوية) ---- */}
+          {canMedicines && (
           <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
             <h2 className="flex items-center gap-2 font-heading text-base font-black md:text-lg">
               <Search className="size-4.5 text-[#1E4E8F]" />
@@ -348,8 +407,10 @@ export default function PharmacistPortal() {
               </div>
             )}
           </div>
+          )}
 
-          {/* ---- preparation queue ---- */}
+          {/* ---- preparation queue (صلاحية الطلبات) ---- */}
+          {canOrders && (
           <div>
             <h2 className="flex items-center gap-2 font-heading text-lg font-black">
               <IconRxClipboard className="size-5 text-[#1E4E8F]" />
@@ -369,10 +430,21 @@ export default function PharmacistPortal() {
                       <div className="flex items-center gap-2.5">
                         <span className="font-heading text-base font-black text-[#1E4E8F]">{o.id}</span>
                         <Badge className="rounded-full border-0 bg-[#FFF4E5] text-[#B45E0A]">{t("admin.stPending")}</Badge>
+                        {o.discreetPackaging && (
+                          <Badge className="rounded-full border-0 bg-[#0B1E38] text-white">
+                            {lang === "ar" ? "تغليف خاص — سادة بدون علامات" : "Discreet packaging"}
+                          </Badge>
+                        )}
+                        {isNightOrder(o.createdAt ?? o.date) && (
+                          <Badge className="rounded-full border-0 bg-[#12294D] text-[#FCD34D]">
+                            🌙 {lang === "ar" ? "طلب ليلي" : "Night order"}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
                         <Phone className="size-3.5" />
                         <span dir="ltr">{o.phone}</span>
+                        <CustomerContactMenu phone={o.phone} label="" className="grid size-8 place-items-center rounded-full bg-[#2E9E6B] text-white shadow-xs transition hover:brightness-105 active:scale-95" />
                       </div>
                     </div>
 
@@ -393,23 +465,69 @@ export default function PharmacistPortal() {
                       {o.address}
                     </div>
 
+                    {isNightOrder(o.createdAt ?? o.date) && (
+                      <p className="mt-2.5 rounded-xl border border-[#F59E0B]/40 bg-[#FFFBEB] px-3 py-2 text-center font-heading text-xs font-black text-[#B45E0A]">
+                        🌙 {t("checkout.nightLine")}
+                        <span className="font-bold text-[#B45E0A]/70">
+                          {lang === "ar" ? " — اكتبها على كارت وحطها في الشنطة" : " — write it on a card in the bag"}
+                        </span>
+                      </p>
+                    )}
+
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border/60 pt-3.5">
                       <span className="text-sm font-bold text-muted-foreground">
                         {lang === "ar" ? o.customerAr : o.customerEn}
                       </span>
-                      <Button className="h-11 rounded-full px-6 font-black" onClick={() => pharmacistReady(o.id)}>
-                        <CheckCircle2 className="size-4" />
-                        {t("pharm.readyBtn")}
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Button
+                          variant="outline"
+                          className="h-11 rounded-full px-4 font-black text-[#184C8A]"
+                          onClick={() => setTimelinePhone(o.phone)}
+                        >
+                          <User className="size-4" />
+                          {t("timeline.viewPatient")}
+                        </Button>
+                        <Button className="h-11 rounded-full px-6 font-black" onClick={() => pharmacistReady(o.id)}>
+                          <CheckCircle2 className="size-4" />
+                          {t("pharm.readyBtn")}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+          )}
+
+          {/* ---- جاهز وبانتظار استلام المندوب ---- */}
+          {canOrders && readyOrders.length > 0 && (
+            <div>
+              <h2 className="flex items-center gap-2 font-heading text-lg font-black">
+                <CheckCircle2 className="size-5 text-[#2E9E6B]" />
+                {t("admin.stReady")} ({readyOrders.length})
+              </h2>
+              <div className="mt-3 space-y-2">
+                {readyOrders.map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-[#2E9E6B]/30 bg-[#EAF6F1]/50 px-4 py-3"
+                  >
+                    <span className="font-heading text-sm font-black text-[#1E4E8F]">{o.id}</span>
+                    <span className="truncate text-xs font-bold text-muted-foreground">
+                      {lang === "ar" ? o.customerAr : o.customerEn} · <span dir="ltr">{o.phone}</span>
+                    </span>
+                    <Badge className="rounded-full border-0 bg-[#EAF6F1] text-[#2E9E6B]">
+                      {lang === "ar" ? "بانتظار استلام المندوب" : "Waiting for courier pickup"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ---- incoming prescriptions ---- */}
-          {newRx.length > 0 && (
+          {canRx && newRx.length > 0 && (
             <div>
               <h2 className="flex items-center gap-2 font-heading text-lg font-black">
                 <FileText className="size-5 text-[#B45E0A]" />
@@ -427,23 +545,30 @@ export default function PharmacistPortal() {
                           {r.id} — {lang === "ar" ? r.customerAr : r.customerEn}
                         </p>
                         <p className="truncate text-[11px] font-bold text-muted-foreground">
-                          {r.fileName && (r.fileName.startsWith("http://") || r.fileName.startsWith("https://")) ? (
-                            <a
-                              href={r.fileName}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          {r.fileName ? (
+                            <RxPhotoLink
+                              value={r.fileName}
                               className="font-bold text-[#1E4E8F] underline hover:text-[#163a6b]"
+                              fallbackText={<span>{r.fileName}</span>}
                             >
                               عرض الروشتة ↗
-                            </a>
-                          ) : (
-                            <span>{r.fileName}</span>
-                          )}{" "}
+                            </RxPhotoLink>
+                          ) : null}{" "}
                           · <span dir="ltr">{r.phone}</span>
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <CustomerContactMenu phone={r.phone} label="" className="grid size-9 place-items-center rounded-full bg-[#2E9E6B] text-white shadow-xs transition hover:brightness-105 active:scale-95" />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-9 rounded-full px-4 font-black text-[#184C8A]"
+                        onClick={() => setTimelinePhone(r.phone)}
+                      >
+                        <User className="size-3.5" />
+                        {t("timeline.viewPatient")}
+                      </Button>
                       <Button
                         size="sm"
                         className="h-9 rounded-full bg-[#2E9E6B] px-4 font-black text-white hover:bg-[#278a5e]"
@@ -468,7 +593,227 @@ export default function PharmacistPortal() {
             </div>
           )}
 
-          {/* ---- low stock + expiring tables ---- */}
+          {/* ---- طلبات واتساب السريعة (بكود تتبع) ---- */}
+          {canWhatsapp && whatsappOrders.length > 0 && (
+            <div>
+              <h2 className="flex items-center gap-2 font-heading text-lg font-black">
+                <IconWhatsapp className="size-5 text-[#25D366]" />
+                {lang === "ar" ? "طلبات واتساب" : "WhatsApp orders"} ({whatsappOrders.filter((w) => w.status === "sent").length}{" "}
+                {lang === "ar" ? "جديدة" : "new"})
+              </h2>
+              <div className="mt-3 space-y-2.5">
+                {whatsappOrders.slice(0, 20).map((w) => (
+                  <div key={w.id} className="rounded-2xl border border-[#25D366]/30 bg-[#ECFDF5]/50 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-[#0B1E38] px-2.5 py-0.5 font-heading text-xs font-black text-white" dir="ltr">
+                          {w.code}
+                        </span>
+                        {w.status === "sent" && (
+                          <Badge className="rounded-full border-0 bg-[#FFF4E5] text-[#B45E0A]">{lang === "ar" ? "اتبعت واتساب" : "Sent"}</Badge>
+                        )}
+                        {w.status === "converted" && (
+                          <Badge className="rounded-full border-0 bg-[#EAF1F9] text-[#1E4E8F]">{lang === "ar" ? "اتحول لطلب" : "Converted"}</Badge>
+                        )}
+                        {w.status === "done" && (
+                          <Badge className="rounded-full border-0 bg-[#EAF6F1] text-[#2E9E6B]">{lang === "ar" ? "تم" : "Done"}</Badge>
+                        )}
+                        {w.status === "cancelled" && (
+                          <Badge className="rounded-full border-0 bg-[#DC4B4B]/10 text-[#DC4B4B]">{lang === "ar" ? "ملغي" : "Cancelled"}</Badge>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-bold text-muted-foreground">
+                        {new Date(w.createdAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-GB")}
+                        {w.phone ? (
+                          <>
+                            {" · "}
+                            <span dir="ltr">{w.phone}</span>
+                          </>
+                        ) : null}
+                      </span>
+                    </div>
+                    <div className="mt-2 space-y-0.5">
+                      {w.items.map((it, i) => (
+                        <p key={i} className="text-xs font-bold text-foreground/80">
+                          {lang === "ar" ? it.nameAr : it.nameEn}
+                          <span className="text-muted-foreground"> × {it.qty}</span>
+                        </p>
+                      ))}
+                    </div>
+                    <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-[#25D366]/20 pt-2.5">
+                      <span className="font-heading text-sm font-black text-[#1E4E8F]">{fmtPrice(w.total, t)}</span>
+                      <div className="flex items-center gap-2">
+                        <CustomerContactMenu phone={w.phone} label="" className="grid size-8 place-items-center rounded-full bg-[#2E9E6B] text-white shadow-xs transition hover:brightness-105 active:scale-95" />
+                        {w.status === "sent" && (
+                          <Button
+                            size="sm"
+                            className="h-8 rounded-full bg-[#184C8A] px-3.5 text-[11px] font-black text-white"
+                            onClick={() => void waStatus(w.id, "converted")}
+                          >
+                            {lang === "ar" ? "اتحول لطلب" : "Converted"}
+                          </Button>
+                        )}
+                        {(w.status === "sent" || w.status === "converted") && (
+                          <Button
+                            size="sm"
+                            className="h-8 rounded-full bg-[#2E9E6B] px-3.5 text-[11px] font-black text-white hover:bg-[#278a5e]"
+                            onClick={() => void waStatus(w.id, "done")}
+                          >
+                            {lang === "ar" ? "تم" : "Done"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ---- طلبات النواقص («طلب ناقص» — بكود تتبع) ---- */}
+          {canShortages && shortageRequests.length > 0 && (
+            <div>
+              <h2 className="flex items-center gap-2 font-heading text-lg font-black">
+                <Package className="size-5 text-[#B45E0A]" />
+                {lang === "ar" ? "طلبات النواقص" : "Shortage requests"} ({shortageRequests.filter((r) => r.status === "pending").length}{" "}
+                {lang === "ar" ? "جديدة" : "new"})
+              </h2>
+              <div className="mt-3 space-y-2.5">
+                {shortageRequests.slice(0, 20).map((r) => {
+                  const digits = (r.phone || "").replace(/[^0-9]/g, "");
+                  const intlPhone = digits.startsWith("0")
+                    ? `20${digits.slice(1)}`
+                    : digits.startsWith("20")
+                      ? digits
+                      : digits.length === 10 && digits.startsWith("1")
+                        ? `20${digits}`
+                        : digits;
+                  const arrivedMsg =
+                    lang === "ar"
+                      ? `السلام عليكم، معاك صيدلية بحبح 🌿\nالدوا اللي طلبته بقى متوفر دلوقتي: ${r.itemName}\nكود طلب الناقص: ${r.code}\nتحب نجهّزهولك طلب توصيل؟`
+                      : `Hello, this is Bahbah Pharmacy.\nThe medicine you requested is now available: ${r.itemName}\nShortage request code: ${r.code}\nShall we prepare it as a delivery order?`;
+                  return (
+                    <div key={r.id} className="rounded-2xl border border-[#B45E0A]/25 bg-[#FFF9F0]/60 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-[#0B1E38] px-2.5 py-0.5 font-heading text-xs font-black text-white" dir="ltr">
+                            {r.code}
+                          </span>
+                          {r.status === "pending" && (
+                            <Badge className="rounded-full border-0 bg-[#FFF4E5] text-[#B45E0A]">{lang === "ar" ? "جديد" : "New"}</Badge>
+                          )}
+                          {r.status === "available" && (
+                            <Badge className="rounded-full border-0 bg-[#EAF6F1] text-[#2E9E6B]">{lang === "ar" ? "بقى متوفر" : "Available"}</Badge>
+                          )}
+                          {r.status === "notified" && (
+                            <Badge className="rounded-full border-0 bg-[#EAF1F9] text-[#1E4E8F]">{lang === "ar" ? "اتبعت للزبون" : "Customer notified"}</Badge>
+                          )}
+                          {r.status === "converted" && (
+                            <Badge className="rounded-full border-0 bg-[#EAF1F9] text-[#1E4E8F]">{lang === "ar" ? "اتحول لطلب" : "Converted"}</Badge>
+                          )}
+                          {r.status === "closed" && (
+                            <Badge className="rounded-full border-0 bg-muted text-muted-foreground">{lang === "ar" ? "مقفل" : "Closed"}</Badge>
+                          )}
+                          <Badge variant="outline" className="rounded-full font-bold text-muted-foreground">
+                            {r.source === "barcode"
+                              ? lang === "ar" ? "باركود" : "Barcode"
+                              : r.source === "photo"
+                                ? lang === "ar" ? "صورة" : "Photo"
+                                : r.source === "product"
+                                  ? lang === "ar" ? "من صنف ناقص" : "From item"
+                                  : lang === "ar" ? "كتابة" : "Typed"}
+                          </Badge>
+                        </div>
+                        <span className="text-[11px] font-bold text-muted-foreground">
+                          {new Date(r.createdAt).toLocaleString(lang === "ar" ? "ar-EG" : "en-GB")}
+                        </span>
+                      </div>
+                      <p className="mt-2 font-heading text-sm font-black text-foreground">
+                        {r.itemName}
+                        {r.barcode ? (
+                          <span className="ms-2 text-[11px] font-bold text-muted-foreground" dir="ltr">
+                            {r.barcode}
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-0.5 text-xs font-bold text-foreground/70">
+                        {r.name ? `${r.name} · ` : ""}
+                        {r.phone ? <span dir="ltr">{r.phone}</span> : lang === "ar" ? "من غير رقم" : "No phone"}
+                        {r.photoUrl ? (
+                          <>
+                            {" · "}
+                            <RxPhotoLink
+                              value={r.photoUrl}
+                              className="inline-flex items-center gap-1 font-black text-[#1E4E8F] underline"
+                              fallbackText={
+                                <span className="inline-flex items-center gap-1 font-black text-muted-foreground">
+                                  <FileText className="size-3" />
+                                  {lang === "ar" ? "صورة مرفقة" : "Attached photo"}
+                                </span>
+                              }
+                            >
+                              <FileText className="size-3" />
+                              {lang === "ar" ? "صورة مرفقة" : "Attached photo"}
+                            </RxPhotoLink>
+                          </>
+                        ) : null}
+                      </p>
+                      {r.status !== "closed" && r.status !== "converted" && (
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[#B45E0A]/15 pt-2.5">
+                          {r.status === "pending" && (
+                            <Button
+                              size="sm"
+                              className="h-8 rounded-full bg-[#2E9E6B] px-3.5 text-[11px] font-black text-white hover:bg-[#278a5e]"
+                              onClick={() => void shortageStatus(r.id, "available")}
+                            >
+                              {lang === "ar" ? "بقى متوفر" : "Now available"}
+                            </Button>
+                          )}
+                          {(r.status === "available" || r.status === "notified") && intlPhone && (
+                            <a
+                              href={`https://wa.me/${intlPhone}?text=${encodeURIComponent(arrivedMsg)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={() => {
+                                if (r.status === "available") void shortageStatus(r.id, "notified");
+                              }}
+                              className="bb-whatsapp-gradient flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[11px] font-black text-white shadow-sm transition active:scale-95"
+                            >
+                              <IconWhatsapp className="size-3.5" />
+                              {lang === "ar" ? "رد واتساب: الدوا وصل" : "WhatsApp: it arrived"}
+                            </a>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 rounded-full px-3.5 text-[11px] font-black text-[#184C8A]"
+                            onClick={() => void shortageStatus(r.id, "converted")}
+                          >
+                            {lang === "ar" ? "اتحول لطلب" : "Converted"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 rounded-full px-3.5 text-[11px] font-black text-muted-foreground"
+                            onClick={() => void shortageStatus(r.id, "closed")}
+                          >
+                            {lang === "ar" ? "إغلاق" : "Close"}
+                          </Button>
+                          <CustomerContactMenu phone={r.phone} label="" className="grid size-8 place-items-center rounded-full bg-[#2E9E6B] text-white shadow-xs transition hover:brightness-105 active:scale-95" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ---- طلبات التمريض (خدمات تمريضية — بكود تتبع) ---- */}
+          <NursingQueue />
+
+          {/* ---- low stock + expiring tables (صلاحية الأدوية) ---- */}
+          {canMedicines && (
           <div className="grid gap-4 lg:grid-cols-2">
             <StockTable
               title={t("pharm.lowTbl")}
@@ -478,11 +823,102 @@ export default function PharmacistPortal() {
             />
             <ExpiringTable rows={expiring.slice(0, 8)} />
           </div>
+          )}
+        </div>
+      )}
+
+      {/* ================= TAB: PATIENT FILE (by phone) ================= */}
+      {effectiveTab === "file" && (
+        <div className="space-y-5 pt-4">
+          <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
+            <h2 className="flex items-center gap-2 font-heading text-base font-black md:text-lg">
+              <User className="size-5 text-[#B45E0A]" />
+              {lang === "ar" ? "فتح ملف مريض برقم الهاتف" : "Open a patient file by phone"}
+            </h2>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={filePhoneInput}
+                onChange={(e) => setFilePhoneInput(e.target.value)}
+                placeholder="01xxxxxxxxx"
+                inputMode="tel"
+                dir="ltr"
+                className="h-12 flex-1 rounded-2xl text-base"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && filePhoneInput.trim().length >= 8) setFilePhone(filePhoneInput.trim());
+                }}
+              />
+              <Button
+                className="h-12 rounded-full px-6 font-black"
+                disabled={filePhoneInput.trim().length < 8}
+                onClick={() => setFilePhone(filePhoneInput.trim())}
+              >
+                {lang === "ar" ? "فتح الملف" : "Open file"}
+              </Button>
+            </div>
+            <p className="mt-2 text-[11px] font-bold text-muted-foreground">
+              {lang === "ar"
+                ? "الملف بيجمع طلبات المريض وروشتاته وقياساته واشتراكه الشهري برقم الهاتف. لو الرقم جديد هيتفتح ملف جديد، وأول قياس تحفظه بيتسجل على السيرفر وبيظهر للمريض في «قياساتي» و«رحلتي الصحية»."
+                : "The file unifies the patient's orders, prescriptions, measurements and monthly care by phone. A new number opens a new file; the first measurement you save is stored server-side and appears in the patient's own portal."}
+            </p>
+          </div>
+
+          {filePhone &&
+            (() => {
+              const meas = measurements.filter((m) => phonesMatch(m.patientPhone, filePhone));
+              const existingCode = meas.find((m) => m.patientCode)?.patientCode;
+              const digits = filePhone.replace(/\D/g, "");
+              const fileNo = existingCode || `BB-${digits.slice(-4) || "----"}`;
+              const pName =
+                orders.find((o) => phonesMatch(o.phone, filePhone))?.customerAr ||
+                careSubs.find((c) => phonesMatch(c.phone, filePhone))?.nameAr ||
+                meas[0]?.patientName ||
+                "";
+              const hasHistory =
+                meas.length > 0 ||
+                orders.some((o) => phonesMatch(o.phone, filePhone)) ||
+                careSubs.some((c) => phonesMatch(c.phone, filePhone));
+              return (
+                <>
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-[#B45E0A]/30 bg-[#FFF4E5]/50 p-5 shadow-sm">
+                    <div>
+                      <p className="font-heading text-lg font-black">
+                        {pName || (lang === "ar" ? "ملف جديد" : "New file")}
+                        {!hasHistory && (
+                          <span className="ms-2 rounded-full bg-[#B45E0A] px-2 py-0.5 text-[10px] font-black text-white">
+                            {lang === "ar" ? "جديد" : "New"}
+                          </span>
+                        )}
+                      </p>
+                      <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                        {lang === "ar" ? "رقم الملف: " : "File no.: "}
+                        <span dir="ltr" className="font-black text-[#B45E0A]">{fileNo}</span>
+                        {" · "}
+                        <span dir="ltr">{filePhone}</span>
+                      </p>
+                    </div>
+                    <Button
+                      className="h-11 rounded-full bg-[#2E9E6B] px-5 font-black text-white hover:bg-[#238156]"
+                      onClick={() => {
+                        setPatientPhone(filePhone);
+                        setPatientName(pName);
+                        setPatientCode(fileNo);
+                        setOpenMeasModal(true);
+                      }}
+                    >
+                      <Plus className="size-4 me-1" />
+                      {lang === "ar" ? "إضافة قياس للمريض" : "Add measurement"}
+                    </Button>
+                  </div>
+
+                  <PatientTimeline phone={filePhone} />
+                </>
+              );
+            })()}
         </div>
       )}
 
       {/* ================= TAB 2: PATIENT VITALS & MEASUREMENTS ================= */}
-      {portalTab === "vitals" && (
+      {effectiveTab === "vitals" && (
         <div className="space-y-5 pt-2">
           {/* Quick Info & Action Header */}
           <div className="rounded-3xl border border-border/80 bg-gradient-to-br from-emerald-50/60 to-background p-5 shadow-xs">
@@ -882,6 +1318,31 @@ export default function PharmacistPortal() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ===== الملف الصحي الموحد للمريض — قياسات + طلبات + روشتات + رعاية ===== */}
+      <Dialog
+        open={!!timelinePhone}
+        onOpenChange={(v) => {
+          if (!v) setTimelinePhone(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl rounded-3xl p-6">
+          <DialogHeader className="border-b border-border/80 pb-3">
+            <DialogTitle className="flex flex-wrap items-center gap-2 font-heading text-lg font-black text-foreground">
+              <User className="size-5 text-[#184C8A]" />
+              {t("timeline.title")}
+              {timelinePhone && (
+                <span className="text-sm font-bold text-muted-foreground" dir="ltr">
+                  {timelinePhone}
+                </span>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[70vh] overflow-y-auto pt-4">
+            {timelinePhone && <PatientTimeline phone={timelinePhone} />}
+          </div>
         </DialogContent>
       </Dialog>
     </main>

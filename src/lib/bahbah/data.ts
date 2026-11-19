@@ -1,5 +1,5 @@
 import { Baby, Bone, Wind, Dumbbell, Flame } from "lucide-react";
-import realCatalogData from "./real-catalog.json";
+import realCatalogData from "./real-catalog.json" with { type: "json" };
 import {
   IconCapsule,
   IconVitaminTube,
@@ -85,7 +85,7 @@ export interface Order {
   date: string;
   items: OrderItem[];
   total: number;
-  status: "pending" | "shipping" | "delivered" | "cancelled";
+  status: "pending" | "ready" | "shipping" | "delivered" | "cancelled";
   customerAr: string;
   customerEn: string;
   phone: string;
@@ -95,6 +95,185 @@ export interface Order {
   coupon?: string;
   discount?: number;
   delivery?: OrderDelivery;
+  /** تغليف خاص سادة بدون علامات (مجاناً) — بيتنقل مع الطلب للصيدلي والواصلي */
+  discreetPackaging?: boolean;
+  /** وقت إنشاء الطلب كاملاً (لتمييز الطلبات الليلية) */
+  createdAt?: string;
+  /** وقت آخر تحديث للحالة على السيرفر (لكشف الطلبات العالقة في التقرير اليومي) */
+  updatedAt?: string;
+  /** دبوس موقع العميل على الخريطة (من دفتر العناوين أو تحديد الموقع) — للمندوب */
+  lat?: number;
+  lng?: number;
+}
+
+/**
+ * تقييم عميل لمندوب التوصيل — بيتكتب في Supabase (courier_ratings)
+ * بعد تأكيد التسليم، تقييم واحد لكل طلب، والتأكيد ما بيظهرش للعميل
+ * غير بعد حفظ السيرفر فعليًا. المدير بيشوف متوسط كل مندوب وآخر
+ * تعليقاته في قسم المناديب.
+ */
+export interface CourierRating {
+  id: string;
+  orderId: string;
+  courierId?: string;
+  /** لقطة اسم المندوب وقت التقييم (بتفضل ثابتة حتى لو الاسم اتغيّر بعدين) */
+  courierName?: string;
+  customerPhone: string;
+  stars: number;
+  comment?: string;
+  createdAt: string;
+}
+
+/** رسائل واتساب الجاهزة الافتراضية للمناديب — المدير بيعدّلها من لوحة
+    الإدارة وبتتخزن في admin_settings.courier_msg_templates، والقيم دي
+    هي الاحتياطي لو السيرفر لسه ما ردّش أو القايمة فاضية */
+export const DEFAULT_COURIER_MSG_TEMPLATES: string[] = [
+  "أنا في الطريق إليك دلوقتي",
+  "قربت منك، دقايق وأكون عندك",
+  "أنا وصلت وجاهز للتسليم",
+];
+
+/** وسيلة التحصيل اللي المندوب استلم بيها فعليًا عند باب العميل */
+export type CollectionMethod = "cash" | "wallet" | "bank";
+
+/**
+ * سجل تحصيل المندوب (التوريد) — بيتكتب في Supabase قبل إتمام التسليم،
+ * وقراءته للمدير بس (أدمن أو صلاحية «الماليات»). الصيدلي ما يشوفش أي مبلغ.
+ */
+export interface CourierCollection {
+  id: string;
+  orderId: string;
+  courierId?: string;
+  courierEmail?: string;
+  courierName?: string;
+  amount: number;
+  method: CollectionMethod;
+  /** المحفظة: اتحولت من رقم إيه */
+  walletFrom?: string;
+  /** المحفظة/البنك: راحت لحساب/رقم إيه */
+  walletTo?: string;
+  note?: string;
+  createdAt: string;
+}
+
+/**
+ * عنوان محفوظ في دفتر عناوين العميل — بيتخزن في Supabase مربوط برقم
+ * التليفون (customer_addresses) وبيتزامن محليًا عشان الدفع يبقى أسرع.
+ */
+export interface SavedAddress {
+  id: string;
+  phone: string;
+  label: string;
+  details: string;
+  city?: string;
+  lat?: number;
+  lng?: number;
+  isDefault: boolean;
+  updatedAt?: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* نقاط الولاء والمستويات — الرصيد الحقيقي على السيرفر بس             */
+/* (loyalty_accounts / loyalty_ledger / loyalty_cards في Supabase).     */
+/* المستويات نفسها بيانات إعدادات عند الأدمن (settings.loyaltyTiers). */
+/* ------------------------------------------------------------------ */
+
+export type LoyaltyPerk = "none" | "discount_card_10" | "free_delivery";
+
+export interface LoyaltyTier {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  /** أقل رصيد نقاط للوصول للمستوى ده */
+  minPoints: number;
+  perk: LoyaltyPerk;
+}
+
+/** المستويات الافتراضية — نفس اللي بتتزرع على السيرفر في ترقية الولاء.
+    أسماء لطيفة بروح الصيدلية والرعاية — من غير ألقاب بطولة أو مؤسسات. */
+export const DEFAULT_LOYALTY_TIERS: LoyaltyTier[] = [
+  { id: "lvl1", nameAr: "عميل جديد", nameEn: "New Client", minPoints: 0, perk: "none" },
+  { id: "lvl2", nameAr: "صديق بحبح", nameEn: "Bahbah Friend", minPoints: 500, perk: "none" },
+  { id: "lvl3", nameAr: "عميل منتظم", nameEn: "Regular Client", minPoints: 1000, perk: "discount_card_10" },
+  { id: "lvl4", nameAr: "عميل العلاج الشهري", nameEn: "Monthly Treatment Client", minPoints: 1500, perk: "free_delivery" },
+];
+
+/** معدل الكسب الافتراضي: نقطة لكل 10 جنيه (الأدمن يقدر يغيّره) */
+export const DEFAULT_LOYALTY_EGP_PER_POINT = 10;
+
+/** رصيد التوصيل المجاني الافتراضي: كام توصيلة مجانية في الشهر لعميل
+    المستوى الأعلى / عميل العلاج الشهري المشترك (الأدمن يقدر يغيّره) */
+export const DEFAULT_LOYALTY_FREE_SHIP_QUOTA = 4;
+
+/** أعلى مستوى وصلّه العميل برصيده الحالي */
+export function loyaltyLevelFor(tiers: LoyaltyTier[], balance: number): LoyaltyTier {
+  const sorted = [...tiers].sort((a, b) => a.minPoints - b.minPoints);
+  let cur = sorted[0] ?? DEFAULT_LOYALTY_TIERS[0];
+  for (const t of sorted) if (balance >= t.minPoints) cur = t;
+  return cur;
+}
+
+/** المستوى اللي بعده (null لو العميل في أعلى مستوى) */
+export function loyaltyNextLevel(tiers: LoyaltyTier[], balance: number): LoyaltyTier | null {
+  const sorted = [...tiers].sort((a, b) => a.minPoints - b.minPoints);
+  return sorted.find((t) => balance < t.minPoints) ?? null;
+}
+
+export interface LoyaltyCard {
+  code: string;
+  percent: number;
+  /** voided = ألغاه المدير من لوحة الإدارة (ترقية integrity-fixes) */
+  status: "active" | "used" | "voided";
+  earnedAt?: string;
+  usedAt?: string;
+}
+
+/** حالة ولاء العميل زي ما بترجع من السيرفر (ensure_loyalty) */
+export interface LoyaltyState {
+  balance: number;
+  /** كارت الخصم المكتسب (الأحدث) — null لو لسه ما اكتسبش كارت */
+  card: LoyaltyCard | null;
+  /** عنده اشتراك رعاية شهرية نشط على السيرفر (بيمنحه توصيل مجاني) */
+  careMember: boolean;
+  /** رصيد التوصيل المجاني الشهري زي ما السيرفر بيحسبه — الحقول دي
+      اختيارية: غيابها معناه السيرفر لسه على نسخة ما قبل ترقية الرصيد */
+  freeQuota?: number;
+  /** توصيلات مجانية مستهلكة الشهر ده */
+  freeUsed?: number;
+  /** توصيلات مجانية متبقية الشهر ده */
+  freeRemaining?: number;
+}
+
+/** مؤهل أصلًا لتوصيل مجاني من الولاء/الرعاية؟ — مستواه بيمنح الميزة
+    أو عنده اشتراك رعاية شهرية نشط (قبل فحص الرصيد المتبقي) */
+export function loyaltyFreeShipEligible(
+  tiers: LoyaltyTier[],
+  loyalty: LoyaltyState | null,
+  careActive: boolean
+): boolean {
+  return (
+    (loyalty != null && loyaltyLevelFor(tiers, loyalty.balance).perk === "free_delivery") ||
+    !!loyalty?.careMember ||
+    careActive
+  );
+}
+
+/** رصيد التوصيل المجاني المتبقي من السيرفر — null لو السيرفر لسه ما
+    بيبعتش أرقام الرصيد (ترقية الرصيد ما اتشغّلتش بعد) */
+export function loyaltyFreeRemaining(loyalty: LoyaltyState | null): number | null {
+  return loyalty && typeof loyalty.freeRemaining === "number" ? loyalty.freeRemaining : null;
+}
+
+/** قاعدة التوصيل المجاني الموحدة (الواجهة بتعكسها والسيرفر هو المرجع):
+    مؤهل + (الرصيد لسه مش معروف أو لسه فيه رصيد متبقي) */
+export function loyaltyFreeShipApplies(
+  tiers: LoyaltyTier[],
+  loyalty: LoyaltyState | null,
+  careActive: boolean
+): boolean {
+  if (!loyaltyFreeShipEligible(tiers, loyalty, careActive)) return false;
+  const rem = loyaltyFreeRemaining(loyalty);
+  return rem === null || rem > 0;
 }
 
 export interface OrderDelivery {
@@ -112,6 +291,136 @@ export interface AppUser {
   name: string;
   email: string;
   phone?: string;
+}
+
+/** طلب ناقص — بيتسجل في Supabase قبل فتح واتساب، بكود تتبع وبرقم الزبون */
+export interface ShortageRequest {
+  id: string;
+  /** كود التتبع القصير BH-XXXX */
+  code: string;
+  phone: string;
+  name: string;
+  itemName: string;
+  barcode?: string;
+  /** رابط صورة العلبة/الروشتة (Supabase Storage) إن وُجدت */
+  photoUrl?: string;
+  source: "manual" | "barcode" | "photo" | "product";
+  status: "pending" | "available" | "notified" | "converted" | "closed";
+  createdAt: string;
+}
+
+/* ------------------------------------------------------------------ */
+/* خدمات تمريضية منزلية — العميل بيحجز من زرار «خدمات تمريضية»،        */
+/* والحجز بيتسجل في Supabase الأول بكود BH-XXXX. القائمة دي مجرد بذرة  */
+/* افتراضية: القائمة الفعلية بيانات إعدادات يديرها المدير بالكامل من   */
+/* لوحة الإدارة (تعديلات الأساسيات في admin_settings.nursing_edits،    */
+/* والخدمات المضافة بالكامل في admin_settings.nursing_custom) —        */
+/* انظر mergedNursingServices في store.ts.                             */
+/* ------------------------------------------------------------------ */
+export interface NursingService {
+  id: string;
+  nameAr: string;
+  nameEn: string;
+  descAr: string;
+  descEn: string;
+  /** sugar/bp = خدمة قياس بتتسجل نتيجتها في «قياساتي» عند إتمام الزيارة */
+  kind: "sugar" | "bp" | "other";
+  /** السعر الافتراضي بالجنيه — بيتلغي بأي تعديل من لوحة الإدارة */
+  price: number;
+  /** للخدمات المضافة من الإدارة: false = مخفية من قائمة العميل */
+  active?: boolean;
+}
+
+export const NURSING_SERVICES: NursingService[] = [
+  {
+    id: "sugar",
+    nameAr: "قياس سكر",
+    nameEn: "Blood sugar check",
+    descAr: "قياس سكر الدم في البيت وتسجيل النتيجة في ملفك",
+    descEn: "At-home blood sugar check, recorded in your file",
+    kind: "sugar",
+    price: 25,
+  },
+  {
+    id: "bp",
+    nameAr: "قياس ضغط",
+    nameEn: "Blood pressure check",
+    descAr: "قياس ضغط الدم والنبض في البيت وتسجيل النتيجة في ملفك",
+    descEn: "At-home blood pressure & pulse check, recorded in your file",
+    kind: "bp",
+    price: 20,
+  },
+  {
+    id: "injection",
+    nameAr: "حقن",
+    nameEn: "Injection",
+    descAr: "إعطاء حقنة عضل/وريد في البيت بأيدي تمريض مؤهل",
+    descEn: "IM/IV injection at home by qualified nursing staff",
+    kind: "other",
+    price: 30,
+  },
+  {
+    id: "iv",
+    nameAr: "تركيب كانيولا / محاليل",
+    nameEn: "IV cannula / fluids",
+    descAr: "تركيب كانيولا وتعليق محاليل في البيت ومتابعتها",
+    descEn: "Cannula insertion and IV fluids at home",
+    kind: "other",
+    price: 75,
+  },
+  {
+    id: "dressing",
+    nameAr: "غيار جروح",
+    nameEn: "Wound dressing",
+    descAr: "غيار وتطهير الجروح وجرح العمليات في البيت",
+    descEn: "Wound cleaning and dressing at home",
+    kind: "other",
+    price: 50,
+  },
+];
+
+/** حجز خدمة تمريضية — بيتسجل في Supabase قبل أي تأكيد للعميل، بكود تتبع */
+export interface NursingRequest {
+  id: string;
+  /** كود التتبع القصير BH-XXXX */
+  code: string;
+  phone: string;
+  name: string;
+  serviceId: string;
+  serviceNameAr: string;
+  serviceNameEn: string;
+  serviceKind: "sugar" | "bp" | "other";
+  /** سعر الخدمة وقت الحجز (لقطة — ما بتتغيرش لو السعر اتعدل بعدين) */
+  servicePrice: number;
+  /** رسوم الزيارة حسب منطقة التوصيل (0 لو مفيش منطقة) */
+  visitFee: number;
+  total: number;
+  zoneId?: string;
+  address: string;
+  /** الميعاد المفضل كنص (تاريخ + فترة) — العميل بيختاره في خطوة واحدة */
+  preferredAt: string;
+  notes?: string;
+  status: "new" | "confirmed" | "done" | "cancelled";
+  /** نتيجة القياس لو الخدمة قياس سكر/ضغط واتسجلت عند إتمام الزيارة */
+  measuredSugar?: number;
+  measuredSystolic?: number;
+  measuredDiastolic?: number;
+  /** معرّف سجل القياس في patient_measurements لو اتسجل في «قياساتي» */
+  measurementId?: string;
+  createdAt: string;
+}
+
+/** طلب سريع بواتساب — بيتسجل في Supabase قبل فتح واتساب، بكود تتبع */
+export interface WhatsappOrder {
+  id: string;
+  /** كود التتبع القصير BH-XXXX */
+  code: string;
+  phone: string;
+  name: string;
+  items: { productId?: string; nameAr: string; nameEn: string; qty: number; price: number }[];
+  total: number;
+  status: "sent" | "converted" | "done" | "cancelled";
+  createdAt: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1040,6 +1349,16 @@ const mappedRealProducts: Product[] = (realCatalogData as any[]).map((p) => {
     cat = "medicines";
   }
 
+  // Category cleanup (explicit, final word): منتجات العناية ما تدخلش قسم الأدوية
+  const nameEn = (p.nameEn || "").toLowerCase();
+  if (name.includes("ميسلار") || nameEn.includes("micellar")) {
+    cat = "skincare"; // ماء/مناديل ميسلار = عناية بالبشرة مش دوا
+  } else if (name.includes("مبردة")) {
+    cat = "devices"; // حافظة مبردة للإنسولين = مستلزم طبي
+  } else if (name.includes("مبرد")) {
+    cat = "personal"; // مبرد قدم/ضوافر = عناية شخصية
+  }
+
   return {
     ...p,
     category: cat,
@@ -1666,6 +1985,10 @@ export interface AdSlide {
   code?: string;
   /** عدّاد تنازلي حي لحد آخر اليوم */
   urgent?: boolean;
+  /** نافذة عرض زمنية اختيارية (ساعة محلية 0–23) — من */
+  showFrom?: number;
+  /** نافذة عرض زمنية اختيارية (ساعة محلية 0–23) — إلى (قد تلتف بعد منتصف الليل) */
+  showTo?: number;
 }
 
 export const adSlides: AdSlide[] = [
@@ -1964,7 +2287,7 @@ export interface CareSubscriber {
   since: string;
   nextDelivery: string;
   months: number;
-  status: "active" | "paused";
+  status: "active" | "paused" | "cancelled";
 }
 
 export const demoCareSubs: CareSubscriber[] = [];

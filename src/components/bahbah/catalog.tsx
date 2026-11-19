@@ -46,6 +46,7 @@ import {
   type SortKey,
 } from "@/lib/bahbah/store";
 import { ProductCard } from "./product-card";
+import { mensHealthProducts } from "@/lib/bahbah/curation";
 import {
   IconSearchGlass,
   IconSearchOff,
@@ -452,6 +453,7 @@ export default function CatalogView() {
   const catalogCategory = useBahbah((s) => s.catalogCategory);
   const setCatalogCategory = (c: string | null) => useBahbah.setState({ catalogCategory: c });
   const openCatalog = useBahbah((s) => s.openCatalog);
+  const setShortageOpen = useBahbah((s) => s.setShortageOpen);
   const view = useBahbah((s) => s.catalogView);
   const sortKey = useBahbah((s) => s.sortKey);
   const sortDir = useBahbah((s) => s.sortDir);
@@ -512,11 +514,20 @@ export default function CatalogView() {
   return (
     <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 md:px-6 md:pb-20 md:pt-8">
       {/* heading */}
-      <div className="mb-6">
-        <h1 className="font-heading text-3xl font-black md:text-4xl">
-          {activeCat ? (lang === "ar" ? activeCat.nameAr : activeCat.nameEn) : t("cat.all")}
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground md:text-base">{t("cat.sub")}</p>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-3xl font-black md:text-4xl">
+            {activeCat ? (lang === "ar" ? activeCat.nameAr : activeCat.nameEn) : t("cat.all")}
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground md:text-base">{t("cat.sub")}</p>
+        </div>
+        <Button
+          variant="outline"
+          className="h-10 rounded-full border-[#C56A0A]/40 bg-[#FFF4E5] px-5 font-black text-[#B45E0A] hover:bg-[#FFE8CC] hover:text-[#B45E0A]"
+          onClick={() => setShortageOpen(true)}
+        >
+          {lang === "ar" ? "طلب ناقص" : "Request a missing item"}
+        </Button>
       </div>
 
       {/* category chips */}
@@ -546,6 +557,31 @@ export default function CatalogView() {
           </button>
         ))}
       </div>
+
+      {/* ركن صحة الرجل — هادئ داخل العناية الشخصية، من غير أي ترويج */}
+      {catalogCategory === "personal" && !q.trim() && mensHealthProducts().length > 0 && (
+        <div className="mt-5 rounded-3xl border border-border/70 bg-muted/40 p-5">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 className="font-heading text-lg font-black md:text-xl">
+                {lang === "ar" ? "صحة الرجل" : "Men's health"}
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground md:text-sm">
+                {lang === "ar"
+                  ? "قسم هادئ — وطلبك بيوصلك بتغليف خاص سادة بدون أي علامات لو اخترته عند إتمام الطلب (مجاناً)."
+                  : "A discreet corner — your order can arrive in plain unmarked packaging, free at checkout."}
+              </p>
+            </div>
+          </div>
+          <div className="no-scrollbar mt-4 flex snap-x gap-4 overflow-x-auto pb-1">
+            {mensHealthProducts().map((p) => (
+              <div key={p.id} className="w-[220px] shrink-0 snap-start md:w-[260px]">
+                <ProductCard product={p} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick Dosage Form Filter */}
       <div className="no-scrollbar -mx-4 mt-3 flex items-center gap-1.5 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0">

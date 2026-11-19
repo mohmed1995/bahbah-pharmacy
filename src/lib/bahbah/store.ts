@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
@@ -30,19 +31,47 @@ import {
   demoCareSubs,
   demoMeasurements,
   type PatientMeasurement,
+  type WhatsappOrder,
+  type ShortageRequest,
+  NURSING_SERVICES,
+  type NursingService,
+  type NursingRequest,
+  type CourierCollection,
+  type SavedAddress,
   type Driver,
+  type LoyaltyTier,
+  type LoyaltyState,
+  DEFAULT_LOYALTY_TIERS,
+  DEFAULT_LOYALTY_EGP_PER_POINT,
+  DEFAULT_LOYALTY_FREE_SHIP_QUOTA,
+  DEFAULT_COURIER_MSG_TEMPLATES,
+  loyaltyFreeShipApplies,
 } from "./data";
+import { hourInWindow, isPromotable } from "./curation";
 import { toast } from "sonner";
 import {
   submitOrderToSupabase,
   submitRefillToSupabase,
-  syncFreeThresholdToSupabase,
   updateOrderStatusInSupabase,
   insertRxRequestToSupabase,
   updateRxStatusInSupabase,
   insertCareSubToSupabase,
   updateCareSubStatusInSupabase,
+  careSelfUpdateInSupabase,
   insertMeasurementToSupabase,
+  deleteMeasurementFromSupabase,
+  insertWhatsappOrderToSupabase,
+  updateWhatsappOrderStatusInSupabase,
+  insertShortageRequestToSupabase,
+  updateShortageRequestStatusInSupabase,
+  insertNursingRequestToSupabase,
+  updateNursingRequestInSupabase,
+  insertCourierCollectionToSupabase,
+  updateCourierCollectionInSupabase,
+  deleteCourierCollectionFromSupabase,
+  fetchOrdersDetailedFromSupabase,
+  upsertCustomerAddressToSupabase,
+  deleteCustomerAddressFromSupabase,
   syncAdminSettingsToSupabase,
   signOutFromSupabase,
 } from "@/lib/supabase";
@@ -142,9 +171,73 @@ export const DEFAULT_FILTERS: CatalogFilters = {
 
 export const MAX_PRICE = 1000;
 
+/* ------------------------------------------------------------------ */
+/* Staff permissions — صلاحيات الطاقم اللي المدير بيوزعها بنفسه.        */
+/* المصدر الحقيقي: جدول staff_permissions في Supabase (RLS + دالة        */
+/* has_permission على السيرفر). هنا بنحتفظ بنسخة العميل للواجهة بس،     */
+/* ولو الجدول مش موجود/فاضي بنرجع لافتراضات الدور (سلوك النهارده).     */
+/* ------------------------------------------------------------------ */
+export type PermissionKey =
+  | "orders"
+  | "prescriptions"
+  | "medicines"
+  | "shortages"
+  | "whatsapp_orders"
+  | "measurements"
+  | "nursing"
+  | "finances"
+  | "settings"
+  | "staff";
+
+export const PERMISSION_KEYS: PermissionKey[] = [
+  "orders",
+  "prescriptions",
+  "medicines",
+  "shortages",
+  "whatsapp_orders",
+  "measurements",
+  "nursing",
+  "finances",
+  "settings",
+  "staff",
+];
+
+/** افتراضات كل دور = سلوك التطبيق قبل نظام الصلاحيات (الصيدلي: تنفيذ من غير ماليات) */
+export const PERMISSION_DEFAULTS: Record<Role, Record<PermissionKey, boolean>> = {
+  admin: {
+    orders: true, prescriptions: true, medicines: true, shortages: true,
+    whatsapp_orders: true, measurements: true, nursing: true, finances: true, settings: true, staff: true,
+  },
+  pharmacist: {
+    orders: true, prescriptions: true, medicines: true, shortages: true,
+    whatsapp_orders: true, measurements: true, nursing: true, finances: false, settings: false, staff: false,
+  },
+  courier: {
+    orders: true, prescriptions: false, medicines: false, shortages: false,
+    whatsapp_orders: false, measurements: false, nursing: false, finances: false, settings: false, staff: false,
+  },
+  patient: {
+    orders: false, prescriptions: false, medicines: false, shortages: false,
+    whatsapp_orders: false, measurements: false, nursing: false, finances: false, settings: false, staff: false,
+  },
+};
+
+/** هل الدور الحالي عنده الصلاحية؟ (أدمن = الكل؛ غير كده: صف الطاقم فوق افتراض الدور) */
+export function hasPermission(
+  s: { sessionRole: Role | null; staffPermissions: Partial<Record<PermissionKey, boolean>> | null },
+  key: PermissionKey
+): boolean {
+  const role = s.sessionRole;
+  if (!role) return false;
+  if (role === "admin") return true;
+  const merged = { ...PERMISSION_DEFAULTS[role], ...(s.staffPermissions ?? {}) };
+  return !!merged[key];
+}
+
 export type AdminSection =
   | "overview"
   | "orders"
+  | "collections"
   | "prescriptions"
   | "products"
   | "inventory"
@@ -155,15 +248,37 @@ export type AdminSection =
   | "ads"
   | "customers"
   | "reports"
+  | "daily"
+  | "backup"
   | "maintenance"
+  | "staff"
   | "settings";
+
+export interface VillageDay {
+  /** اسم اليوم (مثال: السبت) */
+  day: string;
+  /** أسماء القرى المغطاة في اليوم ده */
+  villages: string;
+}
 
 export interface AdminSettings {
   openNow: boolean;
   acceptOrders: boolean;
-  freeThreshold: number;
+  /** حملة التوصيل المجاني — مفتاح تشغيل/إيقاف من لوحة الإدارة (بتتحفظ في إعدادات السيرفر) */
+  freeShipCampaignOn: boolean;
+  /** صورة بانر حملة التوصيل المجاني (رابط أو data URL — نفس نمط صور الأدمن) */
+  freeShipCampaignImg?: string;
   defaultFee: number;
   hotline: string;
+  /** جدول توصيل القرى الأسبوعي — بيتحفظ في إعدادات الأدمن على السيرفر */
+  villageDays?: VillageDay[];
+  /** مستويات الولاء (اسم/حد نقاط/ميزة) — بيانات إعدادات عند الأدمن، بتتقرا من السيرفر */
+  loyaltyTiers?: LoyaltyTier[];
+  /** معدل كسب نقاط الولاء: كل كام جنيه في طلب اتسلّم = نقطة (افتراضي 10) */
+  loyaltyEarnEgpPerPoint?: number;
+  /** رصيد التوصيل المجاني الشهري: كام توصيلة مجانية في الشهر لعميل
+      المستوى الأعلى / عميل العلاج الشهري المشترك (افتراضي 4) */
+  loyaltyFreeShipQuota?: number;
 }
 
 /* ---- editable-from-admin content (CMS layers over the base data) ---- */
@@ -204,6 +319,9 @@ export interface AdEdit {
   ctaAr?: string;
   ctaEn?: string;
   img?: string;
+  /** نافذة عرض زمنية (ساعة محلية 0–23) — تُحفظ في إعدادات الأدمن على السيرفر */
+  showFrom?: number;
+  showTo?: number;
 }
 
 /** weekly-deal & special-offer overrides */
@@ -231,12 +349,28 @@ export interface ZoneEdit {
   freeOver?: number;
 }
 
+/** تعديلات الإدارة على خدمة تمريضية أساسية (اسم/وصف/سعر/تفعيل) —
+    بتتخزن في admin_settings.nursing_edits (نفس آلية care_edits).
+    الخدمات المضافة بالكامل من الإدارة بتتخزن في nursing_custom. */
+export interface NursingServiceEdit {
+  nameAr?: string;
+  nameEn?: string;
+  descAr?: string;
+  descEn?: string;
+  price?: number;
+  active?: boolean;
+}
+
 export const DEFAULT_SETTINGS: AdminSettings = {
   openNow: true,
   acceptOrders: true,
-  freeThreshold: 300,
+  freeShipCampaignOn: false,
   defaultFee: 30,
   hotline: "+20 101 150 0166",
+  villageDays: [],
+  loyaltyTiers: DEFAULT_LOYALTY_TIERS,
+  loyaltyEarnEgpPerPoint: DEFAULT_LOYALTY_EGP_PER_POINT,
+  loyaltyFreeShipQuota: DEFAULT_LOYALTY_FREE_SHIP_QUOTA,
 };
 
 export interface CartItem {
@@ -289,6 +423,28 @@ interface BahbahState {
   adminUnlocked: boolean;
   sessionRole: Role | null;
   setSessionRole: (r: Role | null) => void;
+  /** صلاحيات الموظف الحالي من staff_permissions (null = الجدول مش موجود/مفيش صف → افتراضات الدور) */
+  staffPermissions: Partial<Record<PermissionKey, boolean>> | null;
+  setStaffPermissions: (p: Partial<Record<PermissionKey, boolean>> | null) => void;
+
+  /* ---- truth guards (NOT persisted) ---- */
+  /** true while a placeOrder call is awaiting the server verdict (double-submit guard) */
+  orderPlacing: boolean;
+  /** true once server orders were loaded — from then on the server is the only order source */
+  serverOrdersLoaded: boolean;
+  /** ISO time of the last successful server sync (maintenance panel) */
+  lastSyncAt: string | null;
+  setServerOrdersLoaded: (v: boolean) => void;
+  setLastSyncAt: (iso: string | null) => void;
+  /* ---- حالة مزامنة لوحة الأداء (مش بتتحفظ — بتتعاد كل جلسة) ---- */
+  /** idle = لسه ما جلبناش، loading = جلب شغال، ok = البيانات حديثة، error = الجلب فشل والبيانات المعروضة قديمة */
+  dashSyncStatus: "idle" | "loading" | "ok" | "error";
+  dashSyncError: string | null;
+  /** إعادة جلب طلبات اللوحة من السيرفر يدويًا — true لو نجحت */
+  refreshDashboardData: () => Promise<boolean>;
+  /* ---- demo presentation mode (explicit opt-in; auto-OFF whenever server data exists) ---- */
+  demoMode: boolean;
+  setDemoMode: (v: boolean) => void;
 
   /* ---- CMS layers edited from the dashboard ---- */
   siteEdits: SiteEdits;
@@ -296,6 +452,9 @@ interface BahbahState {
   offerEdits: Record<string, OfferEdit>;
   careEdits: Record<string, CareEdit>;
   zoneEdits: Record<string, ZoneEdit>;
+  nursingEdits: Record<string, NursingServiceEdit>;
+  /** خدمات تمريضية أضافها المدير بنفسه — admin_settings.nursing_custom */
+  nursingCustom: NursingService[];
 
   /* ---- dashboard state (persisted demo CRUD) ---- */
   adminSection: AdminSection;
@@ -306,6 +465,12 @@ interface BahbahState {
   stockAdj: Record<string, number>;
   priceOverride: Record<string, number>;
   driverStatus: Record<string, DriverStatus>;
+  /** مناديب أزالهم المدير (admin_settings.driver_removed) — بيختفوا من
+      كل قوائم التعيين على كل الأجهزة، مش من جهاز المدير بس */
+  driverRemoved: string[];
+  /** رسائل واتساب جاهزة بيختار منها المندوب/الموظف وهو بيكلم العميل —
+      بيعدّلها المدير وبتتخزن في admin_settings.courier_msg_templates */
+  courierMsgTemplates: string[];
   zoneDisabled: string[];
   settings: AdminSettings;
   rxQueue: RxRequest[];
@@ -314,6 +479,21 @@ interface BahbahState {
   adsOff: string[];
   careSubs: CareSubscriber[];
   measurements: PatientMeasurement[];
+  whatsappOrders: WhatsappOrder[];
+  shortageRequests: ShortageRequest[];
+  /** حجوزات الخدمات التمريضية — للطاقم من السيرفر، وحجوزات العميل بتتضاف بعد تأكيد السيرفر */
+  nursingRequests: NursingRequest[];
+  nursingOpen: boolean;
+  /** سجلات تحصيل المناديب (التوريد) — للمدير بس، مش بتتحفظ محليًا أبدًا */
+  courierCollections: CourierCollection[];
+  /** دفتر عناوين العميل — بيتحفظ محليًا وبيتزامن مع Supabase عند تسجيل الدخول */
+  savedAddresses: SavedAddress[];
+  /** آخر عنوان استخدمه العميل في طلب — بيتحدد تلقائيًا في الدفع الجاي */
+  lastAddressId: string | null;
+  /** حالة ولاء العميل من السيرفر (رصيد/كارت/عضوية رعاية) — null قبل أول مزامنة */
+  loyalty: LoyaltyState | null;
+  shortageOpen: boolean;
+  shortagePrefill: { itemName?: string; barcode?: string; source?: ShortageRequest["source"] } | null;
 
   setLang: (l: Lang) => void;
   toggleLang: () => void;
@@ -341,7 +521,50 @@ interface BahbahState {
     deliveryType: "delivery" | "pickup";
     zoneId?: string;
     slotId?: string;
-  }) => string;
+    discreetPackaging?: boolean;
+    /** دبوس موقع العميل + عنوان دفتر العناوين المستخدم (بيبقى «آخر عنوان») */
+    lat?: number;
+    lng?: number;
+    addressId?: string;
+  }) => Promise<string>;
+  createWhatsappOrder: (o: {
+    items: WhatsappOrder["items"];
+    total: number;
+    phone?: string;
+    name?: string;
+  }) => Promise<string | null>;
+  setWhatsappOrderStatus: (id: string, status: WhatsappOrder["status"]) => Promise<boolean>;
+  createShortageRequest: (r: {
+    itemName: string;
+    barcode?: string;
+    photoUrl?: string;
+    source: ShortageRequest["source"];
+    phone?: string;
+    name?: string;
+  }) => Promise<string | null>;
+  setShortageRequestStatus: (id: string, status: ShortageRequest["status"]) => Promise<boolean>;
+  createNursingRequest: (r: {
+    service: NursingService;
+    visitFee: number;
+    zoneId?: string;
+    address: string;
+    preferredAt: string;
+    notes?: string;
+    phone?: string;
+    name?: string;
+  }) => Promise<string | null>;
+  setNursingRequestStatus: (id: string, status: NursingRequest["status"]) => Promise<boolean>;
+  /** إتمام زيارة تمريض: الحالة «تمت الزيارة» + نتيجة القياس لو الخدمة قياس سكر/ضغط
+      (النتيجة بتتسجل كمان في «قياساتي» — patient_measurements) */
+  completeNursingVisit: (
+    id: string,
+    measured?: { sugar?: number; systolic?: number; diastolic?: number }
+  ) => Promise<boolean>;
+  setNursingOpen: (v: boolean) => void;
+  setShortageOpen: (
+    v: boolean,
+    prefill?: { itemName?: string; barcode?: string; source?: ShortageRequest["source"] } | null
+  ) => void;
   reorder: (orderId: string) => void;
 
   setCartOpen: (v: boolean) => void;
@@ -359,12 +582,12 @@ interface BahbahState {
   toggleElderMode: () => void;
   applyCoupon: (code: string) => boolean;
   clearCoupon: () => void;
-  subscribeCare: (p: SubscribeCareInput) => void;
+  subscribeCare: (p: SubscribeCareInput) => Promise<boolean>;
   refillMonthlyRx: (patient: CareSubscriber) => Promise<string>;
-  pauseCare: () => void;
-  resumeCare: () => void;
-  cancelCare: () => void;
-  changeCareDay: (dayPref: number) => void;
+  pauseCare: () => Promise<void>;
+  resumeCare: () => Promise<void>;
+  cancelCare: () => Promise<void>;
+  changeCareDay: (dayPref: number) => Promise<void>;
   openCareWizard: (planId?: string) => void;
   closeCareWizard: () => void;
 
@@ -378,37 +601,71 @@ interface BahbahState {
   resetFilters: () => void;
 
   setAdminSection: (s: AdminSection) => void;
-  adminAdvance: (orderId: string) => void;
-  adminCancel: (orderId: string) => void;
-  adminAssignDriver: (orderId: string, driverId: string) => void;
-  courierPickup: (orderId: string) => void; // courier took the parcel (pending → shipping)
-  courierDeliver: (orderId: string) => void; // courier handed it over (shipping → delivered)
-  pharmacistReady: (orderId: string) => void; // pharmacist handed the order to the driver
-  restock: (productId: string, qty: number) => void;
-  setPrice: (productId: string, price: number) => void;
-  addAdminProduct: (p: Product) => void;
-  addDriver: (d: Driver) => void;
-  updateProductImage: (productId: string, img: string, verified?: boolean) => void;
-  cycleDriverStatus: (driverId: string) => void;
-  toggleZone: (zoneId: string) => void;
-  updateSettings: (patch: Partial<AdminSettings>) => void;
-  toggleCouponActive: (code: string) => void;
-  addCoupon: (c: Coupon) => void;
-  toggleAd: (adId: string) => void;
-  toggleCareSubStatus: (id: string) => void;
+  /* إجراءات الطلبات بترجّع true بس لو السيرفر أكّد التحديث — الواجهة ما
+     بتتقدّمش ولا تقول «تم» قبل التأكيد (إصلاح التوصيلات) */
+  adminAdvance: (orderId: string) => Promise<boolean>;
+  adminCancel: (orderId: string) => Promise<boolean>;
+  adminAssignDriver: (orderId: string, driverId: string) => Promise<boolean>;
+  courierPickup: (orderId: string) => Promise<boolean>; // courier took the parcel (pending → shipping)
+  courierDeliver: (orderId: string) => Promise<boolean>; // courier handed it over (shipping → delivered)
+  /** تسليم مع تسجيل التحصيل أولًا (التوريد): سجل الفلوس لازم يثبت في السيرفر قبل ما الطلب يبقى «تم التسليم» */
+  courierDeliverWithCollection: (orderId: string, input: {
+    amount: number;
+    method: CourierCollection["method"];
+    walletFrom?: string;
+    walletTo?: string;
+    note?: string;
+  }) => Promise<boolean>;
+  /* ---- دفتر عناوين العميل ---- */
+  addSavedAddress: (a: Omit<SavedAddress, "id" | "updatedAt"> & { id?: string }) => SavedAddress;
+  updateSavedAddress: (id: string, patch: Partial<Omit<SavedAddress, "id" | "phone">>) => void;
+  deleteSavedAddress: (id: string) => Promise<void>;
+  setDefaultSavedAddress: (id: string) => void;
+  pharmacistReady: (orderId: string) => Promise<boolean>; // pharmacist handed the order to the driver
+  /* إجراءات الإعدادات/الكتالوج بترجّع true بس لو السيرفر أكّد الحفظ —
+     عند الفشل التعديل بيرجع لآخر حالة محفوظة وبيظهر تنبيه بالفشل */
+  restock: (productId: string, qty: number) => Promise<boolean>;
+  setPrice: (productId: string, price: number) => Promise<boolean>;
+  addAdminProduct: (p: Product) => Promise<boolean>;
+  addDriver: (d: Driver) => Promise<boolean>;
+  /** إزالة مندوب نهائيًا (سيادة المدير): بتتشال من السيرفر (custom_drivers
+      + driver_removed) فبيختفي من قوائم التعيين على كل الأجهزة */
+  removeDriver: (driverId: string) => Promise<boolean>;
+  updateProductImage: (productId: string, img: string, verified?: boolean) => Promise<boolean>;
+  cycleDriverStatus: (driverId: string) => Promise<boolean>;
+  /** حفظ رسائل واتساب الجاهزة للمناديب (admin_settings.courier_msg_templates) —
+      true بس لو السيرفر أكّد، والفشل بيرجّع القايمة لآخر حالة محفوظة */
+  saveCourierMsgTemplates: (list: string[]) => Promise<boolean>;
+  toggleZone: (zoneId: string) => Promise<boolean>;
+  updateSettings: (patch: Partial<AdminSettings>) => Promise<boolean>;
+  toggleCouponActive: (code: string) => Promise<boolean>;
+  addCoupon: (c: Coupon) => Promise<boolean>;
+  removeCoupon: (code: string) => Promise<boolean>;
+  toggleAd: (adId: string) => Promise<boolean>;
+  toggleCareSubStatus: (id: string) => Promise<boolean>;
+  /** إلغاء اشتراك رعاية من الطاقم/المدير — تأكيد سيرفر أولًا */
+  cancelCareSub: (id: string) => Promise<boolean>;
   addMeasurement: (m: Omit<PatientMeasurement, "id" | "recordedAt">) => Promise<string>;
-  deleteMeasurement: (id: string) => void;
+  deleteMeasurement: (id: string) => Promise<boolean>;
+  /** تصحيح/حذف سجل تحصيل من المدير — السياسة على السيرفر للأدمن بس */
+  adminUpdateCollection: (id: string, patch: { amount?: number; note?: string }) => Promise<boolean>;
+  adminDeleteCollection: (id: string) => Promise<boolean>;
   resetAdminDemo: () => void;
 
   /* ---- admin password gate & CMS editors ---- */
   lockAdmin: () => void;
-  updateSiteEdits: (patch: SiteEdits) => void;
-  updateAdEdit: (id: string, patch: AdEdit) => void;
-  updateOfferEdit: (id: string, patch: OfferEdit) => void;
-  updateCareEdit: (id: string, patch: CareEdit) => void;
-  updateZoneEdit: (id: string, patch: ZoneEdit) => void;
-  submitRx: (r: { fileName: string; phone: string; noteAr: string; noteEn: string }) => void;
-  adminSetRx: (id: string, status: RxStatus) => void;
+  updateSiteEdits: (patch: SiteEdits) => Promise<boolean>;
+  updateAdEdit: (id: string, patch: AdEdit) => Promise<boolean>;
+  updateOfferEdit: (id: string, patch: OfferEdit) => Promise<boolean>;
+  updateCareEdit: (id: string, patch: CareEdit) => Promise<boolean>;
+  updateZoneEdit: (id: string, patch: ZoneEdit) => Promise<boolean>;
+  updateNursingEdit: (id: string, patch: NursingServiceEdit) => Promise<boolean>;
+  /** إضافة خدمة تمريضية جديدة من لوحة الإدارة (بتتحفظ في السيرفر) */
+  addNursingService: (s: Omit<NursingService, "id" | "active">) => Promise<boolean>;
+  updateNursingCustom: (id: string, patch: Partial<NursingService>) => Promise<boolean>;
+  deleteNursingCustom: (id: string) => Promise<boolean>;
+  submitRx: (r: { fileName: string; phone: string; noteAr: string; noteEn: string }) => Promise<boolean>;
+  adminSetRx: (id: string, status: RxStatus) => Promise<boolean>;
 }
 
 export interface AppUser {
@@ -450,39 +707,57 @@ export function generateOrderId(): string {
   return `BB-${ymd}-${rand}`;
 }
 
+/** معرّف فريد ضد التصادم لسجلات بتتكتب كمفاتيح أساسية (روشتات/قياسات):
+    وقت كامل + لاحقة عشوائية — الصيغ القديمة كانت بتتصادم (رقم تسلسلي
+    من طول القايمة، أو آخر 6 أرقام من الوقت) فالسجل كان بيضيع بصمت. */
+export function uniqueRecordId(prefix: string): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let rand = "";
+  for (let i = 0; i < 6; i++) {
+    rand += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return `${prefix}-${Date.now().toString(36)}-${rand}`;
+}
+
 /** effective live stock of a product (base + dashboard adjustments, never < 0) */
 export function effStock(productId: string, stockAdj: Record<string, number>): number {
   const base = getProduct(productId)?.stock ?? 0;
   return Math.max(0, base + (stockAdj[productId] ?? 0));
 }
 
-const seedOrder: Order = {
-  id: "BB-0998",
-  date: "2026-10-28",
-  items: [
-    { productId: "vitamin-c-1000", nameAr: "فيتامين سي 1000 فوار", nameEn: "Vitamin C 1000 Effervescent", price: 85, qty: 2 },
-    { productId: "sensodyne", nameAr: "سينسوداين معجون أسنان", nameEn: "Sensodyne Toothpaste", price: 95, qty: 1 },
-  ],
-  total: 265,
-  status: "delivered",
-  customerAr: "عميل بحبح",
-  customerEn: "Bahbah Customer",
-  phone: "0100 000 0000",
-  address: "ديروط — شارع المحطة",
-  payment: "cod",
-  mine: true,
-  delivery: {
-    type: "delivery",
-    zoneId: "deirout-city",
-    zoneNameAr: "ديروط داخل المدينة",
-    zoneNameEn: "Deirout (city)",
-    slotAr: "في أسرع وقت",
-    slotEn: "ASAP",
-    driverId: "dr-1",
-    fee: 10,
-  },
+/* ------------------------------------------------------------------ */
+/* Order status state machine — mirrors the SQL trigger rules:         */
+/* terminal states (delivered / cancelled) never move again, and a     */
+/* cancelled order can never be resurrected.                           */
+/* ------------------------------------------------------------------ */
+export const ORDER_TRANSITIONS: Record<Order["status"], Order["status"][]> = {
+  /* pending → shipping لسه مسموح (طلبات قديمة/استلام مباشر من غير خطوة تجهيز صريحة) */
+  pending: ["ready", "shipping", "cancelled"],
+  ready: ["shipping", "cancelled"],
+  shipping: ["delivered", "cancelled"],
+  delivered: [],
+  cancelled: [],
 };
 
+export function canTransitionOrder(from: Order["status"], to: Order["status"]): boolean {
+  if (from === to) return false;
+  return (ORDER_TRANSITIONS[from] ?? []).includes(to);
+}
+
+/**
+ * Demo data (fabricated sales series etc.) may ONLY be presented when the owner
+ * explicitly enabled demo mode AND no server truth exists: no staff session and
+ * no server orders loaded yet. The moment server data exists, demo is OFF.
+ */
+export function isDemoActive(s: {
+  demoMode: boolean;
+  serverOrdersLoaded: boolean;
+  sessionRole: Role | null;
+}): boolean {
+  return s.demoMode && !s.serverOrdersLoaded && !s.sessionRole;
+}
+
+export const useDemoActive = () => useBahbah((s) => isDemoActive(s));
 
 /* ------------------------------------------------------------------ */
 /* Web Audio API Synthesized Chime & Instant Order Notification       */
@@ -666,6 +941,155 @@ export function notifyNewOrder(order: Order) {
   }
 }
 
+/** Staff alert: a new prescription arrived (chime + toast + browser notification) */
+export function notifyNewRx(rx: RxRequest) {
+  playOrderChime();
+  if (typeof window !== "undefined") {
+    toast.info(`🧾 روشتة جديدة واردة الآن! ${rx.id}`, {
+      description: `${rx.customerAr || rx.customerEn} — ${rx.phone}`,
+      duration: 12000,
+    });
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification(`روشتة جديدة في صيدلية بحبح ${rx.id}`, {
+          body: `العميل: ${rx.customerAr || rx.customerEn} — ${rx.phone}`,
+          icon: "/images/bahbah-badge.png",
+        });
+      } catch {}
+    }
+  }
+}
+
+/** Staff alert: a new patient measurement was recorded */
+export function notifyNewMeasurement(m: PatientMeasurement) {
+  playOrderChime();
+  if (typeof window !== "undefined") {
+    toast.info(`🩺 قياس جديد للمريض ${m.patientName}`, {
+      description: `كود ${m.patientCode} — ${m.patientPhone}`,
+      duration: 10000,
+    });
+  }
+}
+
+/** Staff alert: a new monthly-care subscription arrived */
+export function notifyNewCareSub(sub: CareSubscriber) {
+  playOrderChime();
+  if (typeof window !== "undefined") {
+    toast.info(`💊 اشتراك رعاية شهرية جديد — ${sub.nameAr}`, {
+      description: sub.phone,
+      duration: 10000,
+    });
+  }
+}
+
+/** Customer feedback: my order's status changed on the server — صوت + تنبيه + إشعار متصفح */
+/* سجل «اتنبّهنا خلاص» على مستوى الجلسة: نفس الانتقال (طلب + حالة) ما
+   يتنبّهش غير مرة واحدة مهما شافه أكتر من مسار في نفس الوقت (قناة
+   realtime، فحص شاشة التتبع، مراقب حالات طلباتي في الخلفية) — الحالات
+   بتتقدم لقدام بس فمفيش انتقال شرعي بيتكرر. */
+const orderStatusNotified = new Set<string>();
+export function notifyMyOrderStatus(order: Order) {
+  const dedupeKey = `${order.id}:${order.status}`;
+  if (orderStatusNotified.has(dedupeKey)) return;
+  orderStatusNotified.add(dedupeKey);
+  const labels: Record<Order["status"], string> = {
+    pending: "طلبك وصل الصيدلية وقيد المراجعة دلوقتي",
+    ready: "تم تجهيز طلبك 📦 — المندوب هيستلمه ويخرج بيه للتوصيل",
+    shipping: "طلبك خرج للتوصيل وهو في الطريق إليك 🚴",
+    delivered: "تم تسليم طلبك بنجاح — بالشفا والعافية 💚 قيّم المندوب اللي وصّلك من شاشة تتبع الطلب ⭐",
+    cancelled: "تم إلغاء طلبك — كلمنا لو محتاج أي مساعدة",
+  };
+  if (typeof window === "undefined") return;
+  /* الجرس للمريض نفسه: جرس الباب عند التسليم، ورنّة الطلبات لباقي الحالات */
+  if (order.status === "delivered") playDoorbellDingDong();
+  else playOrderChime();
+  toast.info(`📦 تحديث طلبك #${order.id}`, {
+    description: labels[order.status] ?? order.status,
+    duration: 9000,
+  });
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(`صيدلية بحبح — تحديث طلبك #${order.id}`, {
+        body: labels[order.status] ?? order.status,
+        icon: "/images/bahbah-badge.png",
+      });
+    } catch {}
+  }
+}
+
+/** Courier alert: a delivery became HIS (order ready and/or assigned to him) — صوت + تنبيه */
+export function notifyCourierAssignment(order: Order) {
+  if (typeof window === "undefined") return;
+  playOrderChime();
+  toast.success(`🛵 توصيلة جديدة باسمك! طلب #${order.id}`, {
+    description: `${order.customerAr || order.customerEn} — ${order.address}`,
+    duration: 12000,
+  });
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(`توصيلة جديدة في صيدلية بحبح #${order.id}`, {
+        body: `العميل: ${order.customerAr || order.customerEn} — ${order.address}`,
+        icon: "/images/bahbah-badge.png",
+      });
+    } catch {}
+  }
+}
+
+/** Manager alert: a courier recorded a collection (توريد) — صوت + تنبيه + إشعار.
+    بتتنادى بس في جلسات المدير/الماليات، وسجلات التحصيل محكومة بـ RLS أصلًا. */
+export function notifyNewCollection(c: CourierCollection) {
+  if (typeof window === "undefined") return;
+  const methodAr =
+    c.method === "cash"
+      ? "كاش"
+      : c.method === "wallet"
+        ? `محفظة إلكترونية من رقم ${c.walletFrom || "—"} لحساب ${c.walletTo || "—"}`
+        : `تحويل بنكي لحساب ${c.walletTo || "—"}`;
+  const line = `تم توريد ${c.amount} جنيه — ${methodAr}`;
+  playOrderChime();
+  toast.success(`💰 ${line}`, {
+    description: `طلب #${c.orderId} — المندوب: ${c.courierName || c.courierId || "—"}`,
+    duration: 12000,
+  });
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification("صيدلية بحبح — توريد جديد", {
+        body: `${line} (طلب #${c.orderId})`,
+        icon: "/images/bahbah-badge.png",
+      });
+    } catch {}
+  }
+}
+
+/* تنبيهات فشل الحفظ على السيرفر: قاعدة «إصلاح التوصيلات» إن مفيش كنترول
+   يقول «تم» على كتابة السيرفر ما أكّدهاش — الفشل بيبان للمستخدم والتعديل
+   بيرجع لآخر حالة مؤكدة. */
+function notifySettingsSaveFailed() {
+  toast.error("تعذّر الحفظ على السيرفر — التعديل ما اتثبّتش ورجع لآخر حالة محفوظة. راجع الاتصال وحاول تاني", {
+    duration: 7000,
+  });
+}
+function notifyOrderSaveFailed() {
+  toast.error("تعذّر تحديث الطلب على السيرفر — حالة الطلب زي ما هي. راجع الاتصال وحاول تاني", {
+    duration: 7000,
+  });
+}
+function notifyCareSaveFailed() {
+  toast.error("تعذّر حفظ تعديل الاشتراك على السيرفر — الاشتراك زي ما هو. راجع الاتصال وحاول تاني", {
+    duration: 7000,
+  });
+}
+function notifyRxSaveFailed() {
+  toast.error("تعذّر إرسال الروشتة للسيرفر — الروشتة ما وصلتش الصيدلية. راجع الاتصال وحاول تاني", {
+    duration: 7000,
+  });
+}
+function notifyAddressSyncFailed() {
+  toast.warning("العنوان اتحفظ على الجهاز بس ما اتزامنش مع السيرفر — ممكن ما يظهرش عند تسجيل الدخول من جهاز تاني", {
+    duration: 7000,
+  });
+}
+
 export const useBahbah = create<BahbahState>()(
   persist(
     (set, get) => ({
@@ -702,11 +1126,42 @@ export const useBahbah = create<BahbahState>()(
       adminUnlocked: false,
       sessionRole: null,
       setSessionRole: (r) => set({ sessionRole: r, adminUnlocked: r === "admin" }),
+      staffPermissions: null,
+      setStaffPermissions: (p) => set({ staffPermissions: p }),
+      orderPlacing: false,
+      serverOrdersLoaded: false,
+      lastSyncAt: null,
+      setServerOrdersLoaded: (v) => set({ serverOrdersLoaded: v }),
+      setLastSyncAt: (iso) => set({ lastSyncAt: iso }),
+      dashSyncStatus: "idle",
+      dashSyncError: null,
+      refreshDashboardData: async () => {
+        if (get().dashSyncStatus === "loading") return false;
+        set({ dashSyncStatus: "loading", dashSyncError: null });
+        const res = await fetchOrdersDetailedFromSupabase();
+        if (res.orders) {
+          set({
+            adminOrders: res.orders,
+            serverOrdersLoaded: true,
+            lastSyncAt: new Date().toISOString(),
+            dashSyncStatus: "ok",
+            dashSyncError: null,
+          });
+          return true;
+        }
+        /* الفشل مش بيصفّر اللوحة: البيانات الحالية بتفضل باينة تحت شريط الخطأ */
+        set({ dashSyncStatus: "error", dashSyncError: res.error });
+        return false;
+      },
+      demoMode: false,
+      setDemoMode: (v) => set({ demoMode: v }),
       siteEdits: {},
       adEdits: {},
       offerEdits: {},
       careEdits: {},
       zoneEdits: {},
+      nursingEdits: {},
+      nursingCustom: [],
 
       adminSection: "overview",
       adminOrders: [],
@@ -716,6 +1171,8 @@ export const useBahbah = create<BahbahState>()(
       stockAdj: {},
       priceOverride: {},
       driverStatus: {},
+      driverRemoved: [],
+      courierMsgTemplates: DEFAULT_COURIER_MSG_TEMPLATES,
       zoneDisabled: [],
       settings: DEFAULT_SETTINGS,
       rxQueue: [],
@@ -724,6 +1181,16 @@ export const useBahbah = create<BahbahState>()(
       adsOff: [],
       careSubs: [],
       measurements: [],
+      whatsappOrders: [],
+      shortageRequests: [],
+      nursingRequests: [],
+      nursingOpen: false,
+      courierCollections: [],
+      savedAddresses: [],
+      lastAddressId: null,
+      loyalty: null,
+      shortageOpen: false,
+      shortagePrefill: null,
 
       setLang: (l) => set({ lang: l }),
       toggleLang: () => set({ lang: get().lang === "ar" ? "en" : "ar" }),
@@ -736,10 +1203,13 @@ export const useBahbah = create<BahbahState>()(
         set({ view: "account", accountTab: tab ?? get().accountTab, cartOpen: false, searchOpen: false }),
       openTrack: (orderId) => set({ view: "track", trackOrderId: orderId, cartOpen: false, searchOpen: false }),
       advanceTrack: () => {
-        /* demo: simulate the courier moving the order to its next real status */
+        /* demo: simulate the courier moving the order to its next real status.
+           محاكاة تجريبية بس — في التشغيل الحقيقي الحالة تيجي من السيرفر فقط،
+           فالدالة دي ما تشتغلش برا وضع الديمو عشان ما ترسمش تقدم توصيل وهمي. */
+        if (!isDemoActive(get())) return;
         const id = get().trackOrderId;
         if (!id) return;
-        const next = { pending: "shipping", shipping: "delivered" } as const;
+        const next = { pending: "ready", ready: "shipping", shipping: "delivered" } as const;
         set({
           myOrders: get().myOrders.map((o) =>
             o.id === id && o.status in next ? { ...o, status: next[o.status as keyof typeof next] } : o
@@ -789,48 +1259,103 @@ export const useBahbah = create<BahbahState>()(
         signOutFromSupabase();
       },
 
-      placeOrder: ({ address, phone, payment, name, city, deliveryType, zoneId, slotId }) => {
+      placeOrder: async ({ address, phone, payment, name, city, deliveryType, zoneId, slotId, discreetPackaging, lat, lng, addressId }) => {
         const state = get();
-        /* guard: never create an empty order (double-tap protection) */
+        /* double-submit guard: one order in flight at a time */
+        if (state.orderPlacing) return "";
+        /* guard: never create an empty order */
         if (state.cart.length === 0) return "";
-        const items: OrderItem[] = state.cart.map((c) => {
+        /* shop-closed gate — the dashboard toggle is synced to the storefront */
+        if (!state.settings.acceptOrders) {
+          toast.error("الصيدلية واقفة استقبال الطلبات دلوقتي — جرّب كمان شوية أو كلمنا واتساب", {
+            duration: 8000,
+          });
+          return "";
+        }
+        /* validate every line BEFORE anything is committed: qty > 0 and within
+           live stock (نفس قاعدة addToCart). أي صنف ناقص = إيقاف الطلب والسلة تفضل. */
+        const items: OrderItem[] = [];
+        let clampedAny = false;
+        for (const c of state.cart) {
           const p = getProduct(c.productId);
-          return {
+          if (!p || !(c.qty > 0)) {
+            toast.error("في صنف غير صالح في السلة — راجع السلة وحاول تاني", { duration: 8000 });
+            return "";
+          }
+          const max = effStock(c.productId, state.stockAdj);
+          if (max <= 0) {
+            toast.error(`"${p.nameAr}" خلص من المخزون دلوقتي — شيله من السلة وكمل طلبك`, {
+              duration: 8000,
+            });
+            return "";
+          }
+          const qty = Math.min(c.qty, max);
+          if (qty !== c.qty) clampedAny = true;
+          items.push({
             productId: c.productId,
-            qty: c.qty,
-            nameAr: p?.nameAr ?? c.productId,
-            nameEn: p?.nameEn ?? c.productId,
-            price: p?.price ?? 0,
-          };
-        });
+            qty,
+            nameAr: p.nameAr,
+            nameEn: p.nameEn,
+            price: p.price,
+          });
+        }
+        if (clampedAny) {
+          toast.warning("تم ضبط كميات بعض الأصناف حسب المتاح في المخزون");
+        }
         const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
 
-        /* coupon engine — validated live, min-total enforced */
+        /* coupon engine — validated live, min-total enforced.
+           كارت خصم الولاء المكتسب بيشتغل هنا زي أي كوبون (والسيرفر بيتحقق
+           منه وبيعلّمه مستخدم في place_order). */
         const coupon = state.coupons.find(
           (c) => c.code === state.appliedCoupon && c.active
         );
-        const discount =
-          coupon && subtotal >= coupon.minTotal
+        const loyaltyCard =
+          state.loyalty?.card && state.loyalty.card.status === "active" &&
+          state.appliedCoupon &&
+          state.loyalty.card.code.toUpperCase() === state.appliedCoupon.toUpperCase()
+            ? state.loyalty.card
+            : null;
+        const discount = coupon
+          ? subtotal >= coupon.minTotal
             ? Math.round((subtotal * coupon.percent) / 100)
+            : 0
+          : loyaltyCard
+            ? Math.round((subtotal * loyaltyCard.percent) / 100)
             : 0;
 
         /* delivery fee by zone + slot premium — pickup is always free;
-           free-delivery goal comes from the dashboard (settings.freeThreshold) */
+           حملة التوصيل المجاني (settings.freeShipCampaignOn) هي آلية الشحن
+           المجاني الوحيدة: وهي شغالة رسوم المنطقة صفر لكل المناطق */
         const zone =
           deliveryType === "delivery"
             ? mergedZones(state.zoneEdits).find((z) => z.id === zoneId)
             : undefined;
         const slot = slotById(slotId);
         const slotExtra = deliveryType === "delivery" ? slot?.extraFee ?? 0 : 0;
-        const freeGoal = state.settings.freeThreshold > 0 ? state.settings.freeThreshold : Infinity;
+        /* توصيل مجاني من الولاء — بيتركّب مع حملة التوصيل المجاني (أي واحد
+           فيهم يكفي): مستوى العميل بيمنحه (عميل العلاج الشهري) أو عنده
+           اشتراك رعاية شهرية نشط — بس من رصيد شهري محدود بيحدده الأدمن،
+           والحملة وهي شغالة ما بتستهلكش من الرصيد. السيرفر بيطبّق نفس
+           القاعدة وهو المرجع. */
+        const loyaltyTiers =
+          state.settings.loyaltyTiers && state.settings.loyaltyTiers.length > 0
+            ? state.settings.loyaltyTiers
+            : DEFAULT_LOYALTY_TIERS;
+        const loyaltyFreeShip =
+          deliveryType === "delivery" &&
+          loyaltyFreeShipApplies(loyaltyTiers, state.loyalty, state.careSub?.status === "active");
         const fee =
           deliveryType === "pickup" || !zone
             ? 0 + slotExtra
-            : subtotal >= freeGoal
+            : state.settings.freeShipCampaignOn || loyaltyFreeShip
               ? 0 + slotExtra
               : zone.fee + slotExtra;
         const total = Math.max(0, subtotal - discount) + fee;
-        const allDrivers = [...(get().customDrivers || []), ...demoDrivers];
+        const removedDrivers = get().driverRemoved || [];
+        const allDrivers = [...(get().customDrivers || []), ...demoDrivers].filter(
+          (d) => !removedDrivers.includes(d.id)
+        );
         const driver =
           deliveryType === "delivery"
             ? (allDrivers.find((d) => d.zoneId === zone?.id && get().driverStatus[d.id] !== "offline" && get().driverStatus[d.id] !== "busy") ??
@@ -839,108 +1364,147 @@ export const useBahbah = create<BahbahState>()(
             : undefined;
 
         const id = generateOrderId();
-        const order: Order = {
-          id,
-          date: new Date().toISOString().slice(0, 10),
-          items,
-          total,
-          status: "pending",
-          customerAr: name || state.user?.name || "عميل بحبح",
-          customerEn: name || state.user?.name || "Bahbah Customer",
-          phone,
-          address:
-            deliveryType === "pickup"
-              ? `${city || ""} — ${address}`.trim() || "استلام من الفرع"
-              : `${zone ? (state.lang === "ar" ? zone.nameAr : zone.nameEn) : city || ""} — ${address}`.trim(),
-          payment,
-          mine: true,
-          coupon: discount > 0 ? coupon?.code : undefined,
-          discount: discount > 0 ? discount : undefined,
-          delivery: {
-            type: deliveryType,
+        const orderAddress =
+          deliveryType === "pickup"
+            ? `${city || ""} — ${address}`.trim() || "استلام من الفرع"
+            : `${zone ? (state.lang === "ar" ? zone.nameAr : zone.nameEn) : city || ""} — ${address}`.trim();
+
+        /* السيرفر أولًا: مفيش شاشة نجاح ولا خصم مخزون ولا تفريغ سلة قبل حكم السيرفر.
+           رفض نهائي = خطأ والسلة تفضل زي ما هي. انقطاع نت = الطلب بيتسجّل محليًا
+           وبيفضل في طابور الإرسال التلقائي (submitOrderToSupabase بيحطه في الطابور). */
+        set({ orderPlacing: true });
+        try {
+          const { result, rejected } = await submitOrderToSupabase({
+            id,
+            name: name || state.user?.name || "عميل بحبح",
+            phone,
+            address: orderAddress,
+            payment,
+            deliveryType,
             zoneId: zone?.id,
-            zoneNameAr: zone?.nameAr,
-            zoneNameEn: zone?.nameEn,
-            slotAr: slot?.labelAr ?? (deliveryType === "pickup" ? "استلام من الفرع" : "في أسرع وقت"),
-            slotEn: slot?.labelEn ?? (deliveryType === "pickup" ? "Pickup from branch" : "ASAP"),
+            slotId: deliveryType === "delivery" ? slotId : undefined,
+            coupon: state.appliedCoupon ?? undefined,
             driverId: driver?.id,
-            fee,
-          },
-        };
-        const adminList = state.adminOrders ?? [];
-        /* المخزون مربوط بالطلب — كل صنف يخصم من المخزن فورًا */
-        const nextStockAdj = { ...state.stockAdj };
-        items.forEach((i) => {
-          nextStockAdj[i.productId] = (nextStockAdj[i.productId] ?? 0) - i.qty;
-        });
-        set({
-          myOrders: [order, ...state.myOrders],
-          cart: [],
-          lastOrderId: id,
-          view: "success",
-          adminOrders: [order, ...adminList],
-          stockAdj: nextStockAdj,
-          appliedCoupon: null,
-          /* bump coupon usage counter */
-          coupons: discount > 0
-            ? state.coupons.map((c) => (c.code === coupon?.code ? { ...c, uses: c.uses + 1 } : c))
-            : state.coupons,
-        });
-        notifyNewOrder(order);
-        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
-          try {
-            const bc = new BroadcastChannel("bahbah_orders_broadcast");
-            bc.postMessage({ type: "NEW_ORDER", order });
-            bc.close();
-          } catch {}
-        }
-        /* الحفظ في Supabase: لو فشل يتحط في طابور محلي ويتعاد تلقائيًا، والعميل يتنبّه */
-        submitOrderToSupabase({
-          id,
-          name: order.customerAr,
-          phone,
-          address: order.address,
-          payment,
-          deliveryType,
-          zoneId: zone?.id,
-          slotId: deliveryType === "delivery" ? slotId : undefined,
-          coupon: state.appliedCoupon ?? undefined,
-          driverId: driver?.id,
-          items: items.map((i) => ({ productId: i.productId, qty: i.qty, nameAr: i.nameAr, nameEn: i.nameEn })),
-        }).then(({ result, rejected }) => {
-          if (typeof window === "undefined") return;
-          if (result) {
-            /* السيرفر هو المرجع في الأسعار: لو اختلف عن حسابنا نعدّل الطلب المحلي ونعرّف العميل */
-            if (Math.abs(result.total - order.total) >= 0.5) {
-              const fix = (o: Order): Order =>
-                o.id === id
-                  ? {
-                      ...o,
-                      total: result.total,
-                      discount: result.discount > 0 ? result.discount : undefined,
-                      delivery: { type: "delivery", ...o.delivery, fee: result.delivery_fee },
-                    }
-                  : o;
-              useBahbah.setState((st) => ({
-                myOrders: st.myOrders.map(fix),
-                adminOrders: st.adminOrders ? st.adminOrders.map(fix) : null,
-              }));
-              toast.warning(`تم تحديث إجمالي طلبك إلى ${result.total} ج.م حسب الأسعار الحالية`);
-            }
-          } else if (rejected) {
+            discreetPackaging: discreetPackaging || undefined,
+            lat: deliveryType === "delivery" ? lat : undefined,
+            lng: deliveryType === "delivery" ? lng : undefined,
+            items: items.map((i) => ({ productId: i.productId, qty: i.qty, nameAr: i.nameAr, nameEn: i.nameEn })),
+          });
+
+          if (rejected) {
             toast.error("الصيدلية ما قدرتش تسجّل الطلب — راجع السلة وحاول تاني أو كلمنا بالواتساب", { duration: 10000 });
-          } else {
+            return "";
+          }
+
+          /* السيرفر هو المرجع في الأرقام النهائية لو ردّ */
+          const finalTotal = result ? result.total : total;
+          const finalDiscount = result ? result.discount : discount;
+          const finalFee = result ? result.delivery_fee : fee;
+          const order: Order = {
+            id,
+            date: new Date().toISOString().slice(0, 10),
+            createdAt: new Date().toISOString(),
+            items,
+            total: finalTotal,
+            status: "pending",
+            customerAr: name || state.user?.name || "عميل بحبح",
+            customerEn: name || state.user?.name || "Bahbah Customer",
+            phone,
+            address: orderAddress,
+            payment,
+            mine: true,
+            coupon: finalDiscount > 0 ? (coupon?.code ?? (loyaltyCard ? loyaltyCard.code : undefined)) : undefined,
+            discount: finalDiscount > 0 ? finalDiscount : undefined,
+            discreetPackaging: discreetPackaging || undefined,
+            lat: deliveryType === "delivery" ? lat : undefined,
+            lng: deliveryType === "delivery" ? lng : undefined,
+            delivery: {
+              type: deliveryType,
+              zoneId: zone?.id,
+              zoneNameAr: zone?.nameAr,
+              zoneNameEn: zone?.nameEn,
+              slotAr: slot?.labelAr ?? (deliveryType === "pickup" ? "استلام من الفرع" : "في أسرع وقت"),
+              slotEn: slot?.labelEn ?? (deliveryType === "pickup" ? "Pickup from branch" : "ASAP"),
+              driverId: driver?.id,
+              fee: finalFee,
+            },
+          };
+
+          const fresh = get();
+          const adminList = fresh.adminOrders ?? [];
+          /* انعكاس محلي لحالة الولاء بعد تأكيد السيرفر — مزامنة الولاء
+             الجاية بتأكده: (1) كارت الخصم لو اتخصم في الطلب ده بقى
+             مستخدم، (2) لو الإعفاء من الرسوم كان بسبب الولاء/الرعاية
+             (والحملة مقفولة) اتستهلكت توصيلة من الرصيد الشهري */
+          let nextLoyalty = fresh.loyalty;
+          if (loyaltyCard && finalDiscount > 0 && nextLoyalty?.card) {
+            nextLoyalty = {
+              ...nextLoyalty,
+              card: { ...nextLoyalty.card, status: "used" as const },
+            };
+          }
+          if (
+            loyaltyFreeShip &&
+            !state.settings.freeShipCampaignOn &&
+            result &&
+            nextLoyalty &&
+            typeof nextLoyalty.freeRemaining === "number"
+          ) {
+            nextLoyalty = {
+              ...nextLoyalty,
+              freeRemaining: Math.max(0, nextLoyalty.freeRemaining - 1),
+              freeUsed: (nextLoyalty.freeUsed ?? 0) + 1,
+            };
+          }
+          /* المخزون مربوط بالطلب — الخصم بيحصل بس بعد قبول السيرفر أو التسجيل الآمن في الطابور */
+          const nextStockAdj = { ...fresh.stockAdj };
+          items.forEach((i) => {
+            nextStockAdj[i.productId] = (nextStockAdj[i.productId] ?? 0) - i.qty;
+          });
+          set({
+            myOrders: [order, ...fresh.myOrders],
+            cart: [],
+            lastOrderId: id,
+            /* العنوان المستخدم في الطلب ده بيبقى هو المحدد تلقائيًا في الطلب الجاي */
+            ...(deliveryType === "delivery" && addressId ? { lastAddressId: addressId } : {}),
+            view: "success",
+            adminOrders: [order, ...adminList],
+            stockAdj: nextStockAdj,
+            appliedCoupon: null,
+            /* حالة الولاء المنعكسة محليًا (كارت مستخدم / توصيلة مستهلكة
+               من الرصيد) — اتحسبت فوق من رد السيرفر المؤكد */
+            ...(nextLoyalty !== fresh.loyalty && nextLoyalty ? { loyalty: nextLoyalty } : {}),
+            /* bump coupon usage counter */
+            coupons: finalDiscount > 0
+              ? fresh.coupons.map((c) => (c.code === coupon?.code ? { ...c, uses: c.uses + 1 } : c))
+              : fresh.coupons,
+          });
+          notifyNewOrder(order);
+          if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+            try {
+              const bc = new BroadcastChannel("bahbah_orders_broadcast");
+              bc.postMessage({ type: "NEW_ORDER", order });
+              bc.close();
+            } catch {}
+          }
+          if (!result) {
             toast.warning("الطلب اتسجّل عندك — هيتبعت للصيدلية أول ما النت يرجع", {
               description: "ممكن كمان تبعته بالواتساب من صفحة النجاح للتأكيد السريع",
               duration: 10000,
             });
+          } else if (Math.abs(result.total - total) >= 0.5) {
+            toast.warning(`تم تحديث إجمالي طلبك إلى ${result.total} ج.م حسب الأسعار الحالية`);
           }
-        });
-        return id;
+          return id;
+        } finally {
+          set({ orderPlacing: false });
+        }
       },
 
-      submitRx: ({ fileName, phone, noteAr, noteEn }) => {
-        const rxId = `RX-${1001 + get().rxQueue.length}`;
+      submitRx: async ({ fileName, phone, noteAr, noteEn }) => {
+        /* معرّف فريد ضد التصادم: الصيغة القديمة (1001 + طول القايمة) كانت
+           بتتصادم بعد أي حذف فالروشتة كانت بتضيع على السيرفر بصمت */
+        const rxId = uniqueRecordId("RX");
         const rx: RxRequest = {
           id: rxId,
           customerAr: get().user?.name || "عميل بحبح",
@@ -952,14 +1516,29 @@ export const useBahbah = create<BahbahState>()(
           noteAr: noteAr || "—",
           noteEn: noteEn || "—",
         };
-        insertRxRequestToSupabase(rx);
+        /* السيرفر أولًا: الروشتة ما بتظهرش كمُرسلة غير لو اتكتبت فعلًا —
+           فشل الكتابة = تنبيه صريح بدل ما المريض يفتكر إنها وصلت */
+        const ok = await insertRxRequestToSupabase(rx);
+        if (!ok) {
+          notifyRxSaveFailed();
+          return false;
+        }
         set({ rxQueue: [rx, ...get().rxQueue] });
+        return true;
       },
-      adminSetRx: (id, status) => {
-        updateRxStatusInSupabase(id, status);
+      adminSetRx: async (id, status) => {
+        const prev = get().rxQueue;
+        const ok = await updateRxStatusInSupabase(id, status);
+        if (!ok) {
+          toast.error("تعذّر تحديث حالة الروشتة على السيرفر — الحالة زي ما هي. راجع الاتصال وحاول تاني", {
+            duration: 7000,
+          });
+          return false;
+        }
         set({
-          rxQueue: get().rxQueue.map((r) => (r.id === id ? { ...r, status } : r)),
+          rxQueue: prev.map((r) => (r.id === id ? { ...r, status } : r)),
         });
+        return true;
       },
 
       reorder: (orderId) => {
@@ -967,9 +1546,15 @@ export const useBahbah = create<BahbahState>()(
         if (!order) return;
         const cart = [...get().cart];
         order.items.forEach((i) => {
+          /* نفس قاعدة addToCart: الكمية ما تعدّيش المخزون الحي أبدًا */
+          const max = effStock(i.productId, get().stockAdj);
+          if (max <= 0) return;
           const idx = cart.findIndex((c) => c.productId === i.productId);
-          if (idx >= 0) cart[idx] = { ...cart[idx], qty: cart[idx].qty + i.qty };
-          else cart.push({ productId: i.productId, qty: i.qty });
+          const cur = idx >= 0 ? cart[idx].qty : 0;
+          const next = Math.min(cur + i.qty, max);
+          if (next <= cur) return;
+          if (idx >= 0) cart[idx] = { ...cart[idx], qty: next };
+          else cart.push({ productId: i.productId, qty: next });
         });
         set({ cart, view: "cart" });
       },
@@ -1000,13 +1585,21 @@ export const useBahbah = create<BahbahState>()(
       applyCoupon: (code) => {
         const norm = code.trim().toUpperCase();
         const c = get().coupons.find((x) => x.code === norm && x.active);
-        if (!c) return false;
-        set({ appliedCoupon: norm });
-        return true;
+        if (c) {
+          set({ appliedCoupon: norm });
+          return true;
+        }
+        /* كارت خصم الولاء المكتسب بيُستخدم زي الكوبون بالكود بتاعه */
+        const card = get().loyalty?.card;
+        if (card && card.status === "active" && card.code.toUpperCase() === norm) {
+          set({ appliedCoupon: norm });
+          return true;
+        }
+        return false;
       },
       clearCoupon: () => set({ appliedCoupon: null }),
 
-      subscribeCare: ({
+      subscribeCare: async ({
         planId = "monthly-rx",
         addons = [],
         name,
@@ -1050,8 +1643,10 @@ export const useBahbah = create<BahbahState>()(
           months: 1,
           status: "active",
         };
-        set({ careSub: sub, careSubs: [entry, ...get().careSubs.filter((s) => s.id !== entry.id)], careWizardPlan: null });
-        insertCareSubToSupabase({
+        /* السيرفر أولًا: الاشتراك ما بيظهرش كمُفعّل غير لو اتكتب فعلًا —
+           فشل الكتابة كان بيخلي المشترك «موجود» عنده ومش موجود عند
+           الصيدلية، فلا الطاقم يشوفه ولا استحقاق التوصيل المجاني يثبت */
+        const saved = await insertCareSubToSupabase({
           memberNo: entry.id,
           planId,
           name: entry.nameAr,
@@ -1062,9 +1657,14 @@ export const useBahbah = create<BahbahState>()(
           dayPref: sub.dayPref,
           status: "active",
         });
+        if (!saved) {
+          notifyCareSaveFailed();
+          return false;
+        }
+        set({ careSub: sub, careSubs: [entry, ...get().careSubs.filter((s) => s.id !== entry.id)], careWizardPlan: null });
         if (prescriptionUrl) {
           const rx: RxRequest = {
-            id: `RX-${Math.floor(1000 + Math.random() * 9000)}`,
+            id: uniqueRecordId("RX"),
             customerAr: sub.name,
             customerEn: sub.name,
             phone: sub.phone,
@@ -1074,9 +1674,16 @@ export const useBahbah = create<BahbahState>()(
             noteAr: `[عميل شهري ${memberNo}] ${notes}`,
             noteEn: `[Monthly client ${memberNo}] ${notes}`,
           };
-          insertRxRequestToSupabase(rx);
-          set((s) => ({ rxQueue: [rx, ...s.rxQueue] }));
+          const rxOk = await insertRxRequestToSupabase(rx);
+          if (rxOk) {
+            set((s) => ({ rxQueue: [rx, ...s.rxQueue] }));
+          } else {
+            toast.warning("الاشتراك اتحفظ، بس صورة الروشتة ما اتبعتتش للسيرفر — الصيدلية هتطلبها منك", {
+              duration: 7000,
+            });
+          }
         }
+        return true;
       },
       refillMonthlyRx: async (patient: CareSubscriber) => {
         const orderId = generateOrderId();
@@ -1107,25 +1714,35 @@ export const useBahbah = create<BahbahState>()(
             fee: 0,
           },
         };
-        await submitRefillToSupabase({
+        /* السيرفر أولًا: نتيجة place_refill هي الحقيقة — فشلها (رقم
+           مرفوض مثلًا) كان بيعدّي بصمت والطلب بيظهر للمريض وهو مش
+           موجود عند الصيدلية. دلوقتي الفشل بيترمي كخطأ والمتصلين
+           بيورّوا رسالة التعذّر، والطلب ما بيتحطش محليًا أصلًا */
+        const ok = await submitRefillToSupabase({
           id: orderId,
           name: patient.nameAr,
           phone: patient.phone,
           address: order.address,
         });
+        if (!ok) {
+          throw new Error("refill_failed");
+        }
         set((s) => ({
           myOrders: [order, ...s.myOrders],
           adminOrders: [order, ...(s.adminOrders || [])],
         }));
         return orderId;
       },
-      pauseCare: () => {
+      pauseCare: async () => {
         const sub = get().careSub;
         if (!sub || sub.status === "paused") return;
-        const matching = get().careSubs.find(
-          (s) => s.phone === sub.phone && s.planId === sub.planId
-        );
-        if (matching) updateCareSubStatusInSupabase(matching.id, "paused");
+        /* مسار المريض بيعدّي على care_self_update (السياسة المباشرة
+           للطاقم بس) — الحالة المحلية ما بتتحركش غير بعد تأكيد الدالة */
+        const ok = await careSelfUpdateInSupabase({ status: "paused" });
+        if (!ok) {
+          notifyCareSaveFailed();
+          return;
+        }
         set({
           careSub: { ...sub, status: "paused" },
           careSubs: get().careSubs.map((s) =>
@@ -1135,13 +1752,14 @@ export const useBahbah = create<BahbahState>()(
           ),
         });
       },
-      resumeCare: () => {
+      resumeCare: async () => {
         const sub = get().careSub;
         if (!sub) return;
-        const matching = get().careSubs.find(
-          (s) => s.phone === sub.phone && s.planId === sub.planId
-        );
-        if (matching) updateCareSubStatusInSupabase(matching.id, "active");
+        const ok = await careSelfUpdateInSupabase({ status: "active" });
+        if (!ok) {
+          notifyCareSaveFailed();
+          return;
+        }
         const today = new Date().toISOString().slice(0, 10);
         set({
           careSub: { ...sub, status: "active", next: nextDeliveryFor(sub.dayPref, today) },
@@ -1152,30 +1770,38 @@ export const useBahbah = create<BahbahState>()(
           ),
         });
       },
-      cancelCare: () => {
+      cancelCare: async () => {
         const sub = get().careSub;
         if (!sub) return;
-        const matching = get().careSubs.find(
-          (s) => s.phone === sub.phone && s.planId === sub.planId
-        );
-        if (matching) updateCareSubStatusInSupabase(matching.id, "cancelled");
+        const ok = await careSelfUpdateInSupabase({ status: "cancelled" });
+        if (!ok) {
+          notifyCareSaveFailed();
+          return;
+        }
         set({
           careSub: null,
           careSubs: get().careSubs.map((s) =>
-            s.phone === sub.phone && s.planId === sub.planId && s.status === "active"
-              ? { ...s, status: "paused" as const }
+            s.phone === sub.phone && s.planId === sub.planId && s.status !== "cancelled"
+              ? { ...s, status: "cancelled" as const }
               : s
           ),
         });
       },
-      changeCareDay: (dayPref) => {
+      changeCareDay: async (dayPref) => {
         const sub = get().careSub;
         if (!sub) return;
+        /* تغيير يوم الصندوق كان محلي بس — دلوقتي بيتبعت لـ care_self_update
+           وبيثبت على السيرفر، والفشل بيخلي اليوم زي ما هو مع تنبيه */
+        const ok = await careSelfUpdateInSupabase({ dayPref });
+        if (!ok) {
+          notifyCareSaveFailed();
+          return;
+        }
         const next = nextDeliveryFor(dayPref, new Date().toISOString().slice(0, 10));
         set({
           careSub: { ...sub, dayPref, next },
           careSubs: get().careSubs.map((s) =>
-            s.phone === sub.phone && s.planId === sub.planId ? { ...s, nextDelivery: next } : s
+            s.phone === sub.phone && s.planId === sub.planId ? { ...s, dayPref, nextDelivery: next } : s
           ),
         });
       },
@@ -1203,34 +1829,49 @@ export const useBahbah = create<BahbahState>()(
 
       setAdminSection: (s) => set({ adminSection: s }),
 
-      adminAdvance: (orderId) => {
-        const next = { pending: "shipping", shipping: "delivered" } as const;
+      adminAdvance: async (orderId) => {
+        const next = { pending: "ready", ready: "shipping", shipping: "delivered" } as const;
         const currentOrder = (get().adminOrders ?? []).find((o) => o.id === orderId);
-        if (currentOrder && currentOrder.status in next) {
-          const nextStatus = next[currentOrder.status as keyof typeof next];
-          updateOrderStatusInSupabase(orderId, {
-            status: nextStatus,
-            ...(nextStatus === "delivered" ? { payment_status: "paid" } : {}),
-          });
+        if (!currentOrder || !(currentOrder.status in next)) return false;
+        const nextStatus = next[currentOrder.status as keyof typeof next];
+        /* السيرفر الأول: الحالة المحلية ما بتتقدّمش غير بعد تأكيد الكتابة */
+        const ok = await updateOrderStatusInSupabase(orderId, {
+          status: nextStatus,
+          ...(nextStatus === "delivered" ? { payment_status: "paid" } : {}),
+        });
+        if (!ok) {
+          notifyOrderSaveFailed();
+          return false;
         }
         set({
           adminOrders: (get().adminOrders ?? []).map((o) =>
-            o.id === orderId && o.status in next
-              ? { ...o, status: next[o.status as keyof typeof next] }
-              : o
+            o.id === orderId ? { ...o, status: nextStatus } : o
           ),
         });
+        return true;
       },
-      adminCancel: (orderId) => {
-        updateOrderStatusInSupabase(orderId, { status: "cancelled" });
+      adminCancel: async (orderId) => {
+        const cur = (get().adminOrders ?? []).find((o) => o.id === orderId);
+        /* terminal states never move again — a delivered order can't be cancelled */
+        if (!cur || !canTransitionOrder(cur.status, "cancelled")) return false;
+        const ok = await updateOrderStatusInSupabase(orderId, { status: "cancelled" });
+        if (!ok) {
+          notifyOrderSaveFailed();
+          return false;
+        }
         set({
           adminOrders: (get().adminOrders ?? []).map((o) =>
             o.id === orderId ? { ...o, status: "cancelled" } : o
           ),
         });
+        return true;
       },
-      adminAssignDriver: (orderId, driverId) => {
-        updateOrderStatusInSupabase(orderId, { courier_id: driverId });
+      adminAssignDriver: async (orderId, driverId) => {
+        const ok = await updateOrderStatusInSupabase(orderId, { courier_id: driverId });
+        if (!ok) {
+          notifyOrderSaveFailed();
+          return false;
+        }
         set({
           adminOrders: (get().adminOrders ?? []).map((o) =>
             o.id === orderId
@@ -1238,20 +1879,45 @@ export const useBahbah = create<BahbahState>()(
               : o
           ),
         });
+        return true;
       },
 
       /* ---- staff portals ---- */
-      courierPickup: (orderId) => {
-        updateOrderStatusInSupabase(orderId, { status: "shipping" });
+      courierPickup: async (orderId) => {
+        const cur =
+          (get().adminOrders ?? []).find((o) => o.id === orderId) ??
+          get().myOrders.find((o) => o.id === orderId);
+        /* guard: الاستلام من ready (بعد التجهيز) — أو pending مباشرة لطلبات قبل خطوة التجهيز */
+        if (!cur || !canTransitionOrder(cur.status, "shipping")) return false;
+        const ok = await updateOrderStatusInSupabase(orderId, { status: "shipping" });
+        if (!ok) {
+          notifyOrderSaveFailed();
+          return false;
+        }
         const patch = (list: Order[]) =>
-          list.map((o) => (o.id === orderId && o.status === "pending" ? { ...o, status: "shipping" as const } : o));
+          list.map((o) =>
+            o.id === orderId && (o.status === "ready" || o.status === "pending")
+              ? { ...o, status: "shipping" as const }
+              : o
+          );
         set({
           adminOrders: patch(get().adminOrders ?? []),
           myOrders: patch(get().myOrders),
         });
+        return true;
       },
-      courierDeliver: (orderId) => {
-        updateOrderStatusInSupabase(orderId, { status: "delivered", payment_status: "paid" });
+      courierDeliver: async (orderId) => {
+        const cur =
+          (get().adminOrders ?? []).find((o) => o.id === orderId) ??
+          get().myOrders.find((o) => o.id === orderId);
+        /* guard: only shipping → delivered (a cancelled order can't be resurrected as delivered) */
+        if (!cur || !canTransitionOrder(cur.status, "delivered")) return false;
+        /* السيرفر الأول: الجرس ورسالة النجاح ما بيحصلوش غير بعد تأكيد التسليم */
+        const ok = await updateOrderStatusInSupabase(orderId, { status: "delivered", payment_status: "paid" });
+        if (!ok) {
+          notifyOrderSaveFailed();
+          return false;
+        }
         playDoorbellDingDong(); // doorbell chime at customer arrival
         if (typeof window !== "undefined") {
           toast.success("🔔 تم تسليم الطلب للعميل بنجاح!", {
@@ -1273,96 +1939,440 @@ export const useBahbah = create<BahbahState>()(
           adminOrders: patch(get().adminOrders ?? []),
           myOrders: patch(get().myOrders),
         });
+        return true;
       },
-      pharmacistReady: (orderId) => {
-        /* medicine is packed — hand it to the assigned courier */
+      /* ---- تسليم مع تحصيل (التوريد): سجل الفلوس بيثبت في السيرفر الأول،
+         ولو فشل التسجيل التسليم ما بيكملش — عشان مفيش جنيه يضيع من غير أثر.
+         معرّف السجل مشتق من رقم الطلب فإعادة المحاولة ما بتكررش السجل. ---- */
+      courierDeliverWithCollection: async (orderId, input) => {
+        const st = get();
+        const cur =
+          (st.adminOrders ?? []).find((o) => o.id === orderId) ??
+          st.myOrders.find((o) => o.id === orderId);
+        if (!cur || !canTransitionOrder(cur.status, "delivered")) return false;
+
+        const amount = Number(input.amount);
+        if (!Number.isFinite(amount) || amount < 0) {
+          toast.error("اكتب المبلغ اللي استلمته من العميل بالظبط قبل التسليم", { duration: 7000 });
+          return false;
+        }
+        if (
+          input.method === "wallet" &&
+          (!input.walletFrom?.trim() || !input.walletTo?.trim())
+        ) {
+          toast.error("المحفظة الإلكترونية لازم يتسجل اتحولت من رقم إيه ولحساب إيه", {
+            duration: 7000,
+          });
+          return false;
+        }
+
+        const collection: CourierCollection = {
+          id: `COL-${orderId}`,
+          orderId,
+          courierId: st.user?.driverId,
+          courierEmail: st.user?.email,
+          courierName: st.user?.name,
+          amount,
+          method: input.method,
+          walletFrom: input.walletFrom?.trim() || undefined,
+          walletTo: input.walletTo?.trim() || undefined,
+          note: input.note?.trim() || undefined,
+          createdAt: new Date().toISOString(),
+        };
+        const { row, error } = await insertCourierCollectionToSupabase(collection);
+        /* duplicate = السجل موجود أصلًا من محاولة سابقة — كمّل التسليم عادي */
+        const alreadyRecorded = !!error && /duplicate|unique/i.test(error);
+        if (!row && !alreadyRecorded) {
+          toast.error(
+            "ما قدرناش نسجّل التحصيل في النظام — الطلب لسه «في الطريق» ومفيش فلوس هتضيع. راجع النت وحاول تاني، ولو المشكلة فضلت كلّم المدير",
+            { duration: 10000 }
+          );
+          return false;
+        }
+        if (row) {
+          set({ courierCollections: [collection, ...get().courierCollections] });
+        }
+        /* التسليم نفسه لازم يثبت في السيرفر — نتيجته هي نتيجة العملية كلها */
+        return get().courierDeliver(orderId);
+      },
+
+      /* ---- دفتر عناوين العميل: محلي أولًا (بيتحفظ على الجهاز) + كتابة
+         للسيرفر في الخلفية. السيرفر هو المرجع عند تسجيل الدخول. ---- */
+      addSavedAddress: (a) => {
+        const list = get().savedAddresses;
+        const addr: SavedAddress = {
+          ...a,
+          id: a.id ?? `ADDR-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`,
+          isDefault: a.isDefault || list.length === 0,
+          updatedAt: new Date().toISOString(),
+        };
+        const demoted = addr.isDefault
+          ? list.filter((x) => x.isDefault).map((x) => ({ ...x, isDefault: false }))
+          : [];
+        set({
+          savedAddresses: [
+            addr,
+            ...list.map((x) => (x.isDefault && addr.isDefault ? { ...x, isDefault: false } : x)),
+          ],
+        });
+        /* المزامنة بقى ليها نتيجة: فشل الحفظ على السيرفر بيورّي تحذير
+           بدل ما العنوان «يتحفظ» محليًا بس ويختفي من أي جهاز تاني */
+        void upsertCustomerAddressToSupabase(addr).then((ok) => {
+          if (!ok) notifyAddressSyncFailed();
+        });
+        demoted.forEach((d) => void upsertCustomerAddressToSupabase(d));
+        return addr;
+      },
+      updateSavedAddress: (id, patch) => {
+        const list = get().savedAddresses;
+        const cur = list.find((x) => x.id === id);
+        if (!cur) return;
+        const next: SavedAddress = { ...cur, ...patch, updatedAt: new Date().toISOString() };
+        const demoted =
+          patch.isDefault === true
+            ? list.filter((x) => x.id !== id && x.isDefault).map((x) => ({ ...x, isDefault: false }))
+            : [];
+        set({
+          savedAddresses: get().savedAddresses.map((x) =>
+            x.id === id ? next : patch.isDefault === true ? { ...x, isDefault: false } : x
+          ),
+        });
+        void upsertCustomerAddressToSupabase(next).then((ok) => {
+          if (!ok) notifyAddressSyncFailed();
+        });
+        demoted.forEach((d) => void upsertCustomerAddressToSupabase(d));
+      },
+      deleteSavedAddress: async (id) => {
+        const list = get().savedAddresses;
+        const prevLastAddressId = get().lastAddressId;
+        const gone = list.find((x) => x.id === id);
+        if (!gone) return;
+        let rest = list.filter((x) => x.id !== id);
+        let promoted: SavedAddress | undefined;
+        if (gone.isDefault && rest.length > 0) {
+          promoted = { ...rest[0], isDefault: true, updatedAt: new Date().toISOString() };
+          rest = rest.map((x) => (x.id === promoted!.id ? promoted! : x));
+        }
+        set({
+          savedAddresses: rest,
+          ...(prevLastAddressId === id ? { lastAddressId: rest[0]?.id ?? null } : {}),
+        });
+        /* الحذف بقى مؤكد: فشل حذف السيرفر بيرجّع العنوان زي ما كان —
+           قبله كان «بيتمسح» من الشاشة ويرجع من السيرفر عند تسجيل الدخول */
+        const ok = await deleteCustomerAddressFromSupabase(id);
+        if (!ok) {
+          set({ savedAddresses: list, lastAddressId: prevLastAddressId });
+          toast.error("تعذّر حذف العنوان من السيرفر — العنوان رجع زي ما هو. راجع الاتصال وحاول تاني", {
+            duration: 7000,
+          });
+          return;
+        }
+        if (promoted) void upsertCustomerAddressToSupabase(promoted);
+      },
+      setDefaultSavedAddress: (id) => {
+        get().updateSavedAddress(id, { isDefault: true });
+      },
+      pharmacistReady: async (orderId) => {
+        /* medicine is packed — the order becomes «تم التجهيز» (ready) and waits for
+           the assigned courier to pick it up (courierPickup moves it to shipping).
+           Server-confirmed exactly like the other order actions: the local status
+           moves only after updateOrderStatusInSupabase confirms the write. */
+        const st = get();
+        const cur =
+          (st.adminOrders ?? []).find((o) => o.id === orderId) ??
+          st.myOrders.find((o) => o.id === orderId);
+        if (!cur || !canTransitionOrder(cur.status, "ready")) return false;
+        const ok = await updateOrderStatusInSupabase(orderId, {
+          status: "ready",
+          ...(st.user?.email ? { pharmacist_id: st.user.email } : {}),
+        });
+        if (!ok) {
+          notifyOrderSaveFailed();
+          return false;
+        }
         const patch = (list: Order[]) =>
-          list.map((o) => (o.id === orderId && o.status === "pending" ? { ...o, status: "shipping" as const } : o));
+          list.map((o) => (o.id === orderId && o.status === "pending" ? { ...o, status: "ready" as const } : o));
         set({
           adminOrders: patch(get().adminOrders ?? []),
           myOrders: patch(get().myOrders),
         });
+        return true;
       },
 
-      restock: (productId, qty) => {
-        const cur = get().stockAdj[productId] ?? 0;
-        const next = { ...get().stockAdj, [productId]: cur + qty };
+      restock: async (productId, qty) => {
+        const prev = get().stockAdj;
+        const next = { ...prev, [productId]: (prev[productId] ?? 0) + qty };
         set({ stockAdj: next });
-        syncAdminSettingsToSupabase({ stock_adj: next });
+        const ok = await syncAdminSettingsToSupabase({ stock_adj: next });
+        if (!ok) {
+          set({ stockAdj: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      setPrice: (productId, price) => {
-        const next = { ...get().priceOverride, [productId]: price };
+      setPrice: async (productId, price) => {
+        const prev = get().priceOverride;
+        const next = { ...prev, [productId]: price };
         set({ priceOverride: next });
-        syncAdminSettingsToSupabase({ price_override: next });
+        const ok = await syncAdminSettingsToSupabase({ price_override: next });
+        if (!ok) {
+          set({ priceOverride: prev });
+          notifySettingsSaveFailed();
+        }
+        /* ملحوظة: الـ price_override ده هو أول مصدر بيقرأه place_order على السيرفر،
+           فالسعر بيثبت عند الدفع. تعديل جدول products نفسه بيتم من كارت المنتج
+           (admin_set_price) ومن زر رفع الكتالوج في لوحة الصيانة. */
+        return ok;
       },
-      addAdminProduct: (p) => {
-        const next = [p, ...get().customProducts];
+      addAdminProduct: async (p) => {
+        const prev = get().customProducts;
+        const next = [p, ...prev];
         set({ customProducts: next });
-        syncAdminSettingsToSupabase({ custom_products: next });
+        const ok = await syncAdminSettingsToSupabase({ custom_products: next });
+        if (!ok) {
+          set({ customProducts: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      addDriver: (d) => {
-        set({ customDrivers: [d, ...(get().customDrivers || [])] });
+      addDriver: async (d) => {
+        const prev = get().customDrivers || [];
+        const next = [d, ...prev];
+        set({ customDrivers: next });
+        /* المندوب لازم يوجد على السيرفر (عمود custom_drivers في admin_settings)
+           عشان يظهر لباقي الأجهزة ويتقدر يتعيّن على طلبات حقيقية — مش محلي بس */
+        const ok = await syncAdminSettingsToSupabase({ custom_drivers: next });
+        if (!ok) {
+          set({ customDrivers: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      updateProductImage: (productId, img, verified) => {
-        const next = { ...get().productImgOverride, [productId]: { img, verified: verified ?? true } };
+      removeDriver: async (driverId) => {
+        const prevDrivers = get().customDrivers || [];
+        const prevStatus = get().driverStatus;
+        const prevRemoved = get().driverRemoved;
+        const nextDrivers = prevDrivers.filter((d) => d.id !== driverId);
+        const nextStatus = { ...prevStatus };
+        delete nextStatus[driverId];
+        /* الإزالة على مستويين: المندوب المخصص بيتمسح من custom_drivers،
+           وأي مندوب (مخصص أو افتراضي) بيتحط في driver_removed فبيختفي
+           من قوائم التعيين على كل الأجهزة — الكل بيتزامن في كتابة واحدة
+           مؤكدة، والفشل بيرجّع كل حاجة زي ما كانت */
+        const nextRemoved = prevRemoved.includes(driverId)
+          ? prevRemoved
+          : [...prevRemoved, driverId];
+        set({ customDrivers: nextDrivers, driverStatus: nextStatus, driverRemoved: nextRemoved });
+        const ok = await syncAdminSettingsToSupabase({
+          custom_drivers: nextDrivers,
+          driver_status: nextStatus,
+          driver_removed: nextRemoved,
+        });
+        if (!ok) {
+          set({ customDrivers: prevDrivers, driverStatus: prevStatus, driverRemoved: prevRemoved });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      updateProductImage: async (productId, img, verified) => {
+        const prev = get().productImgOverride;
+        const next = { ...prev, [productId]: { img, verified: verified ?? true } };
         set({ productImgOverride: next });
-        syncAdminSettingsToSupabase({ custom_products: get().customProducts });
+        /* التوصيلة الصح: التعديلات بتتخزن في عمود img_override المخصص لها —
+           كانت بتتزامن غلط مع custom_products فكانت بتضيع عند أي تحميل من السيرفر */
+        const ok = await syncAdminSettingsToSupabase({ img_override: next });
+        if (!ok) {
+          set({ productImgOverride: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
 
-      cycleDriverStatus: (driverId) => {
+      cycleDriverStatus: async (driverId) => {
         const order: DriverStatus[] = ["available", "busy", "offline"];
-        const cur = get().driverStatus[driverId] ?? demoDrivers.find((d) => d.id === driverId)?.status ?? "available";
-        const next = order[(order.indexOf(cur) + 1) % order.length];
-        set({ driverStatus: { ...get().driverStatus, [driverId]: next } });
-      },
-      toggleZone: (zoneId) => {
-        const list = get().zoneDisabled;
-        set({
-          zoneDisabled: list.includes(zoneId)
-            ? list.filter((z) => z !== zoneId)
-            : [...list, zoneId],
-        });
-      },
-      updateSettings: (patch) => {
-        set({ settings: { ...get().settings, ...patch } });
-        if (typeof patch.freeThreshold === "number" && get().sessionRole === "admin") {
-          syncFreeThresholdToSupabase(patch.freeThreshold);
+        const prev = get().driverStatus;
+        const cur = prev[driverId] ?? demoDrivers.find((d) => d.id === driverId)?.status ?? "available";
+        const nextStatus = order[(order.indexOf(cur) + 1) % order.length];
+        const next = { ...prev, [driverId]: nextStatus };
+        set({ driverStatus: next });
+        const ok = await syncAdminSettingsToSupabase({ driver_status: next });
+        if (!ok) {
+          set({ driverStatus: prev });
+          notifySettingsSaveFailed();
         }
+        return ok;
       },
-      toggleCouponActive: (code) => {
-        const next = get().coupons.map((c) =>
+      saveCourierMsgTemplates: async (list) => {
+        const prev = get().courierMsgTemplates;
+        const next = list.map((s) => s.trim()).filter((s) => s.length > 0).slice(0, 12);
+        set({ courierMsgTemplates: next });
+        /* الرسائل لازم توصل لكل أجهزة المناديب والطاقم — بتتخزن في عمود
+           courier_msg_templates وبتتوزع من get_public_settings */
+        const ok = await syncAdminSettingsToSupabase({ courier_msg_templates: next });
+        if (!ok) {
+          set({ courierMsgTemplates: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      toggleZone: async (zoneId) => {
+        const prev = get().zoneDisabled;
+        const next = prev.includes(zoneId)
+          ? prev.filter((z) => z !== zoneId)
+          : [...prev, zoneId];
+        set({ zoneDisabled: next });
+        /* قفل/فتح المنطقة بيتحفظ في السيرفر (عمود zone_disabled) فبيوصل
+           لواجهات العملاء كلها — مش بيقفل على جهاز المدير بس */
+        const ok = await syncAdminSettingsToSupabase({ zone_disabled: next });
+        if (!ok) {
+          set({ zoneDisabled: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      updateSettings: async (patch) => {
+        const prev = get().settings;
+        const next = { ...prev, ...patch };
+        set({ settings: next });
+        const role = get().sessionRole;
+        /* حالة فتح/قفل المحل واستقبال الطلبات لازم توصل لكل واجهات العملاء:
+           بنزامن كائن الإعدادات كله لـ admin_settings في patch معزول — لو العمود
+           مش موجود لسه على المشروع، الفشل بيتلوج بس ومش بيكسر أي مزامنة تانية،
+           والسلوك المحلي بيكمل زي ما هو. */
+        if (role === "admin" || role === "pharmacist") {
+          const ok = await syncAdminSettingsToSupabase({ settings: next });
+          if (!ok) {
+            /* رجّع مفاتيح الـ patch بس لآخر قيم مؤكدة — أي تعديل تاني نجح في
+               نفس الوقت ما يتأثرش */
+            const reverted = { ...get().settings };
+            for (const k of Object.keys(patch) as Array<keyof AdminSettings>) {
+              (reverted as Record<string, unknown>)[k] = prev[k];
+            }
+            set({ settings: reverted });
+            notifySettingsSaveFailed();
+            return false;
+          }
+        }
+        return true;
+      },
+      toggleCouponActive: async (code) => {
+        const prev = get().coupons;
+        const next = prev.map((c) =>
           c.code === code ? { ...c, active: !c.active } : c
         );
         set({ coupons: next });
-        syncAdminSettingsToSupabase({ coupons: next });
+        const ok = await syncAdminSettingsToSupabase({ coupons: next });
+        if (!ok) {
+          set({ coupons: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      addCoupon: (c) => {
-        const next = [c, ...get().coupons];
+      addCoupon: async (c) => {
+        const prev = get().coupons;
+        const next = [c, ...prev];
         set({ coupons: next });
-        syncAdminSettingsToSupabase({ coupons: next });
+        const ok = await syncAdminSettingsToSupabase({ coupons: next });
+        if (!ok) {
+          set({ coupons: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      toggleAd: (adId) => {
-        const off = get().adsOff;
-        const next = off.includes(adId) ? off.filter((a) => a !== adId) : [...off, adId];
+      removeCoupon: async (code) => {
+        const prev = get().coupons;
+        const next = prev.filter((c) => c.code !== code);
+        if (next.length === prev.length) return false;
+        set({ coupons: next });
+        const ok = await syncAdminSettingsToSupabase({ coupons: next });
+        if (!ok) {
+          set({ coupons: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      adminUpdateCollection: async (id, patch) => {
+        const prev = get().courierCollections;
+        const ok = await updateCourierCollectionInSupabase(id, patch);
+        if (!ok) {
+          toast.error("تعذّر تصحيح سجل التحصيل على السيرفر — السجل زي ما هو. راجع الاتصال وحاول تاني", {
+            duration: 7000,
+          });
+          return false;
+        }
+        set({
+          courierCollections: prev.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  ...(patch.amount !== undefined ? { amount: patch.amount } : {}),
+                  ...(patch.note !== undefined ? { note: patch.note } : {}),
+                }
+              : c
+          ),
+        });
+        return true;
+      },
+      adminDeleteCollection: async (id) => {
+        const prev = get().courierCollections;
+        const ok = await deleteCourierCollectionFromSupabase(id);
+        if (!ok) {
+          toast.error("تعذّر حذف سجل التحصيل من السيرفر — السجل زي ما هو. راجع الاتصال وحاول تاني", {
+            duration: 7000,
+          });
+          return false;
+        }
+        set({ courierCollections: prev.filter((c) => c.id !== id) });
+        return true;
+      },
+      toggleAd: async (adId) => {
+        const prev = get().adsOff;
+        const next = prev.includes(adId) ? prev.filter((a) => a !== adId) : [...prev, adId];
         set({ adsOff: next });
-        syncAdminSettingsToSupabase({ ads_off: next });
+        const ok = await syncAdminSettingsToSupabase({ ads_off: next });
+        if (!ok) {
+          set({ adsOff: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      toggleCareSubStatus: (id) => {
+      toggleCareSubStatus: async (id) => {
         const item = get().careSubs.find((s) => s.id === id);
-        if (item) {
-          const nextStatus = item.status === "active" ? "paused" : "active";
-          updateCareSubStatusInSupabase(id, nextStatus);
+        if (!item) return false;
+        const nextStatus = item.status === "active" ? "paused" : "active";
+        /* تأكيد سيرفر أولًا: التبديل كان بيتحرك محليًا والحفظ بيضيع،
+           فبيانات المدير بتختلف عن السيرفر بصمت */
+        const ok = await updateCareSubStatusInSupabase(id, nextStatus);
+        if (!ok) {
+          notifyCareSaveFailed();
+          return false;
         }
         set({
           careSubs: get().careSubs.map((s) =>
-            s.id === id
-              ? { ...s, status: s.status === "active" ? ("paused" as const) : ("active" as const) }
-              : s
+            s.id === id ? { ...s, status: nextStatus } : s
           ),
         });
+        return true;
+      },
+      cancelCareSub: async (id) => {
+        const item = get().careSubs.find((s) => s.id === id);
+        if (!item || item.status === "cancelled") return false;
+        const ok = await updateCareSubStatusInSupabase(id, "cancelled");
+        if (!ok) {
+          notifyCareSaveFailed();
+          return false;
+        }
+        set({
+          careSubs: get().careSubs.map((s) =>
+            s.id === id ? { ...s, status: "cancelled" as const } : s
+          ),
+        });
+        return true;
       },
       addMeasurement: async (m) => {
-        const id = `MEAS-${Date.now().toString().slice(-6)}`;
+        /* معرّف فريد ضد التصادم: الصيغة القديمة (آخر 6 أرقام من الوقت)
+           كان ممكن تصادمها بين قياسين قريبين فقياس يضيع على السيرفر */
+        const id = uniqueRecordId("MEAS");
         const recordedAt = new Date().toISOString();
         let bmi: number | undefined = undefined;
         if (m.weight && m.height && m.height > 0) {
@@ -1376,41 +2386,315 @@ export const useBahbah = create<BahbahState>()(
           bmi: m.bmi ?? bmi,
         };
         set({ measurements: [newRecord, ...get().measurements] });
-        await insertMeasurementToSupabase(newRecord);
+        /* الحفظ بقى مؤكد: فشل الكتابة بيشيل القياس من الشاشة + تنبيه،
+           بدل قياس «موجود» عند الطاقم ومش موجود على السيرفر */
+        const ok = await insertMeasurementToSupabase(newRecord);
+        if (!ok) {
+          set({ measurements: get().measurements.filter((x) => x.id !== id) });
+          toast.error("تعذّر حفظ القياس على السيرفر — القياس ما اتسجلش. راجع الاتصال وحاول تاني", {
+            duration: 7000,
+          });
+        }
         return id;
       },
-      deleteMeasurement: (id) => {
-        set({ measurements: get().measurements.filter((m) => m.id !== id) });
+      deleteMeasurement: async (id) => {
+        const prev = get().measurements;
+        const target = prev.find((m) => m.id === id);
+        if (!target) return false;
+        set({ measurements: prev.filter((m) => m.id !== id) });
+        /* الحذف لازم يوصل السيرفر: قبله كان محلي بس فالقياس «المحذوف»
+           بيرجع مع أول جلب من السيرفر كأنه ما اتحذفش أبدًا */
+        const ok = await deleteMeasurementFromSupabase(id);
+        if (!ok) {
+          set({ measurements: prev });
+          toast.error("تعذّر حذف القياس من السيرفر — القياس رجع زي ما هو. راجع الاتصال وحاول تاني", {
+            duration: 7000,
+          });
+          return false;
+        }
+        return true;
       },
+
+      /* ---- طلب سريع بواتساب: بيتسجل في السيرفر الأول وبعدين واتساب يفتح ---- */
+      createWhatsappOrder: async ({ items, total, phone, name }) => {
+        const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+        for (let attempt = 0; attempt < 3; attempt++) {
+          let suffix = "";
+          for (let i = 0; i < 4; i++) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+          const order: WhatsappOrder = {
+            id: `WA-${Date.now().toString(36)}${attempt}`,
+            code: `BH-${suffix}`,
+            phone: phone || "",
+            name: name || "",
+            items,
+            total,
+            status: "sent",
+            createdAt: new Date().toISOString(),
+          };
+          const { row, error } = await insertWhatsappOrderToSupabase(order);
+          if (row) {
+            set({ whatsappOrders: [order, ...get().whatsappOrders] });
+            return order.code;
+          }
+          /* كود مكرر = محاولة تانية بكود جديد، أي خطأ تاني = إيقاف */
+          if (!error || !/duplicate|unique/i.test(error)) return null;
+        }
+        return null;
+      },
+      setWhatsappOrderStatus: async (id, status) => {
+        const ok = await updateWhatsappOrderStatusInSupabase(id, status);
+        if (ok) {
+          set({
+            whatsappOrders: get().whatsappOrders.map((w) => (w.id === id ? { ...w, status } : w)),
+          });
+        }
+        /* بترجّع النتيجة للمكوّن عشان يورّي تنبيه عند الفشل بدل الصمت */
+        return ok;
+      },
+
+      /* ---- طلب ناقص: بيتسجل في السيرفر الأول بكود تتبع، وبعدين واتساب يفتح ---- */
+      createShortageRequest: async ({ itemName, barcode, photoUrl, source, phone, name }) => {
+        const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+        for (let attempt = 0; attempt < 3; attempt++) {
+          let suffix = "";
+          for (let i = 0; i < 4; i++) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+          const req: ShortageRequest = {
+            id: `SH-${Date.now().toString(36)}${attempt}`,
+            code: `BH-${suffix}`,
+            phone: phone || "",
+            name: name || "",
+            itemName,
+            barcode,
+            photoUrl,
+            source,
+            status: "pending",
+            createdAt: new Date().toISOString(),
+          };
+          const { row, error } = await insertShortageRequestToSupabase(req);
+          if (row) {
+            set({ shortageRequests: [req, ...get().shortageRequests] });
+            return req.code;
+          }
+          /* كود مكرر = محاولة تانية بكود جديد، أي خطأ تاني = إيقاف */
+          if (!error || !/duplicate|unique/i.test(error)) return null;
+        }
+        return null;
+      },
+      setShortageRequestStatus: async (id, status) => {
+        const ok = await updateShortageRequestStatusInSupabase(id, status);
+        if (ok) {
+          set({
+            shortageRequests: get().shortageRequests.map((r) => (r.id === id ? { ...r, status } : r)),
+          });
+        }
+        return ok;
+      },
+
+      /* ---- خدمات تمريضية: الحجز بيتسجل في السيرفر الأول بكود تتبع ---- */
+      createNursingRequest: async ({ service, visitFee, zoneId, address, preferredAt, notes, phone, name }) => {
+        const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+        for (let attempt = 0; attempt < 3; attempt++) {
+          let suffix = "";
+          for (let i = 0; i < 4; i++) suffix += alphabet[Math.floor(Math.random() * alphabet.length)];
+          const req: NursingRequest = {
+            id: `NR-${Date.now().toString(36)}${attempt}`,
+            code: `BH-${suffix}`,
+            phone: phone || "",
+            name: name || "",
+            serviceId: service.id,
+            serviceNameAr: service.nameAr,
+            serviceNameEn: service.nameEn,
+            serviceKind: service.kind,
+            servicePrice: service.price,
+            visitFee,
+            total: service.price + visitFee,
+            zoneId,
+            address,
+            preferredAt,
+            notes,
+            status: "new",
+            createdAt: new Date().toISOString(),
+          };
+          const { row, error } = await insertNursingRequestToSupabase(req);
+          if (row) {
+            set({ nursingRequests: [req, ...get().nursingRequests] });
+            return req.code;
+          }
+          /* كود مكرر = محاولة تانية بكود جديد، أي خطأ تاني = إيقاف */
+          if (!error || !/duplicate|unique/i.test(error)) return null;
+        }
+        return null;
+      },
+      setNursingRequestStatus: async (id, status) => {
+        const ok = await updateNursingRequestInSupabase(id, { status });
+        if (ok) {
+          set({
+            nursingRequests: get().nursingRequests.map((r) => (r.id === id ? { ...r, status } : r)),
+          });
+        }
+        return ok;
+      },
+      completeNursingVisit: async (id, measured) => {
+        const req = get().nursingRequests.find((r) => r.id === id);
+        if (!req) return false;
+        /* خدمة قياس؟ النتيجة بتتسجل في «قياساتي» الأول (نفس مخزن الملف
+           الموحد — patient_measurements) وبنربط سجل القياس بالحجز. */
+        let measurementId: string | undefined;
+        const hasValue =
+          (req.serviceKind === "sugar" && measured?.sugar != null) ||
+          (req.serviceKind === "bp" && (measured?.systolic != null || measured?.diastolic != null));
+        if (hasValue) {
+          measurementId = await get().addMeasurement({
+            /* نفس اصطلاح الصيدلي: كود المريض BB-آخر ٤ أرقام من التليفون */
+            patientCode: `BB-${(req.phone || "").replace(/\D/g, "").slice(-4) || "P"}`,
+            patientName: req.name || "عميل بحبح",
+            patientPhone: req.phone || "",
+            bloodSugar: req.serviceKind === "sugar" ? measured?.sugar : undefined,
+            systolic: req.serviceKind === "bp" ? measured?.systolic : undefined,
+            diastolic: req.serviceKind === "bp" ? measured?.diastolic : undefined,
+            pharmacistNotes: `قياس من زيارة تمريض منزلية — حجز ${req.code}`,
+            recordedBy: "nursing",
+          });
+        }
+        const ok = await updateNursingRequestInSupabase(id, {
+          status: "done",
+          measuredSugar: req.serviceKind === "sugar" ? measured?.sugar : undefined,
+          measuredSystolic: req.serviceKind === "bp" ? measured?.systolic : undefined,
+          measuredDiastolic: req.serviceKind === "bp" ? measured?.diastolic : undefined,
+          measurementId,
+        });
+        if (ok) {
+          set({
+            nursingRequests: get().nursingRequests.map((r) =>
+              r.id === id
+                ? {
+                    ...r,
+                    status: "done" as const,
+                    measuredSugar: req.serviceKind === "sugar" ? measured?.sugar : r.measuredSugar,
+                    measuredSystolic: req.serviceKind === "bp" ? measured?.systolic : r.measuredSystolic,
+                    measuredDiastolic: req.serviceKind === "bp" ? measured?.diastolic : r.measuredDiastolic,
+                    measurementId: measurementId ?? r.measurementId,
+                  }
+                : r
+            ),
+          });
+        }
+        return ok;
+      },
+      setNursingOpen: (v) => set({ nursingOpen: v }),
+      setShortageOpen: (v, prefill) =>
+        set({ shortageOpen: v, shortagePrefill: v ? (prefill ?? null) : null }),
 
       /* ---- admin password gate & CMS editors ---- */
       lockAdmin: () => {
         set({ adminUnlocked: false, sessionRole: null, user: null });
         signOutFromSupabase();
       },
-      updateSiteEdits: (patch) => {
-        const next = { ...get().siteEdits, ...patch };
+      updateSiteEdits: async (patch) => {
+        const prev = get().siteEdits;
+        const next = { ...prev, ...patch };
         set({ siteEdits: next });
-        syncAdminSettingsToSupabase({ site_edits: next });
+        const ok = await syncAdminSettingsToSupabase({ site_edits: next });
+        if (!ok) {
+          set({ siteEdits: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      updateAdEdit: (id, patch) => {
-        const next = { ...get().adEdits, [id]: { ...get().adEdits[id], ...patch } };
+      updateAdEdit: async (id, patch) => {
+        const prev = get().adEdits;
+        const next = { ...prev, [id]: { ...prev[id], ...patch } };
         set({ adEdits: next });
-        syncAdminSettingsToSupabase({ ad_edits: next });
+        const ok = await syncAdminSettingsToSupabase({ ad_edits: next });
+        if (!ok) {
+          set({ adEdits: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      updateOfferEdit: (id, patch) => {
-        const next = { ...get().offerEdits, [id]: { ...get().offerEdits[id], ...patch } };
+      updateOfferEdit: async (id, patch) => {
+        const prev = get().offerEdits;
+        const next = { ...prev, [id]: { ...prev[id], ...patch } };
         set({ offerEdits: next });
+        /* العروض كانت محلية بس رغم إن الواجهة بتقول «اتنشر في شاشات العملاء» —
+           دلوقتي بتتخزن في عمود offer_edits على السيرفر زي باقي التعديلات */
+        const ok = await syncAdminSettingsToSupabase({ offer_edits: next });
+        if (!ok) {
+          set({ offerEdits: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      updateCareEdit: (id, patch) => {
-        const next = { ...get().careEdits, [id]: { ...get().careEdits[id], ...patch } };
+      updateCareEdit: async (id, patch) => {
+        const prev = get().careEdits;
+        const next = { ...prev, [id]: { ...prev[id], ...patch } };
         set({ careEdits: next });
-        syncAdminSettingsToSupabase({ care_edits: next });
+        const ok = await syncAdminSettingsToSupabase({ care_edits: next });
+        if (!ok) {
+          set({ careEdits: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
-      updateZoneEdit: (id, patch) => {
-        const next = { ...get().zoneEdits, [id]: { ...get().zoneEdits[id], ...patch } };
+      updateZoneEdit: async (id, patch) => {
+        const prev = get().zoneEdits;
+        const next = { ...prev, [id]: { ...prev[id], ...patch } };
         set({ zoneEdits: next });
-        syncAdminSettingsToSupabase({ zone_edits: next });
+        const ok = await syncAdminSettingsToSupabase({ zone_edits: next });
+        if (!ok) {
+          set({ zoneEdits: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      updateNursingEdit: async (id, patch) => {
+        const prev = get().nursingEdits;
+        const next = { ...prev, [id]: { ...prev[id], ...patch } };
+        set({ nursingEdits: next });
+        const ok = await syncAdminSettingsToSupabase({ nursing_edits: next });
+        if (!ok) {
+          set({ nursingEdits: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      addNursingService: async (s) => {
+        const svc: NursingService = {
+          ...s,
+          id: `svc-${Date.now().toString(36)}`,
+          active: true,
+        };
+        const prev = get().nursingCustom;
+        const next = [...prev, svc];
+        set({ nursingCustom: next });
+        const ok = await syncAdminSettingsToSupabase({ nursing_custom: next });
+        if (!ok) {
+          set({ nursingCustom: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      updateNursingCustom: async (id, patch) => {
+        const prev = get().nursingCustom;
+        const next = prev.map((s) => (s.id === id ? { ...s, ...patch } : s));
+        set({ nursingCustom: next });
+        const ok = await syncAdminSettingsToSupabase({ nursing_custom: next });
+        if (!ok) {
+          set({ nursingCustom: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
+      },
+      deleteNursingCustom: async (id) => {
+        const prev = get().nursingCustom;
+        const next = prev.filter((s) => s.id !== id);
+        set({ nursingCustom: next });
+        const ok = await syncAdminSettingsToSupabase({ nursing_custom: next });
+        if (!ok) {
+          set({ nursingCustom: prev });
+          notifySettingsSaveFailed();
+        }
+        return ok;
       },
       resetAdminDemo: () => {
         /* صلاحية حقيقية بس: جلسة Supabase موثّقة بدور admin (مش مجرد state محلي) */
@@ -1423,6 +2707,7 @@ export const useBahbah = create<BahbahState>()(
           stockAdj: {},
           priceOverride: {},
           driverStatus: {},
+          driverRemoved: [],
           zoneDisabled: [],
           settings: DEFAULT_SETTINGS,
           rxQueue: [],
@@ -1436,6 +2721,9 @@ export const useBahbah = create<BahbahState>()(
           stock_adj: {},
           price_override: {},
           custom_products: [],
+          custom_drivers: [],
+          driver_status: {},
+          driver_removed: [],
         });
         /* ⚠️ الزر ده بيصفّر الحالة المحلية بس. كان زمان بيمسح جداول الطلبات والروشتات
            والاشتراكات والقياسات من قاعدة الإنتاج مباشرة من المتصفح (فقدان بيانات عملاء
@@ -1469,8 +2757,6 @@ export const useBahbah = create<BahbahState>()(
         if (sub?.planId && !carePlans.some((pl) => pl.id === sub.planId)) {
           p.careSub = null;
         }
-        const st = p.settings as { freeThreshold?: number } | undefined;
-        if (st && st.freeThreshold === 500) st.freeThreshold = 300;
         return {
           ...p,
           myOrders: [],
@@ -1485,6 +2771,9 @@ export const useBahbah = create<BahbahState>()(
         favorites: s.favorites,
         user: s.user,
         myOrders: s.myOrders,
+        savedAddresses: s.savedAddresses,
+        lastAddressId: s.lastAddressId,
+        loyalty: s.loyalty,
         accountTab: s.accountTab,
         bigText: s.bigText,
         elderMode: s.elderMode,
@@ -1496,6 +2785,8 @@ export const useBahbah = create<BahbahState>()(
         stockAdj: s.stockAdj,
         priceOverride: s.priceOverride,
         driverStatus: s.driverStatus,
+        driverRemoved: s.driverRemoved,
+        courierMsgTemplates: s.courierMsgTemplates,
         zoneDisabled: s.zoneDisabled,
         settings: s.settings,
         rxQueue: s.rxQueue,
@@ -1507,10 +2798,13 @@ export const useBahbah = create<BahbahState>()(
         adEdits: s.adEdits,
         careEdits: s.careEdits,
         zoneEdits: s.zoneEdits,
+        nursingEdits: s.nursingEdits,
+        nursingCustom: s.nursingCustom,
         catalogView: s.catalogView,
         sortKey: s.sortKey,
         sortDir: s.sortDir,
         filters: s.filters,
+        demoMode: s.demoMode,
       }),
     }
   )
@@ -1549,7 +2843,9 @@ export const useAdminProducts = () => {
 
 export const useDrivers = () => {
   const custom = useBahbah((s) => s.customDrivers) || [];
-  return [...custom, ...demoDrivers];
+  const removed = useBahbah((s) => s.driverRemoved) || [];
+  /* المندوب المُزال بيختفي من كل قايمة تعيين — مش بس من شاشة المدير */
+  return [...custom, ...demoDrivers].filter((d) => !removed.includes(d.id));
 };
 
 /** live contact info = defaults from data.ts overridden by dashboard edits */
@@ -1604,13 +2900,31 @@ export function applyAdEdits(
         badgeEn: e.badgeEn?.trim() || s.badgeEn,
         ctaKeyAr: e.ctaAr?.trim() || s.ctaKeyAr,
         ctaKeyEn: e.ctaEn?.trim() || s.ctaKeyEn,
+        showFrom: typeof e.showFrom === "number" ? e.showFrom : s.showFrom,
+        showTo: typeof e.showTo === "number" ? e.showTo : s.showTo,
       };
     });
 }
+
+/** الساعة دلوقتي — بتتحدث كل دقيقة (للنوافذ الزمنية والهيدر الليلي) */
+export function useNow(stepMs = 60000): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), stepMs);
+    return () => clearInterval(id);
+  }, [stepMs]);
+  return now;
+}
+
 export const useAdSlides = () => {
   const adsOff = useBahbah((s) => s.adsOff);
   const adEdits = useBahbah((s) => s.adEdits);
-  return applyAdEdits(adsOff, adEdits);
+  const now = useNow();
+  const hour = now.getHours();
+  return applyAdEdits(adsOff, adEdits).filter((s) => {
+    if (typeof s.showFrom !== "number" || typeof s.showTo !== "number") return true;
+    return hourInWindow(hour, s.showFrom, s.showTo);
+  });
 };
 
 export const useOffers = () => {
@@ -1636,7 +2950,9 @@ export const useOffers = () => {
       if (e?.active === false) return false;
       if (e?.active === true) return true;
       return p.tags.includes("offer") && !!p.oldPrice;
-    });
+    })
+    /* قاعدة ثابتة: المنتجات الحساسة وأدوية الوصفة وGLP-1 لا تدخل رف العروض أبداً */
+    .filter((p) => isPromotable(p));
 };
 
 /** live delivery zones = base zones with dashboard pricing edits */
@@ -1656,12 +2972,41 @@ export const useZones = () => {
   return mergedZones(zoneEdits);
 };
 
+/** قائمة الخدمات التمريضية الفعلية — بتتبني كلها من بيانات الإعدادات:
+    الخدمات الأساسية (NURSING_SERVICES مجرد بذرة افتراضية) بعد تطبيق
+    تعديلات الإدارة عليها (اسم/وصف/سعر/تفعيل من nursing_edits)، وبعدها
+    الخدمات اللي المدير أضافها بنفسه (nursing_custom). الخدمة المعطّلة
+    من الإدارة ما بتظهرش للعميل خالص. */
+export function mergedNursingServices(
+  edits: Record<string, NursingServiceEdit>,
+  custom: NursingService[]
+): NursingService[] {
+  const seeds = NURSING_SERVICES.filter((s) => edits[s.id]?.active !== false).map((s) => {
+    const e = edits[s.id];
+    return {
+      ...s,
+      nameAr: e?.nameAr ?? s.nameAr,
+      nameEn: e?.nameEn ?? s.nameEn,
+      descAr: e?.descAr ?? s.descAr,
+      descEn: e?.descEn ?? s.descEn,
+      price: e?.price ?? s.price,
+    };
+  });
+  const added = (custom ?? []).filter((s) => s.active !== false);
+  return [...seeds, ...added];
+}
+export const useNursingServices = () => {
+  const nursingEdits = useBahbah((s) => s.nursingEdits);
+  const nursingCustom = useBahbah((s) => s.nursingCustom);
+  return mergedNursingServices(nursingEdits, nursingCustom);
+};
+
 export const useT = () => {
   const lang = useBahbah((s) => s.lang);
   return makeT(lang);
 };
 
-export type { DictKey, Lang, Product, IconType, RxRequest, RxStatus, Role, PatientMeasurement };
+export type { DictKey, Lang, Product, IconType, RxRequest, RxStatus, Role, PatientMeasurement, NursingService, NursingRequest };
 export { adminDemoOrders };
 
 
@@ -1678,7 +3023,9 @@ if (typeof window !== "undefined") {
 
   registerCustomDriversGetter(() => {
     try {
-      return [...(useBahbah.getState().customDrivers || []), ...demoDrivers];
+      const st = useBahbah.getState();
+      const removed = st.driverRemoved || [];
+      return [...(st.customDrivers || []), ...demoDrivers].filter((d) => !removed.includes(d.id));
     } catch {
       return demoDrivers;
     }

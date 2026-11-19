@@ -1,0 +1,344 @@
+{
+  "at": "2026-11-19T14:42:44.272Z",
+  "chainBroken": false,
+  "total": 56,
+  "failed": 0,
+  "results": [
+    {
+      "battery": "migration",
+      "name": "platform stubs + pre-existing-table stand-ins created",
+      "pass": true,
+      "evidence": "auth/storage stubs + D10 stand-ins"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: security.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: commerce.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: commerce-seed.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-whatsapp-orders.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: WAREHOUSE_SEED_DDL",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-warehouse-sync.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-shortage-requests.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-portals-permissions.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-collections-addresses.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-free-shipping-campaign.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-loyalty-points.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-nursing-services.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-security-layer1.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-wiring-fixes.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-loyalty-quota.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-integrity-fixes.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-courier-ratings.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-security-layer2.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-data-archive.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "introspection",
+      "name": "archive_preview_counts is SECURITY DEFINER, EXECUTE for authenticated only",
+      "pass": true,
+      "evidence": "acl={postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "battery": "introspection",
+      "name": "archive_old_operational_data is SECURITY DEFINER, EXECUTE for authenticated only",
+      "pass": true,
+      "evidence": "acl={postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "battery": "introspection",
+      "name": "restore_backup_table is SECURITY DEFINER, EXECUTE for authenticated only",
+      "pass": true,
+      "evidence": "acl={postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "battery": "seed",
+      "name": "seed data inserted (old/new orders, queues, essentials)",
+      "pass": true,
+      "evidence": "seeded as superuser"
+    },
+    {
+      "battery": "archive",
+      "name": "pharmacist preview rejected (admin_only)",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "archive",
+      "name": "pharmacist archive rejected (admin_only)",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "archive",
+      "name": "patient archive rejected (admin_only)",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "archive",
+      "name": "anon cannot execute archive at all",
+      "pass": true,
+      "evidence": "error: permission denied for function archive_old_operational_data"
+    },
+    {
+      "battery": "archive",
+      "name": "future cutoff rejected (bad_cutoff)",
+      "pass": true,
+      "evidence": "error: bad_cutoff"
+    },
+    {
+      "battery": "archive",
+      "name": "null cutoff rejected (bad_cutoff)",
+      "pass": true,
+      "evidence": "error: bad_cutoff"
+    },
+    {
+      "battery": "archive",
+      "name": "preview counts match the expected deletion set",
+      "pass": true,
+      "evidence": "{\"orders\":2,\"rx_requests\":1,\"courier_ratings\":1,\"whatsapp_orders\":1,\"nursing_requests\":1,\"shortage_requests\":1,\"courier_collections\":2}"
+    },
+    {
+      "battery": "archive",
+      "name": "preview deleted nothing (orders still 4)",
+      "pass": true,
+      "evidence": "orders=4"
+    },
+    {
+      "battery": "archive",
+      "name": "archive returns exactly the previewed counts",
+      "pass": true,
+      "evidence": "{\"orders\":2,\"rx_requests\":1,\"courier_ratings\":1,\"whatsapp_orders\":1,\"nursing_requests\":1,\"shortage_requests\":1,\"courier_collections\":2}"
+    },
+    {
+      "battery": "archive",
+      "name": "old terminal orders deleted; old pending + new delivered survive",
+      "pass": true,
+      "evidence": "orders left=2"
+    },
+    {
+      "battery": "archive",
+      "name": "collections: old-order + old-orphan deleted; new + new-orphan survive",
+      "pass": true,
+      "evidence": "collections left=2"
+    },
+    {
+      "battery": "archive",
+      "name": "ratings: only the new order's rating survives",
+      "pass": true,
+      "evidence": "ratings left=1"
+    },
+    {
+      "battery": "archive",
+      "name": "whatsapp: old-done deleted; old-sent (open) + new-done survive",
+      "pass": true,
+      "evidence": "whatsapp left=2"
+    },
+    {
+      "battery": "archive",
+      "name": "shortages: old-closed deleted; old-pending (open) + new-closed survive",
+      "pass": true,
+      "evidence": "shortages left=2"
+    },
+    {
+      "battery": "archive",
+      "name": "nursing: old-done deleted; old-new (open) survives",
+      "pass": true,
+      "evidence": "nursing left=1"
+    },
+    {
+      "battery": "archive",
+      "name": "rx: old-approved deleted; old-new (open) survives",
+      "pass": true,
+      "evidence": "rx left=1"
+    },
+    {
+      "battery": "archive",
+      "name": "ESSENTIALS untouched: care/measurements/loyalty x3/addresses/warehouse counts identical",
+      "pass": true,
+      "evidence": "{\"care\":1,\"meas\":1,\"lacc\":1,\"lled\":1,\"lcard\":1,\"addr\":1,\"wh\":1}"
+    },
+    {
+      "battery": "archive",
+      "name": "second archive run deletes nothing (all zeros)",
+      "pass": true,
+      "evidence": "{\"orders\":0,\"rx_requests\":0,\"courier_ratings\":0,\"whatsapp_orders\":0,\"nursing_requests\":0,\"shortage_requests\":0,\"courier_collections\":0}"
+    },
+    {
+      "battery": "restore",
+      "name": "pharmacist restore rejected (admin_only)",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "restore",
+      "name": "non-whitelisted table rejected (admin_settings)",
+      "pass": true,
+      "evidence": "error: table_not_restorable:admin_settings"
+    },
+    {
+      "battery": "restore",
+      "name": "non-array rows rejected (bad_rows)",
+      "pass": true,
+      "evidence": "error: bad_rows"
+    },
+    {
+      "battery": "restore",
+      "name": "empty rows array restores 0 without error",
+      "pass": true,
+      "evidence": "n=0"
+    },
+    {
+      "battery": "restore",
+      "name": "archived shortage row restored (n=1, row present)",
+      "pass": true,
+      "evidence": "n=1"
+    },
+    {
+      "battery": "restore",
+      "name": "re-import of the same file is idempotent (n=1, still exactly one row)",
+      "pass": true,
+      "evidence": "n=1, rows=1"
+    },
+    {
+      "battery": "restore",
+      "name": "loyalty_accounts restored via definer RPC (no client write policy exists)",
+      "pass": true,
+      "evidence": "n=1, balance=120"
+    },
+    {
+      "battery": "restore",
+      "name": "re-import UPDATES the existing row (true upsert, no duplicate)",
+      "pass": true,
+      "evidence": "n=1, balance=55"
+    },
+    {
+      "battery": "restore",
+      "name": "identical order row re-imports cleanly (guard passes, no duplicate)",
+      "pass": true,
+      "evidence": "n=1"
+    },
+    {
+      "battery": "restore",
+      "name": "warehouse restore keys on sync_key, skips null-key rows, idempotent on re-import",
+      "pass": true,
+      "evidence": "first=1, second=1"
+    },
+    {
+      "battery": "restore",
+      "name": "control: a DIRECT 6th open whatsapp insert is rejected by the layer-2 guard",
+      "pass": true,
+      "evidence": "error: too_many_open_requests"
+    },
+    {
+      "battery": "restore",
+      "name": "the same 6th open row RESTORES via the admin RPC (guard bypassed inside restore only)",
+      "pass": true,
+      "evidence": "n=1"
+    },
+    {
+      "battery": "restore",
+      "name": "guard is armed again after the restore (direct insert still rejected)",
+      "pass": true,
+      "evidence": "error: too_many_open_requests"
+    }
+  ]
+}

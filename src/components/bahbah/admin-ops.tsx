@@ -37,6 +37,7 @@ import {
 } from "@/lib/bahbah/data";
 import { useBahbah, useT, useAdminProducts } from "@/lib/bahbah/store";
 import { fmtPrice, ProductVisual } from "./product-card";
+import { CustomerContactMenu } from "./contact-menu";
 import { Switch } from "@/components/ui/switch";
 import { ImageIcon } from "lucide-react";
 import {
@@ -100,6 +101,7 @@ export function OrdersSection() {
   const filters: { key: "all" | Order["status"]; label: string; count: number }[] = [
     { key: "all", label: t("adm.allStatus"), count: list.length },
     { key: "pending", label: t("admin.stPending"), count: list.filter((o) => o.status === "pending").length },
+    { key: "ready", label: t("admin.stReady"), count: list.filter((o) => o.status === "ready").length },
     { key: "shipping", label: t("admin.stShipping"), count: list.filter((o) => o.status === "shipping").length },
     { key: "delivered", label: t("admin.stDelivered"), count: list.filter((o) => o.status === "delivered").length },
     { key: "cancelled", label: t("admin.stCancelled"), count: list.filter((o) => o.status === "cancelled").length },
@@ -161,8 +163,13 @@ export function OrdersSection() {
                     <div className="text-[11px] text-muted-foreground" dir="ltr">{o.date}</div>
                   </td>
                   <td className={TD}>
-                    <div className="font-bold">{lang === "ar" ? o.customerAr : o.customerEn}</div>
-                    <div className="text-xs text-muted-foreground" dir="ltr">{o.phone}</div>
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <div className="font-bold">{lang === "ar" ? o.customerAr : o.customerEn}</div>
+                        <div className="text-xs text-muted-foreground" dir="ltr">{o.phone}</div>
+                      </div>
+                      <CustomerContactMenu phone={o.phone} label="" className="grid size-8 shrink-0 place-items-center rounded-full bg-[#2E9E6B] text-white shadow-xs transition hover:brightness-105 active:scale-95" />
+                    </div>
                   </td>
                   <td className={TD}>
                     {o.delivery?.type === "pickup" ? (
@@ -204,9 +211,20 @@ export function OrdersSection() {
                           size="sm"
                           variant="outline"
                           className="rounded-full px-3 text-xs font-bold"
-                          onClick={() => {
-                            adminAdvance(o.id);
-                            toast.success(t("misc.saved"));
+                          onClick={async () => {
+                            if (await adminAdvance(o.id)) toast.success(t("misc.saved"));
+                          }}
+                        >
+                          {t("admin.stReady")}
+                        </Button>
+                      )}
+                      {o.status === "ready" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-full px-3 text-xs font-bold"
+                          onClick={async () => {
+                            if (await adminAdvance(o.id)) toast.success(t("misc.saved"));
                           }}
                         >
                           {t("adm.startShip")}
@@ -216,22 +234,20 @@ export function OrdersSection() {
                         <Button
                           size="sm"
                           className="rounded-full bg-[#2E9E6B] px-3 text-xs font-bold hover:bg-[#278a5e]"
-                          onClick={() => {
-                            adminAdvance(o.id);
-                            toast.success(t("misc.saved"));
+                          onClick={async () => {
+                            if (await adminAdvance(o.id)) toast.success(t("misc.saved"));
                           }}
                         >
                           {t("adm.markDelivered")}
                         </Button>
                       )}
-                      {(o.status === "pending" || o.status === "shipping") && (
+                      {(o.status === "pending" || o.status === "ready" || o.status === "shipping") && (
                         <Button
                           size="sm"
                           variant="ghost"
                           className="rounded-full px-2.5 text-xs font-bold text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
-                          onClick={() => {
-                            adminCancel(o.id);
-                            toast.success(t("misc.saved"));
+                          onClick={async () => {
+                            if (await adminCancel(o.id)) toast.success(t("misc.saved"));
                           }}
                         >
                           {t("adm.cancelOrder")}
@@ -295,13 +311,21 @@ export function OrdersSection() {
                         ? t("checkout.cod")
                         : details.payment === "instapay"
                           ? t("checkout.instapay")
-                          : t("checkout.card")}
+                          : details.payment === "vodafone"
+                            ? t("checkout.vodafone")
+                            : t("checkout.card")}
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
                     <MapPin className="mt-0.5 size-4 text-[#1E4E8F]" />
                     <span className="leading-snug">{details.address}</span>
                   </div>
+                  {details.discreetPackaging && (
+                    <div className="flex items-start gap-2">
+                      <Package className="mt-0.5 size-4 text-[#1E4E8F]" />
+                      <span className="font-bold">{lang === "ar" ? "تغليف خاص — سادة بدون علامات" : "Discreet packaging"}</span>
+                    </div>
+                  )}
                   <div className="flex items-start gap-2">
                     <Clock className="mt-0.5 size-4 text-[#1E4E8F]" />
                     <span>
@@ -573,9 +597,8 @@ export function ProductsSection() {
                         size="sm"
                         variant="ghost"
                         className="rounded-full bg-[#EAF1F9] px-3 text-xs font-bold text-[#1E4E8F] hover:bg-[#dbe7f5]"
-                        onClick={() => {
-                          restock(p.id, 50);
-                          toast.success(t("misc.saved"));
+                        onClick={async () => {
+                          if (await restock(p.id, 50)) toast.success(t("misc.saved"));
                         }}
                       >
                         <PackagePlus className="size-3.5" />
@@ -679,22 +702,24 @@ export function ProductsSection() {
                 <Button
                   variant="outline"
                   className="h-10 rounded-full text-xs font-bold flex-1"
-                  onClick={() => {
+                  onClick={async () => {
                     setImageUrl("");
                     setImageVerified(false);
-                    updateProductImage(imageFor.id, "", false);
-                    setImageFor(null);
-                    toast.success("تم التبديل إلى العلبة الطبية المعتمدة بنجاح");
+                    if (await updateProductImage(imageFor.id, "", false)) {
+                      setImageFor(null);
+                      toast.success("تم التبديل إلى العلبة الطبية المعتمدة بنجاح");
+                    }
                   }}
                 >
                   استخدام علبة بحبح المعتمدة
                 </Button>
                 <Button
                   className="h-10 rounded-full font-bold bg-[#184C8A] text-white hover:bg-[#112D51] px-5 text-xs"
-                  onClick={() => {
-                    updateProductImage(imageFor.id, imageUrl, imageVerified);
-                    setImageFor(null);
-                    toast.success("تم حفظ وتحديث صورة الدواء بنجاح ✓");
+                  onClick={async () => {
+                    if (await updateProductImage(imageFor.id, imageUrl, imageVerified)) {
+                      setImageFor(null);
+                      toast.success("تم حفظ وتحديث صورة الدواء بنجاح ✓");
+                    }
                   }}
                 >
                   حفظ التعديل
@@ -725,15 +750,16 @@ export function ProductsSection() {
               />
               <Button
                 className="h-11 w-full rounded-full font-bold"
-                onClick={() => {
+                onClick={async () => {
                   const v = Number(priceVal);
                   if (!v || v <= 0) {
                     toast.error(t("auth.invalid"));
                     return;
                   }
-                  setPrice(priceFor.id, v);
-                  setPriceFor(null);
-                  toast.success(t("misc.saved"));
+                  if (await setPrice(priceFor.id, v)) {
+                    setPriceFor(null);
+                    toast.success(t("misc.saved"));
+                  }
                 }}
               >
                 {t("misc.save")}
@@ -834,9 +860,8 @@ export function InventorySection() {
                   size="sm"
                   variant="outline"
                   className="shrink-0 rounded-full px-3 text-xs font-bold"
-                  onClick={() => {
-                    restock(p.id, 50);
-                    toast.success(t("misc.saved"));
+                  onClick={async () => {
+                    if (await restock(p.id, 50)) toast.success(t("misc.saved"));
                   }}
                 >
                   <PackagePlus className="size-3.5" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
   ShoppingCart,
@@ -19,8 +19,11 @@ import {
   BadgeCheck,
   TicketPercent,
   Sparkles,
+  Package,
+  Smartphone,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -41,13 +44,18 @@ import {
   slotById,
   driverById,
   BRANCH,
+  DEFAULT_LOYALTY_TIERS,
+  loyaltyFreeShipApplies,
+  loyaltyFreeRemaining,
   type Order,
   type DeliveryZone,
 } from "@/lib/bahbah/data";
 import { useBahbah, useT, useZones, effStock } from "@/lib/bahbah/store";
+import { isSensitiveProduct, isNightOrder } from "@/lib/bahbah/curation";
 import type { DictKey } from "@/lib/bahbah/i18n";
 import { IconScooter, IconStorefront, IconClockFast, IconPin, IconWallet, IconPlus, IconWhatsapp } from "./icons";
 import { fmtPrice, ProductVisual } from "./product-card";
+import { captureLocation, mapsPinUrl, ADDRESS_LABEL_PRESETS } from "./addresses";
 import Reveal from "./reveal";
 import { toast } from "sonner";
 
@@ -72,7 +80,7 @@ export function normalizeEgPhone(raw: string): string {
 export const EG_MOBILE = /^01[0125]\d{8}$/;
 
 /* ------------------------------------------------------------------ */
-/* Cart page — packshots + free-shipping progress + coupon + savings   */
+/* Cart page — packshots + coupon + savings                           */
 /* ------------------------------------------------------------------ */
 export function CartView() {
   const t = useT();
@@ -82,10 +90,13 @@ export function CartView() {
   const coupons = useBahbah((s) => s.coupons);
   const favorites = useBahbah((s) => s.favorites);
   const stockAdj = useBahbah((s) => s.stockAdj);
-  /* عتبة التوصيل المجاني — بيتظبط من لوحة الإدارة */
-  const freeGoal = Math.max(0, useBahbah((s) => s.settings.freeThreshold));
+  /* حملة التوصيل المجاني — مفتاحها في لوحة الإدارة */
+  const campaignOn = useBahbah((s) => s.settings.freeShipCampaignOn);
   const { setQty, removeFromCart, go, addToCart, applyCoupon, clearCoupon, openProduct } = useBahbah();
+  const user = useBahbah((s) => s.user);
+  const createWhatsappOrder = useBahbah((s) => s.createWhatsappOrder);
   const [code, setCode] = useState("");
+  const [waBusy, setWaBusy] = useState(false);
 
   const lines = cart.map((c) => ({ ...c, p: getProduct(c.productId)! })).filter((l) => l.p);
   const subtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
@@ -95,10 +106,7 @@ export function CartView() {
   );
   const coupon = coupons.find((c) => c.code === appliedCoupon && c.active);
   const discount = coupon && subtotal >= coupon.minTotal ? Math.round((subtotal * coupon.percent) / 100) : 0;
-  const threshold = freeGoal > 0 ? freeGoal : Infinity;
-  const shipping = subtotal === 0 || subtotal >= threshold ? 0 : SHIPPING_FEE;
-  const remaining = Math.max(0, (freeGoal || Infinity) - subtotal);
-  const progress = freeGoal > 0 ? Math.min(100, Math.round((subtotal / freeGoal) * 100)) : 100;
+  const shipping = subtotal === 0 || campaignOn ? 0 : SHIPPING_FEE;
 
   /* suggested add-ons — same categories as cart items, not already in cart */
   const inCart = new Set(cart.map((c) => c.productId));
@@ -219,28 +227,6 @@ export function CartView() {
 
         {/* summary */}
         <div className="h-fit space-y-4 lg:sticky lg:top-24">
-          {/* free-shipping progress */}
-          <Reveal>
-            <div className="rounded-2xl border border-[#059669]/25 bg-gradient-to-l from-[#ECFDF5] to-card p-4 shadow-xs">
-              <p className="flex items-center gap-2 text-xs font-black text-[#059669] md:text-sm">
-                <Truck className="size-4.5 shrink-0" />
-                {remaining > 0
-                  ? t("cart.progress").replace("{x}", fmtPrice(remaining, t))
-                  : t("cart.progressDone")}
-              </p>
-              <div className="mt-2.5 h-2.5 overflow-hidden rounded-full bg-white shadow-inner">
-                <div
-                  className="relative h-full rounded-full bg-gradient-to-r from-[#059669] to-[#10B981] transition-all duration-700"
-                  style={{ width: `${Math.max(progress, 6)}%` }}
-                >
-                  {progress > 0 && progress < 100 && (
-                    <span className="bb-shimmer absolute inset-0 rounded-full" />
-                  )}
-                </div>
-              </div>
-            </div>
-          </Reveal>
-
           {/* coupon */}
           <Reveal delay={60}>
             <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
@@ -331,19 +317,43 @@ export function CartView() {
                 {t("cart.checkout")}
                 <ChevronRight className="size-4 rtl:rotate-180" />
               </Button>
-              <a
-                href={`https://wa.me/201011500166?text=${encodeURIComponent(
-                  `السلام عليكم صيدلية بحبح، أود طلب محتويات السلة التالية:\n${lines
+              <button
+                disabled={waBusy}
+                onClick={async () => {
+                  if (waBusy) return;
+                  setWaBusy(true);
+                  const totalWa = Math.max(0, subtotal - discount) + shipping;
+                  const code = await createWhatsappOrder({
+                    items: lines.map((l) => ({
+                      productId: l.p.id,
+                      nameAr: l.p.nameAr,
+                      nameEn: l.p.nameEn,
+                      qty: l.qty,
+                      price: l.p.price,
+                    })),
+                    total: totalWa,
+                    phone: user?.phone,
+                    name: user?.name,
+                  });
+                  setWaBusy(false);
+                  if (!code) {
+                    toast.error(
+                      lang === "ar"
+                        ? "تعذر تسجيل الطلب السريع دلوقتي — حاول تاني أو كمل من إتمام الطلب"
+                        : "Couldn't log the quick order — please retry or use checkout"
+                    );
+                    return;
+                  }
+                  const msg = `السلام عليكم صيدلية بحبح، أود طلب محتويات السلة التالية:\n${lines
                     .map((l, i) => `${i + 1}. ${lang === "ar" ? l.p.nameAr : l.p.nameEn} × ${l.qty} (${fmtPrice(l.p.price * l.qty, t)})`)
-                    .join("\n")}\n\nالإجمالي: ${fmtPrice(Math.max(0, subtotal - discount) + shipping, t)}`
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className="bb-whatsapp-gradient mt-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-black text-white shadow-md transition hover:scale-[1.01] active:scale-95"
+                    .join("\n")}\n\nالإجمالي: ${fmtPrice(totalWa, t)}\nكود الطلب السريع: ${code}`;
+                  window.open(`https://wa.me/201011500166?text=${encodeURIComponent(msg)}`, "_blank");
+                }}
+                className="bb-whatsapp-gradient mt-2.5 flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-black text-white shadow-md transition hover:scale-[1.01] active:scale-95 disabled:opacity-60"
               >
                 <IconWhatsapp className="size-4.5" />
-                {lang === "ar" ? "طلب ومحادثة عبر واتساب" : "Order via WhatsApp"}
-              </a>
+                {lang === "ar" ? "طلب سريع بواتساب" : "WhatsApp quick order"}
+              </button>
               <Button variant="outline" className="mt-2 w-full rounded-full font-bold active:scale-95" onClick={() => go("catalog")}>
                 {t("cart.continue")}
               </Button>
@@ -364,6 +374,8 @@ export function CheckoutView() {
   const cart = useBahbah((s) => s.cart);
   const user = useBahbah((s) => s.user);
   const myOrders = useBahbah((s) => s.myOrders);
+  const orderPlacing = useBahbah((s) => s.orderPlacing);
+  const acceptOrders = useBahbah((s) => s.settings.acceptOrders);
   const { go, placeOrder } = useBahbah();
 
   const [step, setStep] = useState(1);
@@ -371,8 +383,12 @@ export function CheckoutView() {
   const [phone, setPhone] = useState(user?.phone ?? "");
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
-  const [payment, setPayment] = useState<"cod" | "instapay" | "card">("cod");
+  const [payment, setPayment] = useState<"cod" | "instapay" | "vodafone" | "card">("cod");
   const [cashChangeFloat, setCashChangeFloat] = useState<string>("exact");
+
+  /* تغليف خاص سادة (مجاناً) — بيتحول افتراضياً لو السلة فيها أصناف حساسة */
+  const [discreet, setDiscreet] = useState(false);
+  const [discreetTouched, setDiscreetTouched] = useState(false);
 
   /* delivery state */
   const [deliveryType, setDeliveryType] = useState<"delivery" | "pickup">("delivery");
@@ -385,14 +401,90 @@ export function CheckoutView() {
   const lastOrder = myOrders[0];
   const applyLastOrder = () => {
     if (!lastOrder) return;
+    setAddrTouched(true);
     setName((n) => n || lastOrder.customerAr);
     setPhone(lastOrder.phone);
     setAddress(lastOrder.address.split("—").slice(1).join("—").trim() || lastOrder.address);
+    setSelectedAddressId(null);
+    setPin(
+      lastOrder.lat != null && lastOrder.lng != null
+        ? { lat: lastOrder.lat, lng: lastOrder.lng }
+        : null
+    );
     if (lastOrder.delivery) {
       setDeliveryType(lastOrder.delivery.type);
       if (lastOrder.delivery.zoneId) setZoneId(lastOrder.delivery.zoneId);
     }
     toast.success(t("dv.useLast"));
+  };
+
+  /* ---- دفتر العناوين: اختيار عنوان محفوظ أو كتابة جديد (بيتحفظ مع الطلب) ---- */
+  const savedAddresses = useBahbah((s) => s.savedAddresses);
+  const lastAddressId = useBahbah((s) => s.lastAddressId);
+  const { addSavedAddress } = useBahbah();
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null);
+  const [pinBusy, setPinBusy] = useState(false);
+  const [newLabel, setNewLabel] = useState<string>("البيت");
+  const [addrInit, setAddrInit] = useState(false);
+  /* العميل لمس العنوان بنفسه (كتابة/اختيار/آخر طلب) = الاختيار التلقائي يقف */
+  const [addrTouched, setAddrTouched] = useState(false);
+
+  const myAddresses = savedAddresses.filter(
+    (a) => !a.phone || !(user?.phone || phone) || a.phone === (user?.phone || phone)
+  );
+
+  const pickSavedAddress = (id: string | null) => {
+    setAddrTouched(true);
+    setSelectedAddressId(id);
+    if (!id) {
+      setAddress("");
+      setPin(null);
+      return;
+    }
+    const a = savedAddresses.find((x) => x.id === id);
+    if (!a) return;
+    setAddress(a.details);
+    setPin(a.lat != null && a.lng != null ? { lat: a.lat, lng: a.lng } : null);
+  };
+
+  /* أول مرة بس: آخر عنوان اتستخدم (أو الأساسي) بيبقى محدد وجاهز في الحقول —
+     إلا لو العميل بدأ يكتب/يختار بنفسه قبل ما العناوين توصله */
+  useEffect(() => {
+    if (addrInit) return;
+    if (addrTouched) {
+      setAddrInit(true);
+      return;
+    }
+    if (savedAddresses.length === 0) return;
+    const pick =
+      savedAddresses.find((a) => a.id === lastAddressId) ??
+      savedAddresses.find((a) => a.isDefault) ??
+      savedAddresses[0];
+    if (pick) {
+      setSelectedAddressId(pick.id);
+      setAddress((cur) => cur || pick.details);
+      setPin(
+        pick.lat != null && pick.lng != null ? { lat: pick.lat, lng: pick.lng } : null
+      );
+    }
+    setAddrInit(true);
+  }, [savedAddresses, lastAddressId, addrTouched, addrInit]);
+
+  const locateMe = async () => {
+    setPinBusy(true);
+    const p = await captureLocation();
+    setPinBusy(false);
+    if (p) {
+      setPin(p);
+      toast.success(lang === "ar" ? "اتحدد موقعك — المندوب هيوصل بالظبط" : "Location pinned");
+    } else {
+      toast.error(
+        lang === "ar"
+          ? "ما قدرناش نحدد الموقع — فعّل الـ GPS واسمح بالوصول للموقع"
+          : "Couldn't get your location"
+      );
+    }
   };
 
   /* live zones (dashboard pricing) minus zones the admin disabled */
@@ -409,13 +501,33 @@ export function CheckoutView() {
   const lines = cart.map((c) => ({ ...c, p: getProduct(c.productId)! })).filter((l) => l.p);
   const subtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
 
+  const hasSensitive = lines.some((l) => isSensitiveProduct(l.p));
+  useEffect(() => {
+    if (hasSensitive && !discreetTouched) setDiscreet(true);
+  }, [hasSensitive, discreetTouched]);
+
   const zone = deliveryType === "delivery" ? zones.find((z) => z.id === zoneId) : undefined;
   const chosenSlot = slotById(slotId);
   const slotExtra = deliveryType === "delivery" ? chosenSlot?.extraFee ?? 0 : 0;
-  /* عتبة التوصيل المجاني من لوحة الإدارة */
-  const freeGoal = Math.max(0, useBahbah((s) => s.settings.freeThreshold));
+  /* حملة التوصيل المجاني من لوحة الإدارة — وهي شغالة رسوم كل المناطق صفر */
+  const campaignOn = useBahbah((s) => s.settings.freeShipCampaignOn);
+  /* توصيل مجاني من الولاء/الرعاية ضمن الرصيد الشهري — نفس قاعدة السيرفر
+     ومتجر الطلب: مؤهل (مستوى/اشتراك رعاية) ولسه فيه رصيد متبقي */
+  const loyalty = useBahbah((s) => s.loyalty);
+  const loyaltyTiersSetting = useBahbah((s) => s.settings.loyaltyTiers);
+  const careSub = useBahbah((s) => s.careSub);
+  const loyaltyFreeShip =
+    deliveryType === "delivery" &&
+    loyaltyFreeShipApplies(
+      loyaltyTiersSetting && loyaltyTiersSetting.length > 0
+        ? loyaltyTiersSetting
+        : DEFAULT_LOYALTY_TIERS,
+      loyalty,
+      careSub?.status === "active"
+    );
+  const shipFree = campaignOn || loyaltyFreeShip;
   const fee =
-    (deliveryType === "pickup" || !zone ? 0 : freeGoal > 0 && subtotal >= freeGoal ? 0 : zone!.fee) + slotExtra;
+    (deliveryType === "pickup" || !zone ? 0 : shipFree ? 0 : zone!.fee) + slotExtra;
 
   const activeCoupon = coupons.find((c) => c.code === appliedCoupon && c.active);
   const discount =
@@ -630,7 +742,7 @@ export function CheckoutView() {
                                 <span className="flex items-center justify-between gap-2">
                                   <span>{zoneName(z)}</span>
                                   <span className="text-[11px] font-black text-[#1E4E8F]">
-                                    {freeGoal > 0 && subtotal >= freeGoal ? t("dv.free") : `${z.fee} ${t("misc.currency")}`}
+                                    {shipFree ? t("dv.free") : `${z.fee} ${t("misc.currency")}`}
                                   </span>
                                 </span>
                               </SelectItem>
@@ -662,17 +774,53 @@ export function CheckoutView() {
                         <IconClockFast className="size-3.5" />
                         {t("dv.zoneEta").replace("{x}", String(zone.etaMin))}
                       </span>
-                      {freeGoal > 0 && subtotal >= freeGoal ? (
+                      {shipFree ? (
                         <span className="rounded-full bg-[#EAF6F1] px-2 py-0.5 text-[#2E9E6B]">{t("dv.free")}</span>
                       ) : (
                         <span className="rounded-full bg-muted px-2 py-0.5">
                           {zone.fee} {t("misc.currency")}
-                          {freeGoal > 0 ? ` · ${t("dv.zoneFree").replace("{x}", freeGoal.toLocaleString("en-US"))}` : ""}
                         </span>
                       )}
                     </p>
                   )}
                 </div>
+
+                {/* دفتر العناوين — اختيار سريع من المحفوظ أو عنوان جديد */}
+                {myAddresses.length > 0 && (
+                  <div>
+                    <p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-foreground/75">
+                      <MapPin className="size-4 text-[#1E4E8F]" />
+                      {lang === "ar" ? "عناوينك المحفوظة" : "Your saved addresses"}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {myAddresses.map((a) => (
+                        <button
+                          key={a.id}
+                          onClick={() => pickSavedAddress(a.id)}
+                          className={`rounded-full border-2 px-3.5 py-1.5 text-xs font-black transition active:scale-[0.97] ${
+                            selectedAddressId === a.id
+                              ? "border-[#1E4E8F] bg-[#EAF1F9]/70 text-[#1E4E8F]"
+                              : "border-border text-muted-foreground hover:border-[#1E4E8F]/40"
+                          }`}
+                        >
+                          {a.label}
+                          {a.isDefault ? " ⭐" : ""}
+                          {a.lat != null ? " 📍" : ""}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => pickSavedAddress(null)}
+                        className={`rounded-full border-2 px-3.5 py-1.5 text-xs font-black transition active:scale-[0.97] ${
+                          selectedAddressId === null
+                            ? "border-[#F09428] bg-[#FFF4E5] text-[#B45E0A]"
+                            : "border-border text-muted-foreground hover:border-[#F09428]/50"
+                        }`}
+                      >
+                        ➕ {lang === "ar" ? "عنوان جديد" : "New address"}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <label className="block space-y-1.5">
                   <div className="flex items-center justify-between">
@@ -683,7 +831,15 @@ export function CheckoutView() {
                   </div>
                   <Textarea
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      setAddrTouched(true);
+                      setAddress(e.target.value);
+                      /* تعديل نص عنوان محفوظ = عنوان جديد هيتحفظ بالاسم اللي يختاره */
+                      if (selectedAddressId) {
+                        const sel = savedAddresses.find((x) => x.id === selectedAddressId);
+                        if (sel && e.target.value !== sel.details) setSelectedAddressId(null);
+                      }
+                    }}
                     rows={2}
                     className="rounded-xl leading-relaxed text-sm"
                     placeholder={
@@ -698,6 +854,71 @@ export function CheckoutView() {
                       : "Landmarks ensure fast delivery to your door."}
                   </p>
                 </label>
+
+                {/* دبوس الموقع — تحديد GPS اختياري بيروح مع الطلب للمندوب */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={pinBusy}
+                    onClick={locateMe}
+                    className="h-9 rounded-full px-4 text-xs font-black"
+                  >
+                    <MapPin className="size-3.5" />
+                    {pinBusy
+                      ? lang === "ar"
+                        ? "جارٍ التحديد…"
+                        : "Locating…"
+                      : pin
+                        ? lang === "ar"
+                          ? "تحديث موقعي على الخريطة"
+                          : "Update my pin"
+                        : lang === "ar"
+                          ? "حدّد موقعي على الخريطة"
+                          : "Pin my location"}
+                  </Button>
+                  {pin && (
+                    <>
+                      <a
+                        href={mapsPinUrl(pin.lat, pin.lng)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-full bg-[#EAF6F1] px-3 py-1.5 text-[11px] font-black text-[#2E9E6B]"
+                      >
+                        📍 {lang === "ar" ? "الموقع متحدد — معاينة" : "Pinned — preview"}
+                      </a>
+                      <button
+                        onClick={() => setPin(null)}
+                        className="text-[11px] font-bold text-[#DC4B4B] underline-offset-2 hover:underline"
+                      >
+                        {lang === "ar" ? "شيل الدبوس" : "Remove"}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {/* عنوان جديد؟ سمّيه وهنحفظه في دفترك مع الطلب ده */}
+                {!selectedAddressId && address.trim().length > 3 && (
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-muted-foreground">
+                      {lang === "ar" ? "هنحفظه في دفترك باسم:" : "Save it in your book as:"}
+                    </span>
+                    {ADDRESS_LABEL_PRESETS.map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setNewLabel(p)}
+                        className={`rounded-full border-2 px-3 py-1 text-[11px] font-black transition active:scale-[0.97] ${
+                          newLabel === p
+                            ? "border-[#1E4E8F] bg-[#EAF1F9]/70 text-[#1E4E8F]"
+                            : "border-border text-muted-foreground hover:border-[#1E4E8F]/40"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </>
             )}
 
@@ -779,6 +1000,28 @@ export function CheckoutView() {
               <Input value={notes} onChange={(e) => setNotes(e.target.value)} className="h-11 rounded-xl" />
             </label>
 
+            {/* تغليف خاص — من مميزات التوصيل، اختيار مجاني في قسم التوصيل */}
+            <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-muted/30 p-4">
+              <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-[#EAF1F9] text-[#1E4E8F]">
+                <Package className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-heading text-sm font-black">{t("checkout.discreetT")}</p>
+                <p className="text-xs text-muted-foreground">{t("checkout.discreetD")}</p>
+                <p className="mt-0.5 text-[11px] font-bold text-[#2E9E6B]">
+                  {lang === "ar" ? "من مميزات توصيلنا: تغليف خاص يحافظ على خصوصيتك" : "One of our delivery perks: packaging that protects your privacy"}
+                </p>
+              </div>
+              <Switch
+                checked={discreet}
+                onCheckedChange={(v) => {
+                  setDiscreet(v);
+                  setDiscreetTouched(true);
+                }}
+                aria-label={t("checkout.discreetT")}
+              />
+            </div>
+
             <Button
               size="lg"
               className="h-12 w-full rounded-full text-base font-bold"
@@ -803,7 +1046,8 @@ export function CheckoutView() {
               [
                 ["cod", t("checkout.cod"), t("checkout.codD"), <Store className="size-5" key="1" />],
                 ["instapay", t("checkout.instapay"), t("checkout.instapayD"), <Phone className="size-5" key="2" />],
-                ["card", t("checkout.card"), t("checkout.cardD"), <IconWallet className="size-5" key="3" />],
+                ["vodafone", t("checkout.vodafone"), t("checkout.vodafoneD"), <Smartphone className="size-5" key="3" />],
+                ["card", t("checkout.card"), t("checkout.cardD"), <IconWallet className="size-5" key="4" />],
               ] as const
             ).map(([key, title, desc, icon]) => (
               <button
@@ -1034,9 +1278,19 @@ export function CheckoutView() {
                   {t("dv.expressNote").replace("{x}", String(slotExtra))}
                 </p>
               )}
-              {zone && fee > 0 && subtotal < zone.freeOver && (
-                <p className="rounded-xl bg-[#FFF4E5] px-3 py-2 text-[11px] font-bold text-[#B45E0A]">
-                  {t("dv.zoneFree").replace("{x}", zone.freeOver.toLocaleString("en-US"))}
+              {campaignOn && fee === 0 && deliveryType === "delivery" && (
+                <p className="rounded-xl bg-[#EAF6F1] px-3 py-2 text-[11px] font-bold text-[#2E9E6B]">
+                  {t("cart.campaignFree")}
+                </p>
+              )}
+              {!campaignOn && loyaltyFreeShip && deliveryType === "delivery" && (
+                <p className="rounded-xl bg-[#EAF6F1] px-3 py-2 text-[11px] font-bold text-[#2E9E6B]">
+                  {loyaltyFreeRemaining(loyalty) !== null
+                    ? t("loyalty.freeShipLeft").replace(
+                        "{n}",
+                        String(loyaltyFreeRemaining(loyalty))
+                      )
+                    : t("loyalty.freeShip")}
                 </p>
               )}
               <div className="flex justify-between border-t border-border pt-2 font-heading text-lg font-black">
@@ -1045,13 +1299,21 @@ export function CheckoutView() {
               </div>
             </div>
 
+            {!acceptOrders && (
+              <p className="rounded-xl bg-[#FEF3C7] px-3.5 py-2.5 text-center text-xs font-black text-[#B45309] ring-1 ring-[#F59E0B]/30">
+                {lang === "ar"
+                  ? "الصيدلية واقفة استقبال الطلبات مؤقتًا — سلتك محفوظة، ارجع كمان شوية"
+                  : "The pharmacy is temporarily not accepting orders — your cart is saved"}
+              </p>
+            )}
             <div className="flex gap-2">
               <Button variant="outline" className="h-12 flex-1 rounded-full font-bold active:scale-95" onClick={() => setStep(2)}>
                 {t("checkout.back")}
               </Button>
               <Button
-                className="h-12 flex-1 rounded-full text-base font-black bg-gradient-to-r from-[#184C8A] to-[#113665] text-white shadow-md shadow-[#184C8A]/25 hover:shadow-lg hover:shadow-[#184C8A]/35 active:scale-[0.98] transition-all"
-                onClick={() => {
+                disabled={orderPlacing || !acceptOrders}
+                className="h-12 flex-1 rounded-full text-base font-black bg-gradient-to-r from-[#184C8A] to-[#113665] text-white shadow-md shadow-[#184C8A]/25 hover:shadow-lg hover:shadow-[#184C8A]/35 active:scale-[0.98] transition-all disabled:opacity-60"
+                onClick={async () => {
                   const resolvedCity =
                     zoneId === "custom-village" && customVillageName.trim()
                       ? customVillageName.trim()
@@ -1068,9 +1330,11 @@ export function CheckoutView() {
                       ? ` [فكة: ${cashChangeFloat === "100" ? "ورقة 100 ج.م" : cashChangeFloat === "200" ? "ورقة 200 ج.م" : "مطلوب فكة لمبلغ كبير"}]`
                       : "";
                   const notesPart = notes.trim() ? ` [ملاحظات: ${notes.trim()}]` : "";
+                  const discreetPart = discreet ? ` [تغليف خاص]` : "";
 
-                  const resolvedAddress = `${villagePart}${address.trim()}${notesPart}${changePart}`.trim();
-                  const id = placeOrder({
+                  const resolvedAddress = `${villagePart}${address.trim()}${notesPart}${changePart}${discreetPart}`.trim();
+                  /* بنستنى حكم السيرفر: الرفض بيخلّي العميل هنا وسلته سليمة */
+                  const id = await placeOrder({
                     address: resolvedAddress,
                     phone: phoneNorm,
                     payment,
@@ -1079,13 +1343,35 @@ export function CheckoutView() {
                     deliveryType,
                     zoneId: deliveryType === "delivery" ? zoneId : undefined,
                     slotId: deliveryType === "delivery" ? slotId : undefined,
+                    discreetPackaging: discreet,
+                    lat: deliveryType === "delivery" ? pin?.lat : undefined,
+                    lng: deliveryType === "delivery" ? pin?.lng : undefined,
+                    addressId: deliveryType === "delivery" ? (selectedAddressId ?? undefined) : undefined,
                   });
                   if (!id) return;
+                  /* عنوان جديد اتكتب في الطلب ده؟ بيتحفظ في دفتر العميل
+                     وبيبقى هو آخر عنوان (المحدد تلقائيًا في الطلب الجاي) */
+                  if (deliveryType === "delivery" && !selectedAddressId && address.trim()) {
+                    const saved = addSavedAddress({
+                      phone: phoneNorm,
+                      label: newLabel,
+                      details: address.trim(),
+                      city: resolvedCity,
+                      lat: pin?.lat,
+                      lng: pin?.lng,
+                      isDefault: savedAddresses.length === 0,
+                    });
+                    useBahbah.setState({ lastAddressId: saved.id });
+                  }
                   toast.success(t("checkout.success"));
                 }}
               >
                 <CheckCircle2 className="size-5" />
-                {t("checkout.place")}
+                {orderPlacing
+                  ? lang === "ar"
+                    ? "جارٍ تأكيد الطلب…"
+                    : "Placing order…"
+                  : t("checkout.place")}
               </Button>
             </div>
           </div>
@@ -1113,16 +1399,17 @@ export function SuccessView() {
 
   const waMessage = order
     ? `السلام عليكم د. هاشم (صيدلية بحبح)، قمت بعمل طلب جديد من الموقع برقم (${order.id}):
+الحالة: الطلب مسجّل ولسه في انتظار تأكيد الصيدلية
 الاسم: ${order.customerAr || ""}
 الهاتف: ${order.phone || ""}
 العنوان: ${order.address || ""}
 إجمالي الحساب: ${order.total} ج.م
-طريقة الدفع: ${order.payment === "cod" ? "دفع عند الاستلام" : order.payment}
+طريقة الدفع: ${order.payment === "cod" ? "دفع عند الاستلام" : order.payment}${order.discreetPackaging ? "\nالتغليف: تغليف خاص — علبة/كيس سادة بدون أي علامات" : ""}
 الأصناف المطلوبة:
 ${(order.items || []).map((it) => `- ${it.nameAr || it.productId} (عدد ${it.qty})`).join("\n")}
 
-برجاء تأكيد الطلب والتجهيز في أسرع وقت.`
-    : `السلام عليكم صيدلية بحبح، قمت بعمل طلب جديد من الموقع برقم (${lastOrderId}).`;
+برجاء مراجعة الطلب وتأكيده قبل التجهيز.`
+    : `السلام عليكم صيدلية بحبح، قمت بعمل طلب جديد من الموقع برقم (${lastOrderId}) وهو في انتظار تأكيدكم.`;
 
   const waUrl = `https://wa.me/201011500166?text=${encodeURIComponent(waMessage)}`;
 
@@ -1134,9 +1421,15 @@ ${(order.items || []).map((it) => `- ${it.nameAr || it.productId} (عدد ${it.q
       <h1 className="mt-6 font-heading text-3xl font-black">{t("checkout.success")}</h1>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground md:text-base">
         {lang === "ar"
-          ? "تم تسجيل طلبك في سيستم صيدلية بحبح. للتأكيد السريع ابعته على واتساب الصيدلية من الزر تحت."
+          ? "تم تسجيل طلبك في سيستم صيدلية بحبح وهو دلوقتي في انتظار تأكيد الصيدلية — هنواصل معاك للتأكيد قبل التجهيز. للتأكيد السريع ابعته على واتساب الصيدلية من الزر تحت."
           : t("checkout.successD")}
       </p>
+
+      {order && isNightOrder(order.createdAt ?? order.date) && (
+        <p className="mt-4 rounded-full border border-[#F59E0B]/40 bg-[#FFFBEB] px-5 py-2 font-heading text-sm font-black text-[#B45E0A]">
+          🌙 {t("checkout.nightLine")}
+        </p>
+      )}
 
       {lastOrderId && (
         <Badge className="mt-4 rounded-full bg-[#EAF1F9] px-6 py-2.5 font-heading text-lg font-black text-[#1E4E8F] hover:bg-[#EAF1F9]">
@@ -1161,8 +1454,8 @@ ${(order.items || []).map((it) => `- ${it.nameAr || it.productId} (عدد ${it.q
         </a>
         <p className="mt-2 text-xs text-muted-foreground">
           {lang === "ar"
-            ? "اضغط لإرسال بيانات طلبك تلقائياً لدكتور هاشم بحبح لبدء التجهيز السريع"
-            : "Click to forward order details directly to pharmacist on WhatsApp"}
+            ? "اضغط لإرسال بيانات طلبك تلقائياً لدكتور هاشم بحبح عشان يراجعه ويأكده"
+            : "Click to forward order details directly to pharmacist on WhatsApp for review & confirmation"}
         </p>
       </div>
 

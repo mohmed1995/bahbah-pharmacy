@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -20,9 +20,11 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useBahbah, useT } from "@/lib/bahbah/store";
-import { trackOrderStatus } from "@/lib/supabase";
-import { zoneById, driverById, BRANCH, PHARMACY } from "@/lib/bahbah/data";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import { useBahbah, useT, notifyMyOrderStatus } from "@/lib/bahbah/store";
+import { trackOrderStatus, fetchMyCourierRatingFromSupabase, insertCourierRatingToSupabase } from "@/lib/supabase";
+import { zoneById, driverById, BRANCH, PHARMACY, type CourierRating } from "@/lib/bahbah/data";
 import { IconScooter, IconStorefront, IconPin, IconClockFast, IconOtpBox, IconStarRate } from "./icons";
 import { fmtPrice } from "./product-card";
 
@@ -38,6 +40,7 @@ const ROUTE_D =
 
 function statusStep(status: string): number {
   if (status === "pending") return 1;
+  if (status === "ready") return 2;
   if (status === "shipping") return 2;
   if (status === "delivered") return 4;
   return 1;
@@ -45,6 +48,7 @@ function statusStep(status: string): number {
 
 function progressOf(status: string): number {
   if (status === "pending") return 14;
+  if (status === "ready") return 40;
   if (status === "shipping") return 62;
   if (status === "delivered") return 100;
   return 0;
@@ -56,21 +60,47 @@ export default function TrackView() {
   const trackOrderId = useBahbah((s) => s.trackOrderId);
   const myOrders = useBahbah((s) => s.myOrders);
   const { go, advanceTrack, openAccount } = useBahbah();
-  const [rating, setRating] = useState(0);
 
   const order = useMemo(
     () => myOrders.find((o) => o.id === trackOrderId) ?? myOrders[0],
     [myOrders, trackOrderId]
   );
 
-  /* تحديث حالة طلب العميل نفسه كل 15 ثانية عبر RPC آمنة (بدل قراءة كل الطلبات) */
+  /* إذن إشعارات المتصفح — بنطلبه بهدوء مرة واحدة عند فتح شاشة التتبع،
+     عشان تنبيهات تغيّر الحالة (مع الصوت) توصل للمريض حتى لو في شاشة تانية */
+  useEffect(() => {
+    try {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+    } catch {}
+  }, []);
+
+  /* تحديث حالة طلب العميل نفسه كل 15 ثانية عبر RPC آمنة (بدل قراءة كل الطلبات).
+     المرضى مالهمش SELECT على orders ولا قناة realtime — فده هو مسار التنبيه الوحيد:
+     بنقارن الحالة عند كل فحص، ولو اتغيرت فعلًا بنرنّ وننبّه (notifyMyOrderStatus). */
   const orderId = order?.id;
+  const lastStatusRef = useRef<string | null>(null);
+  const pollInFlightRef = useRef(false);
+  // Seed the baseline from the locally known status: if the order moved
+  // while the patient was away, the first poll still rings once for it;
+  // if it didn't move, the first poll stays silent (no false bell).
+  useEffect(() => {
+    const local = useBahbah.getState().myOrders.find((o) => o.id === orderId);
+    lastStatusRef.current = local?.status ?? null;
+  }, [orderId]);
   useEffect(() => {
     if (!orderId) return;
     let stop = false;
     const tick = async () => {
-      const r = await trackOrderStatus(orderId);
+      if (pollInFlightRef.current) return; // لا فحصين متداخلين أبدًا
+      pollInFlightRef.current = true;
+      const r = await trackOrderStatus(orderId).finally(() => {
+        pollInFlightRef.current = false;
+      });
       if (stop || !r) return;
+      const prev = lastStatusRef.current;
+      const current = useBahbah.getState().myOrders.find((o) => o.id === orderId);
       useBahbah.setState((st) => ({
         myOrders: st.myOrders.map((o) =>
           o.id === orderId
@@ -82,6 +112,11 @@ export default function TrackView() {
             : o
         ),
       }));
+      lastStatusRef.current = r.status;
+      /* أول فحص بيأسس الحالة بس — التنبيه على التغيّر الفعلي بعد كده */
+      if (prev !== null && prev !== r.status && current) {
+        notifyMyOrderStatus({ ...current, status: r.status as typeof current.status });
+      }
     };
     tick();
     const h = setInterval(tick, 15000);
@@ -112,7 +147,9 @@ export default function TrackView() {
 
   const steps = [
     { title: t("track.step1"), desc: t("track.step1D") },
-    { title: t("track.step2"), desc: t("track.step2D") },
+    order.status === "ready"
+      ? { title: t("status.ready"), desc: t("track.step2ReadyD") }
+      : { title: t("track.step2"), desc: t("track.step2D") },
     { title: t("track.step3"), desc: t("track.step3D") },
     { title: t("track.step4"), desc: t("track.step4D") },
   ];
@@ -122,7 +159,9 @@ export default function TrackView() {
       ? t("checkout.cod")
       : order.payment === "instapay"
         ? t("checkout.instapay")
-        : t("checkout.card");
+        : order.payment === "vodafone"
+          ? t("checkout.vodafone")
+          : t("checkout.card");
 
   const zone = zoneById(order.delivery?.zoneId);
   const driver = driverById(order.delivery?.driverId);
@@ -140,7 +179,9 @@ export default function TrackView() {
     ? t("track.done")
     : order.status === "pending"
       ? t("track.step2")
-      : zone
+      : order.status === "ready"
+        ? t("status.ready")
+        : zone
         ? t("dv.zoneEta").replace("{x}", String(zone.etaMin))
         : t("track.etaValue");
 
@@ -182,6 +223,23 @@ export default function TrackView() {
         </div>
       ) : (
         <>
+          {/* ============ DELIVERED — لحظة النجاح والشكر ============ */}
+          {done && (
+            <div className="mt-6 flex items-center gap-4 rounded-3xl border border-emerald-200 bg-gradient-to-l from-emerald-50 to-[#EAF6F1] p-5 bb-card-shadow md:p-6">
+              <span className="grid size-14 shrink-0 place-items-center rounded-full bg-[#059669] text-white shadow-lg shadow-emerald-600/25">
+                <PartyPopper className="size-7" />
+              </span>
+              <div className="min-w-0">
+                <p className="font-heading text-xl font-black text-emerald-800 md:text-2xl">
+                  {t("track.deliveredTitle")}
+                </p>
+                <p className="mt-1 text-sm font-bold leading-relaxed text-emerald-900/70">
+                  {t("track.deliveredThanks")}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* ============ LIVE MAP ============ */}
           <div className="mt-6 overflow-hidden rounded-3xl border border-border/70 bg-card bb-card-shadow">
             <div dir="ltr" className="relative h-56 w-full bg-[#EAF2FA]/70 md:h-64">
@@ -294,10 +352,24 @@ export default function TrackView() {
                 {driver ? (lang === "ar" ? driver.nameAr : driver.nameEn).charAt(0) : <IconScooter className="size-6" />}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-muted-foreground">{t("track.driver")}</p>
-                <p className="truncate font-heading text-base font-black">
-                  {driver ? (lang === "ar" ? driver.nameAr : driver.nameEn) : t("track.courierName")}
-                </p>
+                {driver && order.status === "shipping" ? (
+                  <>
+                    <p className="truncate font-heading text-base font-black text-[#059669]">
+                      {(lang === "ar" ? driver.nameAr : driver.nameEn).split(" ")[0]}{" "}
+                      {lang === "ar" ? "في الطريق إليك" : "is on the way to you"}
+                    </p>
+                    <p className="truncate text-xs font-bold text-muted-foreground">
+                      {t("track.driver")}: {lang === "ar" ? driver.nameAr : driver.nameEn}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-bold text-muted-foreground">{t("track.driver")}</p>
+                    <p className="truncate font-heading text-base font-black">
+                      {driver ? (lang === "ar" ? driver.nameAr : driver.nameEn) : t("track.courierName")}
+                    </p>
+                  </>
+                )}
                 <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] font-bold text-muted-foreground">
                   <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#184C8A] to-[#0B1E38] px-2 py-0.5 text-[10px] font-black text-white">
                     <IconScooter className="size-3" />
@@ -419,41 +491,15 @@ export default function TrackView() {
             )}
           </div>
 
-          {/* ============ rate the delivery ============ */}
-          {done && (
-            <div className="mt-4 rounded-3xl border border-border/70 bg-card p-5 bb-card-shadow md:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="flex items-center gap-2 font-heading text-lg font-black">
-                  <IconStarRate className="size-5 text-[#F59E0B]" />
-                  {t("track.rate")}
-                </h3>
-                {rating > 0 && (
-                  <span className="flex items-center gap-1 text-sm font-bold text-[#059669]">
-                    <BadgeCheck className="size-4" />
-                    {t("track.rateThanks")}
-                  </span>
-                )}
-              </div>
-              <div className="mt-3 flex gap-1.5" dir="ltr">
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setRating(n)}
-                    aria-label={`${n} / 5`}
-                    className="transition-transform hover:scale-110 active:scale-95"
-                  >
-                    <IconStarRate
-                      className={`size-8 ${
-                        n <= rating
-                          ? "text-[#F59E0B] [&_path]:fill-[#F59E0B]"
-                          : "text-[#C9D4E4]"
-                      }`}
-                      strokeWidth={1.6}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* ============ rate the courier (server-backed) ============ */}
+          {done && !isPickup && order.delivery?.driverId && (
+            <CourierRatingCard
+              orderId={order.id}
+              phone={order.phone}
+              courierId={order.delivery.driverId}
+              courierNameAr={driver?.nameAr}
+              courierNameEn={driver?.nameEn}
+            />
           )}
         </>
       )}
@@ -513,5 +559,151 @@ export default function TrackView() {
         </div>
       </div>
     </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* تقييم المندوب بالاسم — بيتحفظ في Supabase (courier_ratings) قبل ما  */
+/* أي تأكيد يظهر للعميل. تقييم واحد لكل طلب: لو الطلب اتقيّم قبل كده  */
+/* بنعرض التقييم المحفوظ نفسه. الفشل بيظهر كخطأ صريح — مفيش «شكرًا»   */
+/* وهمية على كتابة ما حصلتش (كان هنا قبل كده ويجت نجوم محلي فقط).     */
+/* ------------------------------------------------------------------ */
+function CourierRatingCard({
+  orderId,
+  phone,
+  courierId,
+  courierNameAr,
+  courierNameEn,
+}: {
+  orderId: string;
+  phone: string;
+  courierId: string;
+  courierNameAr?: string;
+  courierNameEn?: string;
+}) {
+  const t = useT();
+  const lang = useBahbah((s) => s.lang);
+  const [existing, setExisting] = useState<CourierRating | null>(null);
+  const [stars, setStars] = useState(0);
+  const [comment, setComment] = useState("");
+  const [sending, setSending] = useState(false);
+
+  /* هل العميل قيّم الطلب ده قبل كده؟ بنقرا من السيرفر (RLS: تقييماته بس) */
+  useEffect(() => {
+    let stop = false;
+    fetchMyCourierRatingFromSupabase(orderId).then((r) => {
+      if (!stop) setExisting(r);
+    });
+    return () => {
+      stop = true;
+    };
+  }, [orderId]);
+
+  const courierName =
+    (lang === "ar" ? courierNameAr : courierNameEn) || courierNameAr || courierNameEn || t("track.courier");
+  const snapshotName = courierNameAr || courierNameEn || courierId;
+
+  const submit = async () => {
+    if (stars < 1) {
+      toast.error(t("track.ratePickFirst"));
+      return;
+    }
+    setSending(true);
+    const res = await insertCourierRatingToSupabase({
+      orderId,
+      courierId,
+      courierName: snapshotName,
+      customerPhone: phone,
+      stars,
+      comment: comment.trim() ? comment : undefined,
+    });
+    if (res.ok) {
+      setExisting({
+        id: `CR-${orderId}`,
+        orderId,
+        courierId,
+        courierName: snapshotName,
+        customerPhone: phone,
+        stars,
+        comment: comment.trim() ? comment.trim() : undefined,
+        createdAt: new Date().toISOString(),
+      });
+      toast.success(t("track.rateThanks"));
+    } else if (res.duplicate) {
+      /* اتقيّم قبل كده من جهاز تاني — اعرض المحفوظ بدل إعادة الإرسال */
+      const saved = await fetchMyCourierRatingFromSupabase(orderId);
+      if (saved) setExisting(saved);
+      toast.success(t("track.rateThanks"));
+    } else {
+      toast.error(t("track.rateError"));
+    }
+    setSending(false);
+  };
+
+  const starRow = (value: number, onPick?: (n: number) => void) => (
+    <div className="flex gap-1.5" dir="ltr">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <button
+          key={n}
+          type="button"
+          disabled={!onPick}
+          onClick={() => onPick?.(n)}
+          aria-label={`${n} / 5`}
+          className={onPick ? "transition-transform hover:scale-110 active:scale-95" : "cursor-default"}
+        >
+          <IconStarRate
+            className={`size-8 ${n <= value ? "text-[#F59E0B] [&_path]:fill-[#F59E0B]" : "text-[#C9D4E4]"}`}
+            strokeWidth={1.6}
+          />
+        </button>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="mt-4 rounded-3xl border border-border/70 bg-card p-5 bb-card-shadow md:p-6">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 font-heading text-lg font-black">
+          <IconStarRate className="size-5 text-[#F59E0B]" />
+          {t("track.rateCourier").replace("{name}", courierName)}
+        </h3>
+        {existing && (
+          <span className="flex items-center gap-1 text-sm font-bold text-[#059669]">
+            <BadgeCheck className="size-4" />
+            {t("track.rateThanks")}
+          </span>
+        )}
+      </div>
+
+      {existing ? (
+        <div className="mt-3 space-y-2">
+          {starRow(existing.stars)}
+          {existing.comment && (
+            <p className="rounded-2xl bg-muted/60 px-4 py-3 text-sm font-bold leading-relaxed text-foreground/80">
+              “{existing.comment}”
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          {starRow(stars, setStars)}
+          <Textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={t("track.rateCommentPh")}
+            maxLength={500}
+            rows={2}
+            className="rounded-2xl text-sm font-bold"
+          />
+          <Button
+            onClick={submit}
+            disabled={sending}
+            className="h-11 w-full rounded-full bg-[#059669] font-heading text-sm font-black text-white hover:bg-[#047857] sm:w-auto sm:px-8"
+          >
+            {sending ? t("track.rateSending") : t("track.rateSubmit")}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

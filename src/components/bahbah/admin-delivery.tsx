@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Phone,
   Star,
@@ -10,13 +10,17 @@ import {
   Users,
   MapPin,
   Wallet,
+  Trash2,
+  MessageCircle,
+  Save,
+  RefreshCw,
+  Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
-  drivers as demoDrivers,
   zoneById,
   type DriverStatus,
 } from "@/lib/bahbah/data";
@@ -27,6 +31,10 @@ import type { Driver } from "@/lib/bahbah/data";
 import { IconScooter, IconVan, IconStorefront, IconRoute, IconClockFast } from "./icons";
 import { fmtPrice } from "./product-card";
 import { AdminCard, SectionTitle, StatusBadge, KpiCard } from "./admin-ui";
+import { CustomerContactMenu } from "./contact-menu";
+import { fetchCourierRatingsFromSupabase } from "@/lib/supabase";
+import { courierLiveBoard, deliveryBoardKpis } from "@/lib/bahbah/reports";
+import type { CourierRating } from "@/lib/bahbah/data";
 import { toast } from "sonner";
 
 /* ================================================================== */
@@ -35,10 +43,11 @@ import { toast } from "sonner";
 export function DeliverySection() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
-  const [tab, setTab] = useState<"board" | "drivers" | "zones">("board");
+  const [tab, setTab] = useState<"board" | "live" | "drivers" | "zones">("board");
 
   const tabs = [
     { key: "board", label: t("adm.board"), icon: <IconRoute className="size-4" /> },
+    { key: "live", label: lang === "ar" ? "المناديب الآن" : "Couriers Live", icon: <Radio className="size-4" /> },
     { key: "drivers", label: t("adm.driversTitle"), icon: <Users className="size-4" /> },
     { key: "zones", label: t("adm.zonesTitle"), icon: <MapPin className="size-4" /> },
   ] as const;
@@ -61,6 +70,7 @@ export function DeliverySection() {
       </div>
 
       {tab === "board" && <DeliveryBoard />}
+      {tab === "live" && <CourierLiveBoard />}
       {tab === "drivers" && <DriversPanel />}
       {tab === "zones" && <ZonesPanel />}
     </div>
@@ -75,16 +85,26 @@ function DeliveryBoard() {
   const drivers = useDrivers();
   const driverStatus = useBahbah((s) => s.driverStatus);
   const { adminAdvance, adminAssignDriver, adminCancel } = useBahbah();
-  const list = (orders ?? []).filter((o) => o.status === "pending" || o.status === "shipping");
+  const list = (orders ?? []).filter(
+    (o) => o.status === "pending" || o.status === "ready" || o.status === "shipping"
+  );
 
-  const available = demoDrivers.filter(
+  /* العدد من القايمة المفلترة فعليًا (useDrivers) — كان بيتحسب من
+     القايمة الافتراضية الخام فبيعدّ مناديب المدير شالهم أو عطّلهم */
+  const available = drivers.filter(
     (d) => (driverStatus[d.id] ?? d.status) === "available"
   ).length;
 
+  /* مؤشرات حقيقية من نفس طلبات السيرفر اللي اللوحة بتعرضها — الأرقام
+     الثابتة الوهمية القديمة اتشالت خالص؛ التعريفات موثّقة في
+     deliveryBoardKpis في reports.ts */
+  const today = new Date().toISOString().slice(0, 10);
+  const board = deliveryBoardKpis(orders ?? [], today);
+
   const kpis = [
-    { icon: <IconScooter className="size-5" />, tint: "bg-[#FFF4E5]", color: "text-[#C56A0A]", value: "41", label: t("adm.kpiDeliveries") },
-    { icon: <IconClockFast className="size-5" />, tint: "bg-[#EAF1F9]", color: "text-[#1E4E8F]", value: "45", label: `${t("adm.kpiAvgTime")} (${t("dv.min")})` },
-    { icon: <BadgeCheck className="size-5" />, tint: "bg-[#EAF6F1]", color: "text-[#2E9E6B]", value: "96%", label: t("adm.kpiOnTime") },
+    { icon: <IconScooter className="size-5" />, tint: "bg-[#FFF4E5]", color: "text-[#C56A0A]", value: String(board.deliveredToday), label: t("adm.kpiDeliveries") },
+    { icon: <IconClockFast className="size-5" />, tint: "bg-[#EAF1F9]", color: "text-[#1E4E8F]", value: board.avgDeliveryMinutes !== null ? String(board.avgDeliveryMinutes) : "—", label: `${t("adm.kpiAvgTime")} (${t("dv.min")})` },
+    { icon: <BadgeCheck className="size-5" />, tint: "bg-[#EAF6F1]", color: "text-[#2E9E6B]", value: board.completionRatePct !== null ? `${board.completionRatePct}%` : "—", label: t("adm.kpiCompletion") },
     { icon: <Users className="size-5" />, tint: "bg-[#EEF0F7]", color: "text-[#112D51]", value: String(available), label: t("adm.kpiDrivers") },
   ];
 
@@ -120,7 +140,10 @@ function DeliveryBoard() {
                       </p>
                     </div>
                   </div>
-                  <StatusBadge status={o.status} t={t} />
+                  <div className="flex items-center gap-2">
+                    <CustomerContactMenu phone={o.phone} label="" className="grid size-9 place-items-center rounded-full bg-[#2E9E6B] text-white shadow-xs transition hover:brightness-105 active:scale-95" />
+                    <StatusBadge status={o.status} t={t} />
+                  </div>
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-3 text-xs">
@@ -154,9 +177,10 @@ function DeliveryBoard() {
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <select
                     value={driver?.id ?? ""}
-                    onChange={(e) => {
-                      adminAssignDriver(o.id, e.target.value);
-                      toast.success(t("misc.saved"));
+                    onChange={async (e) => {
+                      if (await adminAssignDriver(o.id, e.target.value)) {
+                        toast.success(t("misc.saved"));
+                      }
                     }}
                     className="h-9 min-w-36 flex-1 rounded-full border border-input bg-transparent px-3 text-xs font-bold"
                     aria-label={t("adm.assign")}
@@ -176,9 +200,21 @@ function DeliveryBoard() {
                       size="sm"
                       variant="outline"
                       className="h-9 rounded-full px-4 text-xs font-bold"
-                      onClick={() => {
-                        adminAdvance(o.id);
-                        toast.success(t("misc.saved"));
+                      onClick={async () => {
+                        if (await adminAdvance(o.id)) toast.success(t("misc.saved"));
+                      }}
+                    >
+                      <IconScooter className="size-3.5" />
+                      {t("admin.stReady")}
+                    </Button>
+                  )}
+                  {o.status === "ready" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 rounded-full px-4 text-xs font-bold"
+                      onClick={async () => {
+                        if (await adminAdvance(o.id)) toast.success(t("misc.saved"));
                       }}
                     >
                       <IconScooter className="size-3.5" />
@@ -189,9 +225,8 @@ function DeliveryBoard() {
                     <Button
                       size="sm"
                       className="h-9 rounded-full bg-[#2E9E6B] px-4 text-xs font-bold hover:bg-[#278a5e]"
-                      onClick={() => {
-                        adminAdvance(o.id);
-                        toast.success(t("misc.saved"));
+                      onClick={async () => {
+                        if (await adminAdvance(o.id)) toast.success(t("misc.saved"));
                       }}
                     >
                       <BadgeCheck className="size-3.5" />
@@ -202,9 +237,8 @@ function DeliveryBoard() {
                     size="sm"
                     variant="ghost"
                     className="h-9 rounded-full px-3 text-xs font-bold text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
-                    onClick={() => {
-                      adminCancel(o.id);
-                      toast.success(t("misc.saved"));
+                    onClick={async () => {
+                      if (await adminCancel(o.id)) toast.success(t("misc.saved"));
                     }}
                   >
                     {t("adm.cancelOrder")}
@@ -219,6 +253,172 @@ function DeliveryBoard() {
   );
 }
 
+/* ---------- لوحة المناديب الحية ---------- */
+/* صورة حية لكل مندوب: طلباته النشطة دلوقتي وحالتها، تسليمات النهارده،
+   تحصيلات النهارده (من سجلات التوريد)، ومتوسط تقييم العملاء. الطلبات
+   والتحصيلات بتتحدث لحظيًا من قنوات realtime في الـ store، والتقييمات
+   بتتجدد كل 30 ثانية و بزر تحديث — كل رقم هنا من بيانات السيرفر. */
+function CourierLiveBoard() {
+  const t = useT();
+  const lang = useBahbah((s) => s.lang);
+  const orders = useBahbah((s) => s.adminOrders) ?? [];
+  const collections = useBahbah((s) => s.courierCollections);
+  const drivers = useDrivers();
+  const driverStatus = useBahbah((s) => s.driverStatus);
+
+  const [ratings, setRatings] = useState<CourierRating[]>([]);
+  const [ratingsAt, setRatingsAt] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const loadRatings = async () => {
+    setRefreshing(true);
+    const r = await fetchCourierRatingsFromSupabase();
+    setRatings(r);
+    setRatingsAt(new Date());
+    setRefreshing(false);
+  };
+  useEffect(() => {
+    void loadRatings();
+    const h = setInterval(() => void loadRatings(), 30000);
+    return () => clearInterval(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const today = new Date().toISOString().slice(0, 10);
+  const rows = useMemo(
+    () => courierLiveBoard(drivers, orders, collections, ratings, today),
+    [drivers, orders, collections, ratings, today]
+  );
+
+  const statusMeta: Record<string, { label: string; cls: string }> = {
+    available: { label: t("adm.available"), cls: "bg-[#EAF6F1] text-[#2E9E6B]" },
+    busy: { label: t("adm.busy"), cls: "bg-[#FFF4E5] text-[#B45E0A]" },
+    offline: { label: t("adm.offline"), cls: "bg-muted text-muted-foreground" },
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#2E9E6B] opacity-60" />
+            <span className="relative inline-flex size-2 rounded-full bg-[#2E9E6B]" />
+          </span>
+          {lang === "ar"
+            ? "الطلبات والتحصيلات بتتحدث لحظيًا — التقييمات آخر تحديث: "
+            : "Orders & collections update live — ratings last refreshed: "}
+          <span dir="ltr">
+            {ratingsAt
+              ? ratingsAt.toLocaleTimeString(lang === "ar" ? "ar-EG" : "en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+              : "…"}
+          </span>
+        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={refreshing}
+          onClick={() => void loadRatings()}
+          className="h-9 rounded-full px-4 text-xs font-bold"
+        >
+          <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          {lang === "ar" ? "تحديث" : "Refresh"}
+        </Button>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-2">
+        {rows.map((row) => {
+          const d = row.driver;
+          const st = driverStatus[d.id] ?? d.status;
+          const meta = statusMeta[st] ?? statusMeta.offline;
+          return (
+            <AdminCard key={d.id} className="p-4">
+              <div className="flex items-center gap-3">
+                <span className="relative grid size-12 shrink-0 place-items-center rounded-2xl bg-[#EAF1F9] font-heading text-lg font-black text-[#1E4E8F]">
+                  {(lang === "ar" ? d.nameAr : d.nameEn).charAt(0)}
+                  <span
+                    className={`absolute -bottom-0.5 -end-0.5 size-3.5 rounded-full ring-2 ring-white ${
+                      st === "available" ? "bg-[#2E9E6B]" : st === "busy" ? "bg-[#F09428]" : "bg-[#98a6b8]"
+                    }`}
+                  />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-heading text-sm font-black">
+                    {lang === "ar" ? d.nameAr : d.nameEn}
+                  </p>
+                  <p className="text-[11px] font-bold text-muted-foreground" dir="ltr">
+                    {d.plate}
+                  </p>
+                </div>
+                <Badge className={`shrink-0 rounded-full border-0 ${meta.cls}`}>{meta.label}</Badge>
+              </div>
+
+              <div className="mt-3 grid grid-cols-4 gap-2 rounded-xl bg-muted/50 p-2.5 text-center">
+                <div>
+                  <p className="font-heading text-sm font-black text-[#1E4E8F]">{row.activeOrders.length}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground">{lang === "ar" ? "نشط الآن" : "Active now"}</p>
+                </div>
+                <div>
+                  <p className="font-heading text-sm font-black text-[#2E9E6B]">{row.deliveredToday}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground">{lang === "ar" ? "سلّم النهارده" : "Delivered today"}</p>
+                </div>
+                <div>
+                  <p className="font-heading text-sm font-black text-[#C56A0A]">{fmtPrice(row.collectionsToday, t)}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground">
+                    {lang === "ar" ? "حصّل النهارده" : "Collected today"}
+                    {row.collectionsCountToday > 0 ? ` (${row.collectionsCountToday})` : ""}
+                  </p>
+                </div>
+                <div>
+                  <p className="flex items-center justify-center gap-1 font-heading text-sm font-black text-[#C56A0A]">
+                    <Star className="size-3 fill-[#F09428] text-[#F09428]" />
+                    {row.ratingAvg !== null ? row.ratingAvg.toFixed(1) : "—"}
+                  </p>
+                  <p className="text-[10px] font-bold text-muted-foreground">
+                    {lang === "ar" ? "التقييم" : "Rating"}
+                    {row.ratingCount > 0 ? ` (${row.ratingCount})` : ""}
+                  </p>
+                </div>
+              </div>
+
+              {row.activeOrders.length === 0 ? (
+                <p className="mt-3 rounded-xl border border-dashed border-border px-3 py-2.5 text-center text-[11px] font-bold text-muted-foreground">
+                  {lang === "ar" ? "مفيش طلبات نشطة معاه دلوقتي" : "No active orders right now"}
+                </p>
+              ) : (
+                <div className="mt-3 space-y-1.5">
+                  {row.activeOrders.map((o) => (
+                    <div
+                      key={o.id}
+                      className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 px-3 py-2 text-xs"
+                    >
+                      <span className="min-w-0">
+                        <span className="font-heading font-black text-[#1E4E8F]">{o.id}</span>{" "}
+                        <span className="font-bold text-foreground/75">
+                          {lang === "ar" ? o.customerAr : o.customerEn}
+                        </span>{" "}
+                        <span className="font-bold text-muted-foreground">
+                          {o.delivery
+                            ? lang === "ar"
+                              ? o.delivery.zoneNameAr
+                              : o.delivery.zoneNameEn
+                            : ""}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="font-black">{fmtPrice(o.total, t)}</span>
+                        <StatusBadge status={o.status} t={t} />
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </AdminCard>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- drivers ---------- */
 function DriversPanel() {
   const t = useT();
@@ -226,7 +426,33 @@ function DriversPanel() {
   const driverStatus = useBahbah((s) => s.driverStatus);
   const drivers = useDrivers();
   const zones = useZones();
-  const { cycleDriverStatus, addDriver } = useBahbah();
+  const { cycleDriverStatus, addDriver, removeDriver } = useBahbah();
+
+  /* تقييمات العملاء الحقيقية من السيرفر (courier_ratings) — المتوسط
+     والعدد وآخر التعليقات لكل مندوب. من غير تقييمات الخانة بتبان «—»
+     بدل أي رقم افتراضي وهمي */
+  const [ratings, setRatings] = useState<CourierRating[]>([]);
+  useEffect(() => {
+    let stop = false;
+    fetchCourierRatingsFromSupabase().then((r) => {
+      if (!stop) setRatings(r);
+    });
+    return () => {
+      stop = true;
+    };
+  }, []);
+  const ratingByDriver = useMemo(() => {
+    const map = new Map<string, { avg: number; count: number; latest: CourierRating[] }>();
+    for (const r of ratings) {
+      if (!r.courierId) continue;
+      const cur = map.get(r.courierId) ?? { avg: 0, count: 0, latest: [] };
+      cur.count += 1;
+      cur.avg += (r.stars - cur.avg) / cur.count;
+      if (r.comment && cur.latest.length < 2) cur.latest.push(r);
+      map.set(r.courierId, cur);
+    }
+    return map;
+  }, [ratings]);
 
   const [addOpen, setAddOpen] = useState(false);
   const [newDriver, setNewDriver] = useState({
@@ -238,7 +464,7 @@ function DriversPanel() {
     zoneId: "deirout-city",
   });
 
-  const handleCreateDriver = (e: React.FormEvent) => {
+  const handleCreateDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDriver.nameAr.trim() || !newDriver.phone.trim()) {
       toast.error(lang === "ar" ? "برجاء إدخال اسم المندوب ورقم الموبايل" : "Please enter courier name and phone");
@@ -258,7 +484,10 @@ function DriversPanel() {
       status: "available",
     };
 
-    addDriver(driverObj);
+    /* الحوار ما بيقفلش ورسالة النجاح ما بتظهرش غير لو المندوب اتحفظ على
+       السيرفر فعلًا — عند الفشل النموذج بيفضل مفتوح بالبيانات زي ما هي */
+    const ok = await addDriver(driverObj);
+    if (!ok) return;
     setAddOpen(false);
     setNewDriver({
       nameAr: "",
@@ -338,10 +567,11 @@ function DriversPanel() {
               <div>
                 <p className="flex items-center justify-center gap-1 font-heading text-sm font-black text-[#C56A0A]">
                   <Star className="size-3 fill-[#F09428] text-[#F09428]" />
-                  {d.rating.toFixed(1)}
+                  {ratingByDriver.get(d.id) ? ratingByDriver.get(d.id)!.avg.toFixed(1) : "—"}
                 </p>
                 <p className="text-[10px] font-bold text-muted-foreground">
                   {lang === "ar" ? "التقييم" : "Rating"}
+                  {ratingByDriver.get(d.id) ? ` (${ratingByDriver.get(d.id)!.count})` : ""}
                 </p>
               </div>
               <div>
@@ -356,17 +586,51 @@ function DriversPanel() {
               </div>
             </div>
 
+            {/* آخر تعليقات العملاء على المندوب (من تقييمات السيرفر) */}
+            {ratingByDriver.get(d.id)?.latest.length ? (
+              <div className="mt-3 space-y-1.5 rounded-xl border border-[#F09428]/25 bg-[#FFF9F0]/70 p-2.5">
+                {ratingByDriver.get(d.id)!.latest.map((r) => (
+                  <p key={r.id} className="flex items-start gap-1.5 text-[11px] font-bold leading-snug text-foreground/75">
+                    <span className="flex shrink-0 items-center gap-0.5 text-[#C56A0A]">
+                      <Star className="size-3 fill-[#F09428] text-[#F09428]" />
+                      {r.stars}
+                    </span>
+                    <span className="min-w-0 flex-1">“{r.comment}”</span>
+                    <span className="shrink-0 text-[10px] text-muted-foreground" dir="ltr">
+                      {new Date(r.createdAt).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-GB")}
+                    </span>
+                  </p>
+                ))}
+              </div>
+            ) : null}
+
             <div className="mt-3 flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
                 className="h-9 flex-1 rounded-full text-xs font-bold"
-                onClick={() => {
-                  cycleDriverStatus(d.id);
-                  toast.success(t("misc.saved"));
+                onClick={async () => {
+                  if (await cycleDriverStatus(d.id)) toast.success(t("misc.saved"));
                 }}
               >
                 {t("adm.changeStatus")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 rounded-full border-[#DC4B4B]/40 px-3 text-xs font-bold text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
+                onClick={async () => {
+                  /* إزالة نهائية مؤكدة: بتتشال من السيرفر فبتختفي من
+                     قوائم التعيين على كل الأجهزة (سيادة المدير) */
+                  const name = lang === "ar" ? d.nameAr : d.nameEn;
+                  if (!window.confirm(lang === "ar" ? `إزالة المندوب «${name}» نهائيًا؟ مش هيظهر في أي قائمة تعيين تاني.` : `Remove courier "${name}" permanently? They will disappear from all assignment lists.`)) return;
+                  if (await removeDriver(d.id)) {
+                    toast.success(lang === "ar" ? "تمت إزالة المندوب" : "Courier removed");
+                  }
+                }}
+              >
+                <Trash2 className="size-4" />
+                {lang === "ar" ? "إزالة" : "Remove"}
               </Button>
               <a
                 href={`tel:${d.phone.replace(/\s/g, "")}`}
@@ -380,6 +644,8 @@ function DriversPanel() {
         );
       })}
       </div>
+
+      <CourierMsgTemplatesCard />
 
       {/* Add New Courier Modal */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
@@ -520,9 +786,8 @@ function ZonesPanel() {
                     {lang === "ar" ? z.areasAr : z.areasEn}
                   </p>
                 </div>
-                <Switch checked={on} onCheckedChange={() => {
-                  toggleZone(z.id);
-                  toast.success(t("misc.saved"));
+                <Switch checked={on} onCheckedChange={async () => {
+                  if (await toggleZone(z.id)) toast.success(t("misc.saved"));
                 }} aria-label={t("adm.zoneOn")} />
               </div>
 
@@ -593,5 +858,86 @@ function ZonesPanel() {
         })}
       </div>
     </div>
+  );
+}
+
+/* ---------- رسائل واتساب الجاهزة للمناديب (يعدّلها المدير) ---------- */
+/* بتتخزن في admin_settings.courier_msg_templates وبتوصل لكل أجهزة
+   المناديب والطاقم من get_public_settings — الحفظ ما بيأكّدش غير لو
+   السيرفر كتب فعلًا (نفس قاعدة باقي الإعدادات) */
+function CourierMsgTemplatesCard() {
+  const t = useT();
+  const lang = useBahbah((s) => s.lang);
+  const templates = useBahbah((s) => s.courierMsgTemplates);
+  const { saveCourierMsgTemplates } = useBahbah();
+  const [draft, setDraft] = useState<string[]>(templates);
+  const [saving, setSaving] = useState(false);
+
+  /* أي تحديث جاي من السيرفر (أو من جهاز تاني) بيبقى هو الأساس للمسودة */
+  useEffect(() => {
+    setDraft(templates);
+  }, [templates]);
+
+  const save = async () => {
+    setSaving(true);
+    const ok = await saveCourierMsgTemplates(draft);
+    setSaving(false);
+    if (ok) toast.success(t("misc.saved"));
+    /* عند الفشل الـ store بيرجّع آخر حالة مؤكدة وبيظهر تنبيه الفشل */
+  };
+
+  return (
+    <AdminCard className="p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 font-heading text-sm font-black">
+          <MessageCircle className="size-4 text-[#25D366]" />
+          {lang === "ar" ? "رسائل واتساب جاهزة للمناديب" : "Ready WhatsApp messages for couriers"}
+        </h3>
+        <Button
+          size="sm"
+          disabled={saving}
+          onClick={save}
+          className="h-9 rounded-full bg-[#184C8A] px-4 text-xs font-black text-white hover:bg-[#112D51]"
+        >
+          <Save className="size-3.5" />
+          {saving ? (lang === "ar" ? "بيحفظ…" : "Saving…") : lang === "ar" ? "حفظ الرسائل" : "Save messages"}
+        </Button>
+      </div>
+      <p className="mt-1.5 text-[11px] font-bold leading-relaxed text-muted-foreground">
+        {lang === "ar"
+          ? "الرسائل دي بتظهر للمندوب والموظف في قايمة «تواصل» جنب رقم أي عميل — يدوس واحدة تتبعت على واتساب العميل على طول."
+          : "These appear in the Contact menu next to any customer phone — one tap sends it to the customer's WhatsApp."}
+      </p>
+      <div className="mt-3 space-y-2">
+        {draft.map((msg, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              value={msg}
+              onChange={(e) => setDraft(draft.map((m, j) => (j === i ? e.target.value : m)))}
+              className="h-10 flex-1 rounded-xl text-sm font-bold"
+              maxLength={300}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              aria-label={lang === "ar" ? "مسح الرسالة" : "Delete message"}
+              className="h-10 w-10 shrink-0 rounded-xl border-[#DC4B4B]/40 p-0 text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
+              onClick={() => setDraft(draft.filter((_, j) => j !== i))}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ))}
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-9 rounded-full border-dashed px-4 text-xs font-bold"
+          onClick={() => setDraft([...draft, ""])}
+        >
+          <Plus className="size-3.5" />
+          {lang === "ar" ? "إضافة رسالة" : "Add message"}
+        </Button>
+      </div>
+    </AdminCard>
   );
 }

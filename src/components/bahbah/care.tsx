@@ -46,6 +46,7 @@ import {
   IconRxClipboardDuo,
 } from "./icons";
 import Reveal from "./reveal";
+import { RxPhotoLink, useRxPhotoUrl } from "./rx-photo";
 import { toast } from "sonner";
 import {
   Search,
@@ -146,6 +147,11 @@ export default function CareView() {
   const [dirSearch, setDirSearch] = useState("");
   const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
 
+  /* روابط العرض الموقّعة لصور الروشتات من الباكت الخاص (الأمان — الطبقة ٢):
+     القيم المخزنة مسارات/روابط قديمة، والعرض لازم يكون برابط موقّع مؤقت */
+  const successRxImgUrl = useRxPhotoUrl(registeredSuccessSub?.prescriptionUrl);
+  const foundRxImgUrl = useRxPhotoUrl(foundPatient?.prescriptionUrl);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sync latest care subscriptions on load
@@ -168,9 +174,9 @@ export default function CareView() {
       const compressedDataUrl = await compressImageFile(file);
       setPrescriptionPreview(compressedDataUrl);
 
-      const publicUrl = await uploadRxPrescriptionImage(file);
-      if (publicUrl) {
-        setPrescriptionUrl(publicUrl);
+      const photoPath = await uploadRxPrescriptionImage(file);
+      if (photoPath) {
+        setPrescriptionUrl(photoPath);
         toast.success(lang === "ar" ? "تم رفع صورة الروشتة بنجاح" : "Prescription image uploaded successfully");
       } else {
         setPrescriptionUrl(compressedDataUrl);
@@ -201,7 +207,7 @@ export default function CareView() {
 
     setSubmitting(true);
     try {
-      subscribeCare({
+      const saved = await subscribeCare({
         name: name.trim(),
         phone: phone.trim(),
         address: address.trim(),
@@ -209,6 +215,9 @@ export default function CareView() {
         notes: notes.trim(),
         prescriptionUrl: prescriptionUrl || prescriptionPreview || "",
       });
+      /* الاشتراك بقى مؤكد من السيرفر: النجاح ما بيظهرش غير لو الاشتراك
+         اتكتب فعلًا (الفشل بيورّي تنبيهه من المتجر نفسه) */
+      if (!saved) return;
 
       const today = new Date().toISOString().slice(0, 10);
       const nextDate = nextDeliveryFor(dayPref, today);
@@ -460,21 +469,29 @@ export default function CareView() {
                     {registeredSuccessSub.prescriptionUrl && (
                       <div className="mt-4 flex items-center gap-3 rounded-2xl bg-black/25 p-3">
                         <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-white">
-                          <Image
-                            src={registeredSuccessSub.prescriptionUrl}
-                            alt="Prescription"
-                            fill
-                            className="object-cover"
-                          />
+                          {successRxImgUrl && (
+                            <Image
+                              src={successRxImgUrl}
+                              alt="Prescription"
+                              fill
+                              className="object-cover"
+                            />
+                          )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-xs font-bold text-white">{lang === "ar" ? "الروشتة الشهرية المعتمدة" : "Active Prescription"}</p>
-                          <button
-                            onClick={() => setPreviewModalImg(registeredSuccessSub.prescriptionUrl || null)}
-                            className="text-[11px] font-bold text-[#F59E0B] hover:underline"
-                          >
-                            {lang === "ar" ? "معاينة الروشتة بحجم كامل" : "View full image"}
-                          </button>
+                          {successRxImgUrl ? (
+                            <button
+                              onClick={() => setPreviewModalImg(successRxImgUrl)}
+                              className="text-[11px] font-bold text-[#F59E0B] hover:underline"
+                            >
+                              {lang === "ar" ? "معاينة الروشتة بحجم كامل" : "View full image"}
+                            </button>
+                          ) : (
+                            <span className="text-[11px] font-bold text-white/70">
+                              {lang === "ar" ? "صورة مرفقة" : "Photo attached"}
+                            </span>
+                          )}
                         </div>
                       </div>
                     )}
@@ -804,21 +821,29 @@ export default function CareView() {
                   {foundPatient.prescriptionUrl && (
                     <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-xs">
                       <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted">
-                        <Image
-                          src={foundPatient.prescriptionUrl}
-                          alt="Prescription"
-                          fill
-                          className="object-cover"
-                        />
+                        {foundRxImgUrl && (
+                          <Image
+                            src={foundRxImgUrl}
+                            alt="Prescription"
+                            fill
+                            className="object-cover"
+                          />
+                        )}
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold">{lang === "ar" ? "صورة الروشتة المسجلة في ملف المريض" : "Saved Prescription Image"}</p>
-                        <button
-                          onClick={() => setPreviewModalImg(foundPatient.prescriptionUrl || null)}
-                          className="mt-0.5 text-xs font-bold text-[#184C8A] hover:underline"
-                        >
-                          {lang === "ar" ? "عرض الروشتة بحجم كامل" : "View full image"}
-                        </button>
+                        {foundRxImgUrl ? (
+                          <button
+                            onClick={() => setPreviewModalImg(foundRxImgUrl)}
+                            className="mt-0.5 text-xs font-bold text-[#184C8A] hover:underline"
+                          >
+                            {lang === "ar" ? "عرض الروشتة بحجم كامل" : "View full image"}
+                          </button>
+                        ) : (
+                          <span className="mt-0.5 block text-xs font-bold text-muted-foreground">
+                            {lang === "ar" ? "صورة مرفقة" : "Photo attached"}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -965,13 +990,20 @@ export default function CareView() {
 
                       <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/60 pt-3">
                         {patient.prescriptionUrl ? (
-                          <button
-                            onClick={() => setPreviewModalImg(patient.prescriptionUrl || null)}
+                          <RxPhotoLink
+                            value={patient.prescriptionUrl}
+                            onOpen={(url) => setPreviewModalImg(url)}
                             className="inline-flex items-center gap-1 text-[11px] font-bold text-[#184C8A] hover:underline"
+                            fallbackText={
+                              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
+                                <FileText className="size-3.5" />
+                                {lang === "ar" ? "روشتة مرفقة" : "Rx attached"}
+                              </span>
+                            }
                           >
                             <FileText className="size-3.5" />
                             {lang === "ar" ? "معاينة الروشتة" : "View Rx"}
-                          </button>
+                          </RxPhotoLink>
                         ) : (
                           <span className="text-[10px] text-muted-foreground">
                             {lang === "ar" ? "لا توجد صورة روشتة" : "No Rx image"}

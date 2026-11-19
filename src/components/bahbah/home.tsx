@@ -13,10 +13,25 @@ import {
   carePlans,
   getProduct,
   products,
+  byCategory,
   WASLY,
   type AdSlide,
 } from "@/lib/bahbah/data";
-import { useBahbah, useT, useAdSlides, useOffers, effStock } from "@/lib/bahbah/store";
+import { useBahbah, useT, useAdSlides, useOffers, useNow, effStock } from "@/lib/bahbah/store";
+import {
+  eveningPeakProducts,
+  deepNightProducts,
+  dentalProducts,
+  orthoProducts,
+  seasonalProducts,
+  currentSeason,
+  hourInWindow,
+  isSensitiveProduct,
+  EVENING_WINDOW,
+  DEEP_NIGHT_WINDOW,
+  type Season,
+} from "@/lib/bahbah/curation";
+import MonthlyReminder from "./monthly-reminder";
 import { ProductCard, SectionHead, BahbahLogo } from "./product-card";
 import {
   IconShieldCheck,
@@ -48,10 +63,11 @@ import {
   IconCheck,
   IconRefill,
   IconScooter,
+  IconWhatsapp,
   duoOf,
 } from "./icons";
 import { toast } from "sonner";
-import { Copy, Dumbbell, Activity } from "lucide-react";
+import { Copy, Dumbbell, Activity, PackageSearch, Stethoscope } from "lucide-react";
 import Reveal from "./reveal";
 
 /* ------------------------------------------------------------------ */
@@ -366,8 +382,9 @@ function AdCarousel() {
 /* ------------------------------------------------------------------ */
 function Hero() {
   const t = useT();
+  const lang = useBahbah((s) => s.lang);
   const siteEdits = useBahbah((s) => s.siteEdits);
-  const { openCatalog, setRxOpen } = useBahbah();
+  const { openCatalog, setRxOpen, setShortageOpen, setNursingOpen } = useBahbah();
 
   return (
     <section className="hero-pattern relative overflow-hidden text-white">
@@ -413,6 +430,24 @@ function Hero() {
             >
               <IconUploadCloud className="size-4" />
               {t("hero.cta2")}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-11 rounded-full border-white/30 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95"
+              onClick={() => setShortageOpen(true)}
+            >
+              <PackageSearch className="size-4" />
+              {lang === "ar" ? "طلب ناقص" : "Request a missing item"}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-11 rounded-full border-white/30 bg-white/10 px-6 text-sm font-bold text-white backdrop-blur-md transition hover:bg-white/20 hover:text-white active:scale-95"
+              onClick={() => setNursingOpen(true)}
+            >
+              <Stethoscope className="size-4" />
+              {lang === "ar" ? "خدمات تمريضية" : "Home nursing"}
             </Button>
           </div>
 
@@ -512,104 +547,72 @@ function FloatingOrb({
 }
 
 /* ------------------------------------------------------------------ */
-/* Free-delivery live strip — الهدف بيتقرأ من إعدادات لوحة الإدارة      */
-/* "باقي 10 جنيه على 300 وتحصل على توصيل مجاني"                        */
+/* حملة التوصيل المجاني — بانر كبير أعلى الرئيسية وهي الحملة شغالة      */
+/* التشغيل والصورة من إعدادات لوحة الإدارة (بتتحفظ على السيرفر)         */
 /* ------------------------------------------------------------------ */
-
-function StripMessage({ raw }: { raw: string }) {
-  /* بيبرز الأرقام باللون البرتقالي جوة الجملة الدعائية */
-  const parts = raw.split(/(\d[\d,]*)/g);
-  return (
-    <>
-      {parts.map((part, i) =>
-        /^\d[\d,]*$/.test(part) ? (
-          <span key={i} dir="ltr" className="mx-1 inline-block rounded-lg bg-[#F09428] px-2 py-0.5 font-heading text-[0.95em] font-black text-white shadow-sm">
-            {part}
-          </span>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </>
-  );
-}
-
-function FreeShipStrip() {
+function FreeShipCampaignBanner() {
   const t = useT();
-  const cart = useBahbah((s) => s.cart);
-  const goal = useBahbah((s) => s.settings.freeThreshold);
+  const on = useBahbah((s) => s.settings.freeShipCampaignOn);
+  const img = useBahbah((s) => s.settings.freeShipCampaignImg);
   const go = useBahbah((s) => s.go);
 
-  if (goal <= 0) return null; /* الإدارة قفلت الميزة */
-
-  const subtotal = cart.reduce((s, c) => s + (getProduct(c.productId)?.price ?? 0) * c.qty, 0);
-  const has = subtotal > 0;
-  const remaining = Math.max(0, goal - subtotal);
-  const pct = Math.min(100, Math.round((subtotal / goal) * 100));
-  const done = has && remaining === 0;
-
-  const msg = !has
-    ? t("ship.stripEmpty").replace("{y}", goal.toLocaleString("en-US"))
-    : done
-      ? t("ship.stripDone")
-      : t("ship.stripGo")
-          .replace("{x}", remaining.toLocaleString("en-US"))
-          .replace("{y}", goal.toLocaleString("en-US"));
+  if (!on) return null;
 
   return (
-    <section className="mx-auto max-w-7xl px-3 pt-3 md:px-6 md:pt-4" aria-label={t("ship.stripBadge")}>
-      <div
-        className={`relative overflow-hidden rounded-2xl p-4 text-white shadow-lg ring-1 ring-black/5 transition-colors duration-500 md:rounded-3xl md:p-5 ${
-          done
-            ? "bg-gradient-to-r from-[#065F46] via-[#059669] to-[#10B981] shadow-lg shadow-[#059669]/20"
-            : "bg-gradient-to-r from-[#0B1E38] via-[#184C8A] to-[#1D4ED8] shadow-lg shadow-[#184C8A]/20"
-        }`}
+    <section className="mx-auto max-w-7xl px-3 pt-3 md:px-6 md:pt-4" aria-label={t("ship.campaignTitle")}>
+      <button
+        onClick={() => go("catalog")}
+        className="group relative block w-full overflow-hidden rounded-3xl text-start shadow-xl ring-1 ring-black/10 lg:rounded-[2rem]"
       >
-        {/* decorative glow */}
-        <span className="pointer-events-none absolute -end-10 -top-14 size-36 rounded-full bg-white/10 blur-2xl" />
-        <span className="pointer-events-none absolute -start-8 -bottom-16 size-40 rounded-full bg-[#F59E0B]/25 blur-2xl" />
-
-        <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
-          {/* icon */}
-          <span className="hidden size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#F59E0B] to-[#EA580C] text-white shadow-md md:grid">
-            <IconVanDuo className="size-6" />
-          </span>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-2.5 py-0.5 text-[10px] font-black tracking-wide text-white shadow-sm md:text-[11px] ring-1 ring-white/20">
-                {t("ship.stripBadge")}
+        {img ? (
+          <span className="relative block h-44 sm:h-56 md:h-72">
+            <Image
+              src={img}
+              alt={t("ship.campaignTitle")}
+              fill
+              sizes="(max-width:1280px) 100vw, 1280px"
+              className="object-cover transition duration-700 group-hover:scale-105"
+            />
+            <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+            <span className="absolute inset-x-0 bottom-0 flex flex-col items-start gap-1.5 p-4 text-white md:p-7">
+              <span className="rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-3 py-1 text-[10px] font-black tracking-wide shadow-md ring-1 ring-white/25 md:text-[11px]">
+                {t("ship.campaignBadge")}
               </span>
-              <p className="font-heading text-sm font-black leading-snug md:text-lg">
-                <StripMessage raw={msg} />
-              </p>
-            </div>
-            {/* progress */}
-            <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-white/20 md:h-3 backdrop-blur-xs">
-              <div
-                className={`relative h-full rounded-full transition-all duration-700 ease-out ${
-                  done ? "bg-white" : "bg-gradient-to-r from-[#F59E0B] via-[#FBBF24] to-[#FCD34D] shadow-xs"
-                }`}
-                style={{ width: `${Math.max(pct, has ? 6 : 0)}%` }}
-              >
-                {pct > 0 && pct < 100 && (
-                  <span className="absolute inset-0 animate-pulse rounded-full bg-white/30" />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {!has && (
-            <Button
-              className="h-11 shrink-0 rounded-full bg-gradient-to-r from-[#F59E0B] to-[#EA580C] px-7 text-sm font-black text-white shadow-lg transition hover:brightness-105 active:scale-95"
-              onClick={() => go("catalog")}
-            >
-              {t("ship.stripCta")}
-              <IconChevronR className="size-4 rtl:rotate-180" />
-            </Button>
-          )}
-        </div>
-      </div>
+              <span className="font-heading text-xl font-black drop-shadow md:text-3xl">
+                {t("ship.campaignTitle")}
+              </span>
+              <span className="text-[11px] font-semibold text-white/85 md:text-sm">
+                {t("ship.campaignSub")}
+              </span>
+            </span>
+          </span>
+        ) : (
+          <span className="relative block overflow-hidden bg-gradient-to-r from-[#065F46] via-[#059669] to-[#10B981] p-5 text-white md:p-8">
+            <span className="pointer-events-none absolute -end-10 -top-14 size-36 rounded-full bg-white/10 blur-2xl" />
+            <span className="pointer-events-none absolute -start-8 -bottom-16 size-40 rounded-full bg-[#F59E0B]/25 blur-2xl" />
+            <span className="relative flex flex-col gap-3 md:flex-row md:items-center md:gap-5">
+              <span className="hidden size-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#F59E0B] to-[#EA580C] text-white shadow-md md:grid">
+                <IconVanDuo className="size-6" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="rounded-full bg-gradient-to-r from-[#EA580C] to-[#F59E0B] px-2.5 py-0.5 text-[10px] font-black tracking-wide text-white shadow-sm ring-1 ring-white/20 md:text-[11px]">
+                  {t("ship.campaignBadge")}
+                </span>
+                <span className="mt-2 block font-heading text-lg font-black leading-snug md:text-2xl">
+                  {t("ship.campaignTitle")}
+                </span>
+                <span className="mt-1 block text-xs font-semibold text-white/85 md:text-sm">
+                  {t("ship.campaignSub")}
+                </span>
+              </span>
+              <span className="inline-flex h-11 shrink-0 items-center gap-1 self-start rounded-full bg-white px-6 text-sm font-black text-[#065F46] shadow-lg transition group-hover:gap-2 md:self-center">
+                {t("ship.stripCta")}
+                <IconChevronR className="size-4 rtl:rotate-180" />
+              </span>
+            </span>
+          </span>
+        )}
+      </button>
     </section>
   );
 }
@@ -843,7 +846,7 @@ function OffersSection() {
 function BestSellers() {
   const t = useT();
   const openCatalog = useBahbah((s) => s.openCatalog);
-  const list = bestSellers().slice(0, 8);
+  const list = bestSellers().filter((p) => !isSensitiveProduct(p)).slice(0, 8);
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-16">
@@ -1193,7 +1196,7 @@ function PromoBanners() {
 function Services() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
-  const { setRxOpen, setConsultOpen, go } = useBahbah();
+  const { setRxOpen, setConsultOpen, setNursingOpen, go } = useBahbah();
 
   const items = [
     {
@@ -1203,6 +1206,19 @@ function Services() {
       title: "services.uploadT",
       desc: "services.uploadD",
       onClick: () => setRxOpen(true),
+    },
+    {
+      /* مدخل الخدمات التمريضية الحقيقي: زرار الـHero كان في مكوّن مش
+         بيتركّب أصلًا (HomeView ما بتستدعيش Hero) فالحجز كان موجود
+         بالكامل بس العميل مش لاقي أي طريق يوصله — هنا في قسم الخدمات
+         المُركّب فعليًا في الصفحة الرئيسية (D-V1) */
+      icon: Stethoscope,
+      tint: "bg-[#FDF2F8]",
+      color: "text-[#BE185D]",
+      title: lang === "ar" ? "خدمات تمريضية في البيت" : "Home nursing services",
+      desc: lang === "ar" ? "قياس سكر وضغط، حقن، كانيولا ومحاليل، وغيار جروح — ممرض بيوصلك لحد البيت. احجز في دقيقة وهنأكد معاك." : "Sugar & pressure checks, injections, IV cannula and wound dressing — a nurse comes to your home. Book in a minute.",
+      onClick: () => setNursingOpen(true),
+      isCustom: true,
     },
     {
       icon: Activity,
@@ -1229,12 +1245,21 @@ function Services() {
       desc: "services.trackD",
       onClick: () => go("account"),
     },
+    {
+      icon: IconBoxes,
+      tint: "bg-[#FFF4E5]",
+      color: "text-[#C56A0A]",
+      title: lang === "ar" ? "تغليف خاص" : "Special packaging",
+      desc: lang === "ar" ? "خصوصيتك محفوظة — طلبك بيوصلك في علبة/كيس سادة بدون أي علامات، وبتختاره مجاناً وانت بتكمل طلبك." : "Your privacy is protected — plain box/bag with no markings, free to choose at checkout.",
+      onClick: () => go("cart"),
+      isCustom: true,
+    },
   ];
 
   return (
     <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-16">
       <SectionHead title={t("services.title")} sub={t("services.sub")} />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {items.map((it) => (
           <button
             key={it.title}
@@ -1506,23 +1531,360 @@ function GymZone() {
 }
 
 /* ------------------------------------------------------------------ */
+/* شريط حي — صاحيين دلوقتي                                             */
+/* ------------------------------------------------------------------ */
+function LiveStrip() {
+  const lang = useBahbah((s) => s.lang);
+  return (
+    <div className="bg-[#0B1E38] text-white">
+      <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-4 py-2 text-center text-xs font-black md:text-sm">
+        <span className="relative flex size-2.5 shrink-0">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#10B981] opacity-75" />
+          <span className="relative inline-flex size-2.5 rounded-full bg-[#10B981]" />
+        </span>
+        {lang === "ar"
+          ? "صاحيين دلوقتي — توصيل ٢٤ ساعة لديروط وقراها"
+          : "We're awake now — 24h delivery to Dayrut & its villages"}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* رف منتجات أفقي بنفس أسلوب رف العروض                                 */
+/* ------------------------------------------------------------------ */
+function ProductShelf({
+  title,
+  sub,
+  items,
+  action,
+  id,
+}: {
+  title: string;
+  sub?: string;
+  items: ReturnType<typeof byCategory>;
+  action?: React.ReactNode;
+  id?: string;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <section id={id} className="pt-14 md:pt-16">
+      <div className="mx-auto max-w-7xl px-4 md:px-6">
+        <SectionHead title={title} sub={sub} action={action} />
+      </div>
+      <div className="no-scrollbar flex snap-x gap-4 overflow-x-auto px-4 pb-2 md:px-6">
+        {items.map((p) => (
+          <div key={p.id} className="w-[240px] shrink-0 snap-start md:w-[280px]">
+            <ProductCard product={p} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* الرفوف الزمنية — ذروة المساء (20–01) والليل العميق (02–05)          */
+/* ------------------------------------------------------------------ */
+function TimedShelves() {
+  const lang = useBahbah((s) => s.lang);
+  const now = useNow();
+  const h = now.getHours();
+
+  if (hourInWindow(h, EVENING_WINDOW.from, EVENING_WINDOW.to)) {
+    return (
+      <ProductShelf
+        title={lang === "ar" ? "ذروة المساء" : "Evening peak"}
+        sub={
+          lang === "ar"
+            ? "خافض حرارة قبل النوم، وأدوية الضغط والسكر، وحفاضات البيبي — اللي بيتلحق دلوقتي"
+            : "Bedtime fever relief, BP & diabetes meds, and baby diapers"
+        }
+        items={eveningPeakProducts()}
+      />
+    );
+  }
+  if (hourInWindow(h, DEEP_NIGHT_WINDOW.from, DEEP_NIGHT_WINDOW.to)) {
+    return (
+      <ProductShelf
+        title={lang === "ar" ? "الليل العميق" : "Deep night"}
+        sub={
+          lang === "ar"
+            ? "قليل بس مصيري — أساسيات الليل الحرجة وتوصلك لحد البيت"
+            : "Few but critical — deep-night essentials, delivered"
+        }
+        items={deepNightProducts()}
+      />
+    );
+  }
+  return null;
+}
+
+/* ------------------------------------------------------------------ */
+/* الرف الموسمي — شتا / رمضان / عودة المدارس / صيف                     */
+/* ------------------------------------------------------------------ */
+const SEASON_COPY: Record<Season, { ar: string; en: string; subAr: string; subEn: string }> = {
+  winter: {
+    ar: "أساسيات الشتا",
+    en: "Winter essentials",
+    subAr: "نزلات البرد والكحة والسخونية — جهز بيتك قبل الزحمة",
+    subEn: "Cold, cough & fever essentials",
+  },
+  ramadan: {
+    ar: "رمضان كريم",
+    en: "Ramadan Kareem",
+    subAr: "أساسيات الصيام: الهضم والحموضة، وأدوية السكر والضغط في مواعيدها",
+    subEn: "Fasting essentials: digestion, heartburn & chronic meds on schedule",
+  },
+  school: {
+    ar: "العودة للمدارس",
+    en: "Back to school",
+    subAr: "عناية بالأسنان وفيتامينات أطفال وحماية من الشمس",
+    subEn: "Dental care, kids vitamins & sun protection",
+  },
+  summer: {
+    ar: "أساسيات الصيف",
+    en: "Summer essentials",
+    subAr: "محاليل الجفاف وأدوية الإسهال وواقي الشمس ومضادات الفطريات",
+    subEn: "Rehydration, anti-diarrhoea, sunscreen & antifungals",
+  },
+};
+
+function SeasonalShelf() {
+  const lang = useBahbah((s) => s.lang);
+  const now = useNow();
+  const season = currentSeason(now);
+  if (!season) return null;
+  const copy = SEASON_COPY[season];
+  return (
+    <ProductShelf
+      title={lang === "ar" ? copy.ar : copy.en}
+      sub={lang === "ar" ? copy.subAr : copy.subEn}
+      items={seasonalProducts(season)}
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* الأم والطفل — قبل شبكة الأقسام العامة                               */
+/* ------------------------------------------------------------------ */
+function MotherBabySection() {
+  const lang = useBahbah((s) => s.lang);
+  const openCatalog = useBahbah((s) => s.openCatalog);
+  const baby = categories.find((c) => c.id === "baby");
+  return (
+    <ProductShelf
+      title={lang === "ar" ? "الأم والطفل" : "Mother & Baby"}
+      sub={
+        lang === "ar"
+          ? "حفاضات وحليب وكل احتياجات البيبي — ولو خلصت آخر واحدة بالليل، احنا صاحيين"
+          : "Diapers, formula & all baby needs — even at midnight"
+      }
+      items={byCategory("baby").slice(0, 10)}
+      action={
+        <Button
+          variant="outline"
+          className="rounded-full px-5 font-bold"
+          onClick={() => openCatalog("baby")}
+        >
+          {lang === "ar" ? (baby?.nameAr ?? "الأم والطفل") : "View all"}
+          <IconChevronR className="size-4 rtl:rotate-180" />
+        </Button>
+      }
+    />
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* علاجك المزمن والنواقص + اطلب بصورة الروشتة (أبطال #2 و#3)          */
+/* ------------------------------------------------------------------ */
+function ChronicStrip() {
+  const lang = useBahbah((s) => s.lang);
+  const { go, setRxOpen } = useBahbah();
+  const cards = [
+    {
+      icon: IconRefill,
+      tint: "bg-[#FFF4E5]",
+      color: "text-[#C56A0A]",
+      title: lang === "ar" ? "كرر علاجك الشهري" : "Refill my monthly meds",
+      desc:
+        lang === "ar"
+          ? "علاج السكر والضغط والقلب بيوصلك كل شهر في ميعاد ثابت — من غير ما تفتكر ولا تلف."
+          : "Diabetes, BP & heart meds delivered monthly on a fixed day.",
+      cta: lang === "ar" ? "برنامج الرعاية الشهرية" : "Monthly care",
+      onClick: () => go("care"),
+    },
+    {
+      icon: IconWhatsapp,
+      tint: "bg-[#ECFDF5]",
+      color: "text-[#059669]",
+      title: lang === "ar" ? "دواك ناقص؟" : "Can't find a medicine?",
+      desc:
+        lang === "ar"
+          ? "ابعت اسم الدوا الناقص على واتساب، وهنأكدلك توفره أو نوفرلك البديل المعتمد من الصيدلي."
+          : "Send the missing medicine name on WhatsApp — we'll confirm stock or a pharmacist-approved alternative.",
+      cta: lang === "ar" ? "ابعت على واتساب" : "WhatsApp us",
+      href: `https://wa.me/${WASLY.whatsapp}?text=${encodeURIComponent(
+        lang === "ar" ? "السلام عليكم، بدور على دواء ناقص: " : "Hello, I'm looking for a medicine that's hard to find: "
+      )}`,
+    },
+    {
+      icon: IconRxClipboardDuo,
+      tint: "bg-[#EAF1F9]",
+      color: "text-[#1E4E8F]",
+      title: lang === "ar" ? "اطلب بصورة الروشتة" : "Order by prescription photo",
+      desc:
+        lang === "ar"
+          ? "صوّر الروشتة أو علبة الدوا الفاضية وابعتها — الصيدلي يراجعها ويأكدلك السعر قبل التوصيل."
+          : "Snap your prescription or empty box — the pharmacist reviews it and confirms the price before delivery.",
+      cta: lang === "ar" ? "ارفع روشتتك" : "Upload prescription",
+      onClick: () => setRxOpen(true),
+    },
+  ];
+
+  return (
+    <section className="mx-auto max-w-7xl px-4 pt-14 md:px-6 md:pt-16">
+      <SectionHead
+        title={lang === "ar" ? "علاجك المزمن والنواقص" : "Chronic refills & hard-to-find meds"}
+        sub={
+          lang === "ar"
+            ? "تكرار شهري ثابت، وبحث عن النواقص، وطلب بصورة الروشتة"
+            : "Monthly refills, shortage finder & photo ordering"
+        }
+      />
+      <div className="grid gap-4 md:grid-cols-3">
+        {cards.map((c) => {
+          const inner = (
+            <>
+              <span className={`grid size-13 place-items-center rounded-2xl ${c.tint} transition group-hover:scale-105`}>
+                <c.icon className={`size-6 ${c.color}`} />
+              </span>
+              <h3 className="mt-4 font-heading text-base font-black md:text-lg">{c.title}</h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground md:text-sm">{c.desc}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#1E4E8F] md:text-sm">
+                {c.cta}
+                <IconChevronR className="size-4 transition group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1" />
+              </span>
+            </>
+          );
+          const cls =
+            "group relative block overflow-hidden rounded-3xl border border-border/70 bg-card p-6 text-start shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg";
+          return c.href ? (
+            <a key={c.title} href={c.href} target="_blank" rel="noreferrer" className={cls}>
+              {inner}
+            </a>
+          ) : (
+            <button key={c.title} onClick={c.onClick} className={cls}>
+              {inner}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* الأسنان والتقويم — قسم قوي ثانوي + ركن تقويم (يظهر عند توفر منتجاته) */
+/* ------------------------------------------------------------------ */
+function DentalSection() {
+  const lang = useBahbah((s) => s.lang);
+  const items = dentalProducts();
+  const ortho = orthoProducts();
+  if (items.length === 0) return null;
+  return (
+    <div id="bahbah-dental">
+      <ProductShelf
+        title={lang === "ar" ? "الأسنان والتقويم" : "Dental & Orthodontics"}
+        sub={
+          lang === "ar"
+            ? "معجون وفرش وغسول وعناية كاملة بالفم — وركن خاص لفرش التقويم وملحقاته"
+            : "Toothpaste, brushes, mouthwash & full oral care — plus an ortho bay"
+        }
+        items={items}
+      />
+      {ortho.length > 0 && (
+        <div className="mx-auto max-w-7xl px-4 pt-8 md:px-6">
+          <div className="rounded-3xl border border-[#184C8A]/15 bg-[#EAF2FA]/60 p-5 md:p-6">
+            <h3 className="font-heading text-lg font-black">
+              {lang === "ar" ? "ركن التقويم" : "Ortho bay"}
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground md:text-sm">
+              {lang === "ar"
+                ? "فرش تقويم وشمع وفرش بين الأسنان — كل اللي محتاجه مع التقويم"
+                : "Ortho brushes, wax & interdental brushes"}
+            </p>
+            <div className="no-scrollbar mt-4 flex snap-x gap-4 overflow-x-auto pb-1">
+              {ortho.map((p) => (
+                <div key={p.id} className="w-[220px] shrink-0 snap-start md:w-[260px]">
+                  <ProductCard product={p} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* توصيل القرى — جدول أسبوعي من إعدادات الأدمن (سيرفر)                  */
+/* ------------------------------------------------------------------ */
+function VillageDaysStrip() {
+  const lang = useBahbah((s) => s.lang);
+  const settings = useBahbah((s) => s.settings);
+  const days = (settings.villageDays ?? []).filter((d) => d.day.trim() && d.villages.trim());
+  if (days.length === 0) return null;
+  return (
+    <section className="mx-auto max-w-7xl px-4 pt-10 md:px-6">
+      <div className="rounded-3xl border border-[#184C8A]/15 bg-[#EAF2FA]/60 p-5 md:p-6">
+        <h3 className="flex items-center gap-2 font-heading text-base font-black md:text-lg">
+          <IconVan className="size-5 text-[#184C8A]" />
+          {lang === "ar" ? "توصيل القرى" : "Village delivery"}
+        </h3>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {days.map((d, i) => (
+            <p key={i} className="rounded-2xl bg-white/80 px-4 py-2.5 text-sm font-bold text-foreground/85 shadow-sm">
+              {lang === "ar" ? "توصيل القرى: " : "Village delivery: "}
+              <span className="text-[#184C8A]">{d.day}</span>
+              {" — "}
+              {d.villages}
+            </p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Home view                                                           */
 /* ------------------------------------------------------------------ */
 export default function HomeView() {
   return (
     <main className="pb-16 md:pb-20">
+      <LiveStrip />
+      <FreeShipCampaignBanner />
       <AdCarousel />
+      <MonthlyReminder />
+      <TimedShelves />
+      <SeasonalShelf />
+      <MotherBabySection />
+      <CareSection />
+      <ChronicStrip />
+      <DentalSection />
       <Categories />
       <OffersSection />
-      <CareSection />
       <BestSellers />
       <Services />
-      <GymZone />
+      <VillageDaysStrip />
       <HowToOrderSection />
       <ToolsRow />
       <PromoBanners />
       <Tips />
       <Testimonials />
+      <GymZone />
       <CtaBanner />
     </main>
   );

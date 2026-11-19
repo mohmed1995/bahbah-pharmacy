@@ -10,3 +10,16 @@ out/
 backups/
 temp_repo/
 tsconfig.tsbuildinfo
+
+# Databases and local data — never commit real DB files (history keeps them forever)
+*.db
+*.db-wal
+*.db-shm
+*.wal
+*.shm
+*.bak
+*.csv
+
+# Python leftovers from one-off scripts
+__pycache__/
+*.pyc

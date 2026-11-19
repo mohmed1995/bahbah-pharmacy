@@ -1,0 +1,308 @@
+[
+  {
+    "battery": "migration",
+    "name": "platform stubs (auth + storage) + pre-existing-table stand-ins created",
+    "pass": true,
+    "evidence": "storage stub mirrors platform shape; storage.objects RLS enabled"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: security.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: commerce.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: commerce-seed.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-whatsapp-orders.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: WAREHOUSE_SEED_DDL",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-warehouse-sync.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-shortage-requests.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-portals-permissions.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-collections-addresses.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-free-shipping-campaign.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-loyalty-points.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-nursing-services.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-security-layer1.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-wiring-fixes.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-loyalty-quota.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-integrity-fixes.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-courier-ratings.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-security-layer2.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "introspection",
+    "name": "bucket rx-prescriptions exists, PRIVATE, 10MB file cap",
+    "pass": true,
+    "evidence": "{\"public\":false,\"file_size_limit\":10485760}"
+  },
+  {
+    "battery": "introspection",
+    "name": "storage policies: insert-own + insert-guest + select-own + select-staff, NO update/delete",
+    "pass": true,
+    "evidence": "rx_storage_insert_guest:INSERT, rx_storage_insert_own:INSERT, rx_storage_select_own:SELECT, rx_storage_select_staff:SELECT"
+  },
+  {
+    "battery": "introspection",
+    "name": "3 public-create guard triggers installed",
+    "pass": true,
+    "evidence": "trg_guard_nursing_request_insert, trg_guard_shortage_request_insert, trg_guard_whatsapp_order_insert"
+  },
+  {
+    "battery": "introspection",
+    "name": "rx_photo_visible_to_caller is SECURITY DEFINER, EXECUTE for authenticated only",
+    "pass": true,
+    "evidence": "acl={postgres=X/postgres,authenticated=X/postgres}"
+  },
+  {
+    "battery": "storage-upload",
+    "name": "patient uploads into OWN u/<phone> folder",
+    "pass": true,
+    "evidence": "u/01001234567/rx_new.jpg"
+  },
+  {
+    "battery": "storage-upload",
+    "name": "patient CANNOT upload into someone else's folder",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"objects\""
+  },
+  {
+    "battery": "storage-upload",
+    "name": "patient CANNOT upload at bucket root",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"objects\""
+  },
+  {
+    "battery": "storage-upload",
+    "name": "guest (anon) can drop into guest/ (write-only drop box)",
+    "pass": true,
+    "evidence": "guest/rx_anon.jpg"
+  },
+  {
+    "battery": "storage-upload",
+    "name": "guest CANNOT upload into a customer's folder",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"objects\""
+  },
+  {
+    "battery": "storage-read",
+    "name": "patient A reads: own folder + guest photo referenced by own Rx + legacy file referenced by own care sub",
+    "pass": true,
+    "evidence": "guest/rx_b.jpg, rx_legacy.jpg, u/01001234567/rx_a.jpg, u/01001234567/rx_new.jpg"
+  },
+  {
+    "battery": "storage-read",
+    "name": "patient A does NOT read: patient B's folder, unreferenced guest uploads",
+    "pass": true,
+    "evidence": "guest/rx_b.jpg, rx_legacy.jpg, u/01001234567/rx_a.jpg, u/01001234567/rx_new.jpg"
+  },
+  {
+    "battery": "storage-read",
+    "name": "patient B reads only own folder",
+    "pass": true,
+    "evidence": "u/01009999999/rx_c.jpg"
+  },
+  {
+    "battery": "storage-read",
+    "name": "pharmacist (prescriptions/shortages defaults) reads ALL bucket objects",
+    "pass": true,
+    "evidence": "6 objects"
+  },
+  {
+    "battery": "storage-read",
+    "name": "courier reads NOTHING (layer-1 posture holds through storage)",
+    "pass": true,
+    "evidence": "saw 0"
+  },
+  {
+    "battery": "storage-read",
+    "name": "anon reads NOTHING (bucket is private)",
+    "pass": true,
+    "evidence": "saw 0"
+  },
+  {
+    "battery": "storage-write",
+    "name": "patient update/delete silently affect 0 rows (no policies exist)",
+    "pass": true,
+    "evidence": "object still present: true"
+  },
+  {
+    "battery": "public-create",
+    "name": "whatsapp: valid public insert passes",
+    "pass": true,
+    "evidence": "BH-QA01"
+  },
+  {
+    "battery": "public-create",
+    "name": "whatsapp: name > 80 chars rejected",
+    "pass": true,
+    "evidence": "error: customer_name_too_long"
+  },
+  {
+    "battery": "public-create",
+    "name": "whatsapp: phone with 3 digits rejected",
+    "pass": true,
+    "evidence": "error: bad_phone"
+  },
+  {
+    "battery": "public-create",
+    "name": "whatsapp: 51 items rejected",
+    "pass": true,
+    "evidence": "error: bad_items"
+  },
+  {
+    "battery": "public-create",
+    "name": "whatsapp: 6th open request for same phone rejected",
+    "pass": true,
+    "evidence": "error: too_many_open_requests"
+  },
+  {
+    "battery": "public-create",
+    "name": "whatsapp: after one closes, a new open request passes again",
+    "pass": true,
+    "evidence": "BH-QB08"
+  },
+  {
+    "battery": "public-create",
+    "name": "shortage: valid public insert passes",
+    "pass": true,
+    "evidence": "BH-QS01"
+  },
+  {
+    "battery": "public-create",
+    "name": "shortage: item_name > 120 chars rejected",
+    "pass": true,
+    "evidence": "error: item_name_too_long"
+  },
+  {
+    "battery": "public-create",
+    "name": "shortage: bad phone rejected",
+    "pass": true,
+    "evidence": "error: bad_phone"
+  },
+  {
+    "battery": "public-create",
+    "name": "shortage: 6th pending request for same phone rejected",
+    "pass": true,
+    "evidence": "error: too_many_open_requests"
+  },
+  {
+    "battery": "public-create",
+    "name": "nursing: valid public insert passes (money consistency intact)",
+    "pass": true,
+    "evidence": "BH-QN01"
+  },
+  {
+    "battery": "public-create",
+    "name": "nursing: notes > 500 chars rejected",
+    "pass": true,
+    "evidence": "error: notes_too_long"
+  },
+  {
+    "battery": "public-create",
+    "name": "nursing: bad phone rejected",
+    "pass": true,
+    "evidence": "error: bad_phone"
+  },
+  {
+    "battery": "public-create",
+    "name": "nursing: 4th open booking for same phone rejected",
+    "pass": true,
+    "evidence": "error: too_many_open_requests"
+  },
+  {
+    "battery": "public-create",
+    "name": "staff UPDATE path unaffected by insert guards (long internal note ok)",
+    "pass": true,
+    "evidence": "update applied as owner"
+  }
+]

@@ -17,6 +17,7 @@ import {
   MessageCircle,
   ArrowUpRight,
   Bell,
+  PackageSearch,
   Lock as LockIcon,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useRef, useSyncExternalStore } from "react";
@@ -45,6 +46,8 @@ import {
   IconCapsule,
   IconRefill,
   IconRxClipboardDuo,
+  IconHeartPulse,
+  IconBoxes,
 } from "./icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,7 +65,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { uploadRxPrescriptionImage } from "@/lib/supabase";
+import { uploadRxPrescriptionImage, fetchWarehouseByBarcode, type DbWarehouseProduct } from "@/lib/supabase";
 import {
   products,
   getProduct,
@@ -77,7 +80,9 @@ import {
   useT,
   cartCount,
   useSiteInfo,
+  useNow,
 } from "@/lib/bahbah/store";
+import { hourInWindow, NEON_WINDOW } from "@/lib/bahbah/curation";
 import { toast } from "sonner";
 import { fmtPrice, ProductVisual } from "./product-card";
 
@@ -108,6 +113,10 @@ export function Header() {
   const { go, openCatalog, setCartOpen, setSearchOpen, setLoginOpen, stopAdminAlarm, toggleLang, openAccount, setConsultOpen, setInstallAppOpen, setRxOpen } = useBahbah();
   const count = cartCount(cart);
 
+  /* وضع الليل: هيدر الرئيسية فقط، من 00:00 لـ 05:00 — لافتة نيون «صاحيين دلوقتي» */
+  const now = useNow();
+  const night = view === "home" && hourInWindow(now.getHours(), NEON_WINDOW.from, NEON_WINDOW.to);
+
   const navItems: { label: string; onClick: () => void; active: boolean }[] = [
     { label: t("nav.home"), onClick: () => go("home"), active: view === "home" },
     { label: t("nav.catalog"), onClick: () => openCatalog(null), active: view === "catalog" || view === "product" },
@@ -118,7 +127,7 @@ export function Header() {
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-white/90 backdrop-blur-xl shadow-[0_2px_15px_-3px_rgba(11,30,56,0.04)]">
+    <header className={`sticky top-0 z-40 border-b shadow-[0_2px_15px_-3px_rgba(11,30,56,0.04)] ${night ? "bb-night-sky border-white/10 text-white" : "border-border/60 bg-white/90 backdrop-blur-xl"}`}>
       {/* Top micro announcement bar */}
       <div className="hidden border-b border-white/10 bg-[#0B1E38] px-4 py-1.5 text-xs text-white/85 sm:block">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -170,7 +179,7 @@ export function Header() {
             <div className="font-heading text-xl font-black text-[#D97706] md:text-3xl">
               {t("brand.name")}
             </div>
-            <div className="hidden text-xs font-black tracking-widest text-[#184C8A] sm:block">
+            <div className={`hidden text-xs font-black tracking-widest sm:block ${night ? "text-white/70" : "text-[#184C8A]"}`}>
               BAHBAH PHARMACY
             </div>
           </div>
@@ -184,8 +193,12 @@ export function Header() {
               onClick={n.onClick}
               className={`rounded-full px-4 py-2 text-sm font-bold transition-all duration-200 ${
                 n.active
-                  ? "bg-[#184C8A]/10 text-[#184C8A] shadow-sm"
-                  : "text-foreground/75 hover:bg-muted hover:text-foreground active:scale-95"
+                  ? night
+                    ? "bg-white/12 text-white shadow-sm"
+                    : "bg-[#184C8A]/10 text-[#184C8A] shadow-sm"
+                  : night
+                    ? "text-white/80 hover:bg-white/10 hover:text-white active:scale-95"
+                    : "text-foreground/75 hover:bg-muted hover:text-foreground active:scale-95"
               }`}
             >
               {n.label}
@@ -194,7 +207,7 @@ export function Header() {
         </nav>
 
         {/* desktop search */}
-        <div className="group mx-auto hidden h-11 w-full max-w-md items-center justify-between rounded-full border border-border/80 bg-muted/60 px-2.5 text-sm text-muted-foreground shadow-inner transition hover:border-[#184C8A]/40 hover:bg-white hover:shadow-sm md:flex">
+        <div className={`group mx-auto hidden h-11 w-full max-w-md items-center justify-between rounded-full border px-2.5 text-sm shadow-inner transition md:flex ${night ? "border-white/15 bg-white/10 text-white/70 hover:border-amber-300/40 hover:bg-white/15" : "border-border/80 bg-muted/60 text-muted-foreground hover:border-[#184C8A]/40 hover:bg-white hover:shadow-sm"}`}>
           <button
             onClick={() => setSearchOpen(true, false)}
             className="flex flex-1 items-center gap-2.5 truncate text-start ps-1.5"
@@ -229,7 +242,7 @@ export function Header() {
               toggleLang();
               toast.success(lang === "ar" ? "Switched to English" : "تم التبديل للعربية");
             }}
-            className="hidden h-10 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-bold text-foreground/80 transition hover:border-[#184C8A]/50 hover:text-[#184C8A] active:scale-95 sm:flex"
+            className={`hidden h-10 items-center gap-1.5 rounded-full border px-3 text-xs font-bold transition active:scale-95 sm:flex ${night ? "border-white/25 text-white/85 hover:border-amber-300/60 hover:text-amber-200" : "border-border text-foreground/80 hover:border-[#184C8A]/50 hover:text-[#184C8A]"}`}
           >
             <IconGlobe className="size-4" />
             {t("nav.langSwitch")}
@@ -238,7 +251,7 @@ export function Header() {
           {/* favorites (desktop) */}
           <button
             onClick={() => openAccount("favorites")}
-            className="relative hidden size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted hover:text-[#184C8A] active:scale-95 md:grid"
+            className={`relative hidden size-10 place-items-center rounded-full transition active:scale-95 md:grid ${night ? "text-white/85 hover:bg-white/10 hover:text-white" : "text-foreground/70 hover:bg-muted hover:text-[#184C8A]"}`}
             aria-label={t("nav.favorites")}
           >
             <IconHeartLine className="size-5" />
@@ -258,7 +271,7 @@ export function Header() {
                 setLoginOpen(true);
               }
             }}
-            className="flex h-10 items-center gap-1.5 rounded-full border border-[#184C8A]/30 bg-[#184C8A]/5 px-3.5 text-xs font-black text-[#184C8A] transition hover:bg-[#184C8A] hover:text-white active:scale-95 shadow-xs"
+            className={`flex h-10 items-center gap-1.5 rounded-full border px-3.5 text-xs font-black transition active:scale-95 shadow-xs ${night ? "border-white/25 bg-white/10 text-white hover:bg-[#F59E0B] hover:text-[#0B1E38]" : "border-[#184C8A]/30 bg-[#184C8A]/5 text-[#184C8A] hover:bg-[#184C8A] hover:text-white"}`}
             aria-label={t("nav.account")}
           >
             <IconUserRound className="size-4" />
@@ -282,7 +295,7 @@ export function Header() {
           {/* install app (mobile) */}
           <button
             onClick={() => setInstallAppOpen(true)}
-            className="grid size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted active:scale-95 md:hidden"
+            className={`grid size-10 place-items-center rounded-full transition active:scale-95 md:hidden ${night ? "text-white/85 hover:bg-white/10" : "text-foreground/70 hover:bg-muted"}`}
             aria-label={lang === "ar" ? "تثبيت التطبيق" : "Install App"}
           >
             <Smartphone className="size-5 text-emerald-600" />
@@ -291,7 +304,7 @@ export function Header() {
           {/* voice search (mobile) */}
           <button
             onClick={() => setSearchOpen(true, true)}
-            className="grid size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted hover:text-[#EA580C] active:scale-95 md:hidden"
+            className={`grid size-10 place-items-center rounded-full transition active:scale-95 md:hidden ${night ? "text-white/85 hover:bg-white/10 hover:text-[#EA580C]" : "text-foreground/70 hover:bg-muted hover:text-[#EA580C]"}`}
             aria-label="البحث الصوتي"
             title="تحدث بالمايك"
           >
@@ -301,7 +314,7 @@ export function Header() {
           {/* search (mobile) */}
           <button
             onClick={() => setSearchOpen(true, false)}
-            className="grid size-10 place-items-center rounded-full text-foreground/70 transition hover:bg-muted active:scale-95 md:hidden"
+            className={`grid size-10 place-items-center rounded-full transition active:scale-95 md:hidden ${night ? "text-white/85 hover:bg-white/10" : "text-foreground/70 hover:bg-muted"}`}
             aria-label={t("search.title")}
           >
             <IconSearchGlass className="size-5" />
@@ -357,12 +370,27 @@ export function Header() {
       <div className="flex justify-center pb-2 sm:hidden">
         <button
           onClick={toggleLang}
-          className="flex h-8 items-center gap-1.5 rounded-full border border-border px-3 text-[11px] font-bold text-foreground/70"
+          className={`flex h-8 items-center gap-1.5 rounded-full border px-3 text-[11px] font-bold ${night ? "border-white/25 text-white/80" : "border-border text-foreground/70"}`}
         >
           <IconGlobe className="size-3.5" />
           {t("nav.langSwitch")}
         </button>
       </div>
+
+      {/* لافتة النيون الليلية — بتظهر بس في وضع الليل على الرئيسية */}
+      {night && (
+        <div className="flex items-center justify-center gap-3 px-4 pb-3.5 pt-0.5">
+          <span className="bb-crescent shrink-0" aria-hidden="true" />
+          <div className="text-center leading-tight">
+            <div className="bb-neon-sign font-heading text-xl font-black tracking-wide md:text-2xl">
+              {lang === "ar" ? "صاحيين دلوقتي" : "We're awake now"}
+            </div>
+            <div className="mt-0.5 text-[11px] font-bold text-white/75">
+              {lang === "ar" ? "توصيل ٢٤ ساعة — لديروط وقراها" : "24h delivery — Dayrut & its villages"}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
@@ -408,12 +436,19 @@ export function BottomNav() {
       onClick: () => setRxOpen(true),
       active: false,
     },
+    {
+      key: "vitals",
+      label: lang === "ar" ? "قياساتي" : "My Vitals",
+      icon: IconHeartPulse,
+      onClick: () => go("vitals"),
+      active: view === "vitals",
+    },
     { key: "account", label: lang === "ar" ? "الحساب" : "Account", icon: IconUserRound, onClick: () => openAccount("orders"), active: view === "account" || view === "login" || view === "track" },
   ];
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-white/95 pb-safe backdrop-blur-xl shadow-[0_-4px_25px_rgba(11,30,56,0.06)] md:hidden">
-      <div className="grid grid-cols-5 items-center">
+      <div className="grid grid-cols-6 items-center">
         {items.map((it) => (
           <button
             key={it.key}
@@ -471,15 +506,13 @@ export function CartDrawer() {
   const lang = useBahbah((s) => s.lang);
   const cartOpen = useBahbah((s) => s.cartOpen);
   const cart = useBahbah((s) => s.cart);
-  /* عتبة التوصيل المجاني — من لوحة الإدارة */
-  const freeGoal = Math.max(0, useBahbah((s) => s.settings.freeThreshold));
+  /* حملة التوصيل المجاني — من لوحة الإدارة */
+  const campaignOn = useBahbah((s) => s.settings.freeShipCampaignOn);
   const { setCartOpen, setQty, removeFromCart, go } = useBahbah();
 
   const lines = cart.map((c) => ({ ...c, p: getProduct(c.productId)! })).filter((l) => l.p);
   const subtotal = lines.reduce((s, l) => s + l.p.price * l.qty, 0);
-  const threshold = freeGoal > 0 ? freeGoal : Infinity;
-  const shipping = subtotal === 0 || subtotal >= threshold ? 0 : SHIPPING_FEE;
-  const remaining = Math.max(0, (freeGoal || Infinity) - subtotal);
+  const shipping = subtotal === 0 || campaignOn ? 0 : SHIPPING_FEE;
 
   return (
     <Sheet open={cartOpen} onOpenChange={setCartOpen}>
@@ -566,13 +599,9 @@ export function CartDrawer() {
                 <span>{t("cart.total")}</span>
                 <span className="text-[#184C8A]">{fmtPrice(subtotal + shipping, t)}</span>
               </div>
-              {remaining > 0 ? (
-                <p className="rounded-xl bg-[#FFFBEB] px-3 py-2 text-center text-xs font-bold text-[#D97706] ring-1 ring-[#F59E0B]/20">
-                  {t("cart.freeNote").replace("{x}", remaining.toLocaleString("en-US"))}
-                </p>
-              ) : (
+              {campaignOn && (
                 <p className="rounded-xl bg-[#ECFDF5] px-3 py-2 text-center text-xs font-bold text-[#059669] ring-1 ring-[#10B981]/20">
-                  {t("cart.freeDone")}
+                  {t("cart.campaignFree")}
                 </p>
               )}
               <Button
@@ -834,6 +863,26 @@ export function SearchDialog() {
   const [audioLevel, setAudioLevel] = useState(0);
 
   const addToCart = useBahbah((s) => s.addToCart);
+
+  /* بحث بالباركود في مخزن الصيدلية (warehouse_products) */
+  const [whHit, setWhHit] = useState<DbWarehouseProduct | null>(null);
+  useEffect(() => {
+    const v = q.trim();
+    if (!/^\d{6,}$/.test(v)) {
+      setWhHit(null);
+      return;
+    }
+    let live = true;
+    const id = setTimeout(() => {
+      fetchWarehouseByBarcode(v).then((r) => {
+        if (live) setWhHit(r);
+      });
+    }, 350);
+    return () => {
+      live = false;
+      clearTimeout(id);
+    };
+  }, [q]);
 
   /* Web Speech API in Egyptian Dialect */
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -1192,6 +1241,31 @@ export function SearchDialog() {
 
         {/* Dialog Body */}
         <div className="nice-scrollbar max-h-[50vh] overflow-y-auto px-5 pb-5">
+          {/* نتيجة الباركود من مخزن الصيدلية */}
+          {whHit && (
+            <div className="mb-3 rounded-2xl border border-[#2E9E6B]/30 bg-[#EAF6F1]/70 p-3.5">
+              <p className="flex items-center gap-1.5 text-[11px] font-black text-[#2E9E6B]">
+                <IconBoxes className="size-3.5" />
+                {lang === "ar" ? "نتيجة الباركود — مخزن الصيدلية" : "Barcode result — pharmacy warehouse"}
+              </p>
+              <p className="mt-1.5 font-heading text-sm font-black">
+                {lang === "ar" ? whHit.name_ar || whHit.name_en : whHit.name_en || whHit.name_ar}
+              </p>
+              <p className="mt-0.5 text-xs font-bold text-muted-foreground">
+                {whHit.sale_price != null ? `${whHit.sale_price} ${lang === "ar" ? "ج.م" : "EGP"}` : ""}
+                {whHit.form ? ` · ${whHit.form}` : ""}
+                {" · "}
+                {(whHit.stock_boxes ?? 0) > 0
+                  ? lang === "ar"
+                    ? `متوفر: ${whHit.stock_boxes} علبة`
+                    : `In stock: ${whHit.stock_boxes} boxes`
+                  : lang === "ar"
+                    ? "غير متوفر حالياً في المخزن"
+                    : "Out of warehouse stock"}
+              </p>
+            </div>
+          )}
+
           {!q.trim() && (
             <div>
               <p className="mb-2 text-xs font-bold text-muted-foreground">
@@ -1377,23 +1451,26 @@ export function RxDialog() {
                 return;
               }
               setUploading(true);
-              let publicUrl: string | null = null;
+              let photoPath: string | null = null;
               if (fileObj) {
                 try {
-                  publicUrl = await uploadRxPrescriptionImage(fileObj);
+                  photoPath = await uploadRxPrescriptionImage(fileObj);
                 } catch (e) {
                   console.warn("Prescription upload error:", e);
                 }
               }
 
-              /* push into the pharmacist review queue (visible in the dashboard & Supabase) */
-              useBahbah.getState().submitRx({
-                fileName: publicUrl || file,
+              /* push into the pharmacist review queue (visible in the dashboard & Supabase) —
+                 النجاح بيظهر بس لو الروشتة اتكتبت على السيرفر فعلًا،
+                 والفشل بيورّي تنبيهه من المتجر وبيخلي النافذة مفتوحة */
+              const sent = await useBahbah.getState().submitRx({
+                fileName: photoPath || file,
                 phone,
                 noteAr: notes,
                 noteEn: notes,
               });
               setUploading(false);
+              if (!sent) return;
               setRxOpen(false);
               setFile(null);
               setFileObj(null);
@@ -1422,6 +1499,299 @@ export function RxDialog() {
               كود المرجع: <span dir="ltr" className="font-black text-[#1E4E8F]">{refCode}</span>
             </p>
           )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Shortage request dialog — «طلب ناقص»                                */
+/* اسم يدوي / مسح باركود / صورة العلبة — بيتسجل في السيرفر الأول       */
+/* بكود BH-XXXX وبعدين واتساب يفتح (نفس نمط الطلب السريع)              */
+/* ------------------------------------------------------------------ */
+type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => {
+  detect: (src: HTMLVideoElement) => Promise<{ rawValue?: string }[]>;
+};
+
+export function ShortageDialog() {
+  const t = useT();
+  const lang = useBahbah((s) => s.lang);
+  const open = useBahbah((s) => s.shortageOpen);
+  const setShortageOpen = useBahbah((s) => s.setShortageOpen);
+  const prefill = useBahbah((s) => s.shortagePrefill);
+  const user = useBahbah((s) => s.user);
+  const createShortageRequest = useBahbah((s) => s.createShortageRequest);
+
+  const [itemName, setItemName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [custName, setCustName] = useState("");
+  const [barcode, setBarcode] = useState("");
+  const [foundNote, setFoundNote] = useState<string | null>(null);
+  const [file, setFile] = useState<string | null>(null);
+  const [fileObj, setFileObj] = useState<File | null>(null);
+  const [scanning, setScanning] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  /* تهيئة الحقول من التعبئة المسبقة (زرار «طلب» على صنف ناقص) أو بيانات الحساب */
+  useEffect(() => {
+    if (open) {
+      setItemName(prefill?.itemName || "");
+      setBarcode(prefill?.barcode || "");
+      setPhone(user?.phone || "");
+      setCustName(user?.name || "");
+      setFoundNote(null);
+      setFile(null);
+      setFileObj(null);
+    } else {
+      setScanning(false);
+    }
+  }, [open ]);
+
+  const stopScan = () => {
+    streamRef.current?.getTracks().forEach((tr) => tr.stop());
+    streamRef.current = null;
+    setScanning(false);
+  };
+
+  /* مسح الباركود بالكاميرا (BarcodeDetector) — الصورة مش بتتخزن، الرقم بس */
+  useEffect(() => {
+    if (!scanning) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    (async () => {
+      const BD = (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
+      if (!BD || !navigator.mediaDevices?.getUserMedia) {
+        toast.error(
+          lang === "ar"
+            ? "المسح بالكاميرا مش متاح على الجهاز ده — اكتب رقم الباركود يدويًا"
+            : "Camera scanning isn't available on this device — type the barcode instead"
+        );
+        setScanning(false);
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((tr) => tr.stop());
+          return;
+        }
+        streamRef.current = stream;
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = stream;
+          await video.play().catch(() => undefined);
+        }
+        const detector = new BD();
+        timer = setInterval(async () => {
+          if (cancelled || !videoRef.current) return;
+          try {
+            const codes = await detector.detect(videoRef.current);
+            const raw = codes?.[0]?.rawValue;
+            if (raw) {
+              setBarcode(raw);
+              stopScan();
+            }
+          } catch {
+            /* لسه بيحاول */
+          }
+        }, 400);
+      } catch {
+        toast.error(lang === "ar" ? "تعذر فتح الكاميرا" : "Couldn't open the camera");
+        setScanning(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+    };
+  }, [scanning]);
+
+  /* مطابقة الباركود مع مخزن الصيدلية — تعبئة الاسم تلقائيًا لو لقيناه */
+  useEffect(() => {
+    const bc = barcode.trim();
+    if (bc.length < 6) {
+      setFoundNote(null);
+      return;
+    }
+    let live = true;
+    const h = setTimeout(async () => {
+      const row = await fetchWarehouseByBarcode(bc);
+      if (!live) return;
+      if (row) {
+        const nm = (lang === "ar" ? row.name_ar || row.name_en : row.name_en || row.name_ar) || "";
+        if (nm) setItemName((prev) => prev || nm);
+        setFoundNote(
+          lang === "ar"
+            ? `لقينا الباركود ده في مخزن الصيدلية: ${nm || bc}`
+            : `Found in the pharmacy warehouse: ${nm || bc}`
+        );
+      } else {
+        setFoundNote(null);
+      }
+    }, 500);
+    return () => {
+      live = false;
+      clearTimeout(h);
+    };
+  }, [barcode]);
+
+  const submit = async () => {
+    if (submitting) return;
+    if (!phone.trim()) {
+      toast.error(lang === "ar" ? "من فضلك اكتب رقم الموبايل عشان نعرف نرد عليك" : "Please enter your mobile number so we can reply");
+      return;
+    }
+    if (!itemName.trim() && !fileObj && !barcode.trim()) {
+      toast.error(
+        lang === "ar"
+          ? "اكتب اسم الدواء، أو امسح الباركود، أو ارفع صورة العلبة"
+          : "Type the medicine name, scan the barcode, or upload a photo of the box"
+      );
+      return;
+    }
+    setSubmitting(true);
+    let photoPath: string | null = null;
+    if (fileObj) {
+      try {
+        photoPath = await uploadRxPrescriptionImage(fileObj);
+      } catch (e) {
+        console.warn("Shortage photo upload error:", e);
+      }
+    }
+    const source = prefill?.source ?? (fileObj ? "photo" : barcode.trim() ? "barcode" : "manual");
+    const code = await createShortageRequest({
+      itemName: itemName.trim() || (lang === "ar" ? "صورة علبة/روشتة" : "Box/prescription photo"),
+      barcode: barcode.trim() || undefined,
+      photoUrl: photoPath || undefined,
+      source,
+      phone: phone.trim(),
+      name: custName.trim(),
+    });
+    setSubmitting(false);
+    if (!code) {
+      toast.error(
+        lang === "ar"
+          ? "تعذر تسجيل طلب الناقص دلوقتي — حاول تاني بعد لحظات"
+          : "Couldn't log the shortage request — please try again in a moment"
+      );
+      return;
+    }
+    stopScan();
+    setShortageOpen(false);
+    toast.success(
+      lang === "ar" ? `اتسجل طلب الناقص بكود ${code} — هنرد عليك أول ما يتوفر` : `Shortage request logged with code ${code}`
+    );
+    const msg =
+      lang === "ar"
+        ? `السلام عليكم صيدلية بحبح، بدوّر على دواء ناقص:\n- ${itemName.trim() || "صورة علبة/روشتة مرفقة في الطلب"}\nكود طلب الناقص: ${code}\nرقمي: ${phone.trim()}`
+        : `Hello Bahbah Pharmacy, I'm looking for a missing medicine:\n- ${itemName.trim() || "Box/prescription photo attached in the request"}\nShortage request code: ${code}\nMy number: ${phone.trim()}`;
+    window.open(`https://wa.me/${WASLY.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) stopScan(); setShortageOpen(v); }}>
+      <DialogContent aria-describedby={undefined} className="max-w-md rounded-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-heading text-lg font-black">
+            <span className="grid size-9 place-items-center rounded-full bg-[#FFF4E5]">
+              <PackageSearch className="size-4.5 text-[#C56A0A]" />
+            </span>
+            {lang === "ar" ? "طلب ناقص" : "Request a missing item"}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {lang === "ar"
+            ? "الدواء مش لاقيه عندنا؟ اكتب اسمه، أو امسح باركود العلبة، أو صوّر العلبة/الروشتة — وهنسجّل طلبك بكود ونرد عليك أول ما يتوفر."
+            : "Can't find a medicine? Type its name, scan the box barcode, or upload a photo — we'll log your request with a code and reply as soon as it's available."}
+        </p>
+        <div className="space-y-3">
+          <Input
+            value={itemName}
+            onChange={(e) => setItemName(e.target.value)}
+            placeholder={lang === "ar" ? "اسم الدواء الناقص" : "Missing medicine name"}
+            className="h-11 rounded-xl"
+          />
+          <div className="flex gap-2">
+            <Input
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder={lang === "ar" ? "رقم الباركود (اختياري)" : "Barcode number (optional)"}
+              inputMode="numeric"
+              dir="ltr"
+              className="h-11 flex-1 rounded-xl text-left"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 shrink-0 rounded-xl font-black text-[#184C8A]"
+              onClick={() => (scanning ? stopScan() : setScanning(true))}
+            >
+              <Camera className="size-4" />
+              {scanning ? (lang === "ar" ? "إيقاف" : "Stop") : lang === "ar" ? "مسح بالكاميرا" : "Scan"}
+            </Button>
+          </div>
+          {scanning && (
+            <div className="overflow-hidden rounded-2xl border border-border bg-black/90">
+              <video ref={videoRef} playsInline muted className="h-44 w-full object-cover" />
+              <p className="py-1.5 text-center text-[11px] font-bold text-white/80">
+                {lang === "ar" ? "قرّب باركود العلبة من الكاميرا…" : "Hold the box barcode up to the camera…"}
+              </p>
+            </div>
+          )}
+          {foundNote && (
+            <p className="flex items-center gap-1.5 rounded-xl bg-[#EAF6F1] px-3 py-2 text-xs font-bold text-[#2E9E6B]">
+              <IconShieldCheck className="size-3.5" /> {foundNote}
+            </p>
+          )}
+          <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-2xl border-2 border-dashed border-[#1E4E8F]/30 bg-[#EAF1F9]/50 p-4 text-center transition hover:border-[#1E4E8F]/60">
+            <IconRxSheet className="size-6 text-[#1E4E8F]" />
+            <span className="text-sm font-bold text-[#1E4E8F]">
+              {lang === "ar" ? "أو ارفع صورة العلبة / الروشتة" : "Or upload a photo of the box / prescription"}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) {
+                  setFile(f.name);
+                  setFileObj(f);
+                }
+              }}
+            />
+            {file && (
+              <span className="flex items-center gap-1 text-xs font-bold text-[#2E9E6B]">
+                <IconShieldCheck className="size-3.5" /> {file}
+              </span>
+            )}
+          </label>
+          <Input
+            value={custName}
+            onChange={(e) => setCustName(e.target.value)}
+            placeholder={lang === "ar" ? "اسمك (اختياري)" : "Your name (optional)"}
+            className="h-11 rounded-xl"
+          />
+          <Input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder={lang === "ar" ? "رقم الموبايل — عشان نرد عليك لما يتوفر" : "Mobile number — so we can reply when available"}
+            inputMode="tel"
+            className="h-11 rounded-xl"
+          />
+          <Button className="h-12 w-full rounded-full text-base font-bold" disabled={submitting} onClick={submit}>
+            {submitting ? (lang === "ar" ? "جاري التسجيل..." : "Logging...") : lang === "ar" ? "سجّل الطلب وابعته واتساب" : "Log request & send via WhatsApp"}
+          </Button>
+          <p className="text-center text-[11px] font-bold text-muted-foreground">
+            {lang === "ar"
+              ? "الطلب بيتسجل عندنا الأول بكود تتبع، وبعدين واتساب بيفتح بالكود."
+              : "Your request is logged with a tracking code first, then WhatsApp opens with the code."}
+          </p>
         </div>
       </DialogContent>
     </Dialog>

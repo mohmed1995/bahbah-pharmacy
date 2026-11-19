@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import type { Product } from "@/lib/bahbah/data";
-import type { DictKey } from "@/lib/bahbah/store";
+import { useBahbah, type DictKey } from "@/lib/bahbah/store";
 import { IconArrowUp, IconArrowDown, IconArrowUpDown } from "./icons";
 
 /* shared building blocks for the admin dashboard */
@@ -149,6 +151,7 @@ export function sortRows<T>(rows: T[], sort: ColSort, val: (row: T) => string | 
 export function StatusBadge({ status, t }: { status: string; t: (k: DictKey) => string }) {
   const meta: Record<string, { label: DictKey; cls: string }> = {
     pending: { label: "admin.stPending", cls: "bg-[#FFF4E5] text-[#B45E0A]" },
+    ready: { label: "admin.stReady", cls: "bg-[#EAF6F1] text-[#2E9E6B]" },
     shipping: { label: "admin.stShipping", cls: "bg-[#EAF1F9] text-[#1E4E8F]" },
     delivered: { label: "admin.stDelivered", cls: "bg-[#EAF6F1] text-[#2E9E6B]" },
     cancelled: { label: "admin.stCancelled", cls: "bg-[#DC4B4B]/10 text-[#DC4B4B]" },
@@ -185,6 +188,85 @@ export function TableWrap({ children }: { children: ReactNode }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
       <div className="nice-scrollbar overflow-x-auto">{children}</div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* شريط حالة مزامنة لوحة الأداء: بيخلي تحميل المؤشرات صادق —          */
+/* تحميل باين، فشل باين مع إعادة محاولة، وزر تحديث يدوي حقيقي.        */
+/* قبل كده فشل جلب الطلبات كان بيتلوج في الكونسول بس واللوحة بتفضل    */
+/* عارضة أرقام قديمة من التخزين المحلي كأنها حية.                     */
+/* ------------------------------------------------------------------ */
+export function DashboardSyncBar() {
+  const lang = useBahbah((s) => s.lang);
+  const status = useBahbah((s) => s.dashSyncStatus);
+  const error = useBahbah((s) => s.dashSyncError);
+  const lastSyncAt = useBahbah((s) => s.lastSyncAt);
+  const refreshDashboardData = useBahbah((s) => s.refreshDashboardData);
+  const ar = lang === "ar";
+  const loading = status === "loading";
+
+  const onRefresh = async () => {
+    const ok = await refreshDashboardData();
+    if (ok) {
+      toast.success(ar ? "تم تحديث بيانات الأداء من السيرفر ✓" : "Dashboard data refreshed from server ✓");
+    } else if (useBahbah.getState().dashSyncStatus === "error") {
+      toast.error(ar ? "تعذّر تحديث بيانات الأداء — حاول مرة أخرى" : "Could not refresh dashboard data — try again");
+    }
+  };
+
+  const refreshBtn = (
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-8 shrink-0 rounded-full px-3.5 text-xs font-bold"
+      disabled={loading}
+      onClick={onRefresh}
+    >
+      <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+      {ar ? "تحديث" : "Refresh"}
+    </Button>
+  );
+
+  if (status === "error") {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#DC4B4B]/40 bg-[#DC4B4B]/5 px-4 py-3">
+        <AlertTriangle className="size-4.5 shrink-0 text-[#DC4B4B]" />
+        <p className="min-w-0 flex-1 text-xs font-bold leading-relaxed text-[#B3373A]">
+          {ar
+            ? "تعذّرت مزامنة بيانات الأداء من السيرفر — الأرقام المعروضة قد تكون قديمة."
+            : "Dashboard data could not be synced from the server — figures shown may be stale."}
+          {error ? <span className="block font-semibold opacity-80" dir="ltr">{error}</span> : null}
+        </p>
+        {refreshBtn}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 px-1">
+      {loading ? (
+        <p className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+          <Loader2 className="size-4 animate-spin text-[#1E4E8F]" />
+          {ar ? "جارٍ تحميل بيانات الأداء من السيرفر…" : "Loading dashboard data from the server…"}
+        </p>
+      ) : (
+        <p className="text-[11px] font-bold text-muted-foreground">
+          {ar ? "آخر مزامنة: " : "Last synced: "}
+          {lastSyncAt
+            ? new Date(lastSyncAt).toLocaleString(ar ? "ar-EG" : "en-US", {
+                day: "numeric",
+                month: "short",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : ar
+              ? "لم تتم بعد في هذه الجلسة"
+              : "Not yet this session"}
+        </p>
+      )}
+      <span className="ms-auto">{refreshBtn}</span>
     </div>
   );
 }

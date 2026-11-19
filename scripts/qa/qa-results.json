@@ -1,0 +1,486 @@
+{
+  "at": "2026-11-19T13:27:10.696Z",
+  "chainBroken": false,
+  "byBattery": {
+    "migration": {
+      "pass": 25,
+      "fail": 0
+    },
+    "money": {
+      "pass": 24,
+      "fail": 0
+    },
+    "idempotency": {
+      "pass": 7,
+      "fail": 0
+    },
+    "roles": {
+      "pass": 21,
+      "fail": 0
+    }
+  },
+  "results": [
+    {
+      "battery": "migration",
+      "name": "platform stubs + pre-existing-table stand-ins created",
+      "pass": true,
+      "evidence": "auth schema/jwt/uid, roles, publication, orders/rx/care/measurements stand-ins (chain has no CREATE TABLE for these four — D10)"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: security.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: commerce.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: commerce-seed.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-whatsapp-orders.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: WAREHOUSE_SEED_DDL",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-warehouse-sync.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-shortage-requests.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-portals-permissions.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-collections-addresses.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-free-shipping-campaign.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-loyalty-points.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-nursing-services.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-security-layer1.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-wiring-fixes.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-loyalty-quota.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order retains campaign check",
+      "pass": true,
+      "evidence": "pg_proc source of winning place_order"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order retains loyalty card logic",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order contains quota gate + consumption",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order retains discreet packaging + lat/lng",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final has_permission includes nursing in pharmacist defaults",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final guard_order_update knows the ready step",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "get_public_settings returns every settings key the client reads",
+      "pass": true,
+      "evidence": "19 keys returned; missing: none"
+    },
+    {
+      "battery": "migration",
+      "name": "RLS enabled on every public table",
+      "pass": true,
+      "evidence": "all tables row-secured"
+    },
+    {
+      "battery": "money",
+      "name": "S1 plain order, zone fee 20",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-001\",\"total\":220,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S2 slot premium +15",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-002\",\"total\":235,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":35}"
+    },
+    {
+      "battery": "money",
+      "name": "S3 pickup = no fee",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-003\",\"total\":200,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":0}"
+    },
+    {
+      "battery": "money",
+      "name": "S4 coupon 10% at min-total 200",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-004\",\"total\":200,\"discount\":20,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S5 coupon below min-total = no discount",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-005\",\"total\":120,\"discount\":0,\"subtotal\":100,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S6 discount rounding via 10% card (min 0): round(15.5) = 16",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-006\",\"total\":159,\"discount\":16,\"subtotal\":155,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S7a campaign ON: zone fee 0, slot premium kept",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-007\",\"total\":215,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":15}"
+    },
+    {
+      "battery": "money",
+      "name": "S7b campaign ON, no slot: fee 0",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-008\",\"total\":200,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":0}"
+    },
+    {
+      "battery": "money",
+      "name": "S8 loyalty card valid: 10% off, no min-total",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-009\",\"total\":200,\"discount\":20,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S8b card marked used exactly once, bound to the order",
+      "pass": true,
+      "evidence": "{\"status\":\"used\",\"used_order_id\":\"QA-ORD-009\"}"
+    },
+    {
+      "battery": "money",
+      "name": "S9 used card gives no discount on second order",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-010\",\"total\":220,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S10 someone else's card code gives no discount",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-011\",\"total\":220,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S11 top-tier: zone fee waived from quota",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-012\",\"total\":200,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":0}"
+    },
+    {
+      "battery": "idempotency",
+      "name": "S11b quota consumption recorded once",
+      "pass": true,
+      "evidence": "rows=1"
+    },
+    {
+      "battery": "idempotency",
+      "name": "S11c duplicate place_order: duplicate flag, no second quota burn, no second order",
+      "pass": true,
+      "evidence": "dup={\"id\":\"QA-ORD-012\",\"total\":200,\"discount\":0,\"subtotal\":200,\"duplicate\":true,\"delivery_fee\":0} used=1"
+    },
+    {
+      "battery": "money",
+      "name": "S12a quota=1: first order free",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-013\",\"total\":200,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":0}"
+    },
+    {
+      "battery": "money",
+      "name": "S12b quota exhausted: full zone fee returns",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-014\",\"total\":220,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "money",
+      "name": "S13 active monthly-care member: fee waived (quota)",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-ORD-015\",\"total\":200,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":0}"
+    },
+    {
+      "battery": "money",
+      "name": "S14 campaign ON + loyalty eligible: fee 0 and quota NOT consumed",
+      "pass": true,
+      "evidence": "fee=0 used 1->1"
+    },
+    {
+      "battery": "money",
+      "name": "S15 earn on delivery: floor(220 / 10) = 22 points",
+      "pass": true,
+      "evidence": "balance=22"
+    },
+    {
+      "battery": "idempotency",
+      "name": "S15b earn is exactly-once across re-delivery (trigger + deterministic ledger id)",
+      "pass": true,
+      "evidence": "balance=22 earnRows=1"
+    },
+    {
+      "battery": "money",
+      "name": "S16a order qty 6 > stock 5 rejected",
+      "pass": true,
+      "evidence": "error: out_of_stock:QA-P2"
+    },
+    {
+      "battery": "money",
+      "name": "S16b stock decremented server-side 5 -> 0",
+      "pass": true,
+      "evidence": "stock=0 total=270"
+    },
+    {
+      "battery": "money",
+      "name": "S16c next order now out of stock",
+      "pass": true,
+      "evidence": "error: out_of_stock:QA-P2"
+    },
+    {
+      "battery": "idempotency",
+      "name": "S17 double-submit same order id: one order, stock decremented once",
+      "pass": true,
+      "evidence": "dup=true orders=1 stock=8"
+    },
+    {
+      "battery": "idempotency",
+      "name": "S18 welcome 50 points granted exactly once across retries",
+      "pass": true,
+      "evidence": "first=50 retry=50 ledgerRows=1"
+    },
+    {
+      "battery": "money",
+      "name": "S18b ensure_loyalty reports quota state (quota 4, used 0, remaining 4)",
+      "pass": true,
+      "evidence": "{\"q\":4,\"u\":0,\"r\":4}"
+    },
+    {
+      "battery": "roles",
+      "name": "patient: cannot read orders table directly (tracking via RPC only)",
+      "pass": true,
+      "evidence": "rows=0"
+    },
+    {
+      "battery": "roles",
+      "name": "patient: cannot update any order",
+      "pass": true,
+      "evidence": "updated=0"
+    },
+    {
+      "battery": "roles",
+      "name": "patient: has_permission('orders') = false",
+      "pass": true,
+      "evidence": "=false"
+    },
+    {
+      "battery": "roles",
+      "name": "patient: CAN create a whatsapp order in initial status 'sent'",
+      "pass": true,
+      "evidence": "insert ok"
+    },
+    {
+      "battery": "roles",
+      "name": "patient: cannot create whatsapp order pre-converted",
+      "pass": true,
+      "evidence": "error: new row violates row-level security policy for table \"whatsapp_orders\""
+    },
+    {
+      "battery": "roles",
+      "name": "courier: blind to whatsapp/rx/measurements/collections queues (layer-1 gates)",
+      "pass": true,
+      "evidence": "wa=0 rx=0 meas=0 col=0"
+    },
+    {
+      "battery": "roles",
+      "name": "courier: has_permission orders=true, finances=false",
+      "pass": true,
+      "evidence": "orders=true finances=false"
+    },
+    {
+      "battery": "roles",
+      "name": "courier: cannot mark order ready (pharmacist step)",
+      "pass": true,
+      "evidence": "error: courier_transition_forbidden"
+    },
+    {
+      "battery": "roles",
+      "name": "courier: CAN pick up own order (pending -> shipping)",
+      "pass": true,
+      "evidence": "update accepted (staff select sees own queue)"
+    },
+    {
+      "battery": "roles",
+      "name": "courier: cannot touch order money fields",
+      "pass": true,
+      "evidence": "error: courier_field_forbidden"
+    },
+    {
+      "battery": "roles",
+      "name": "pharmacist: reads whatsapp queue, blind to collections (no finances)",
+      "pass": true,
+      "evidence": "wa=2 col=0"
+    },
+    {
+      "battery": "roles",
+      "name": "pharmacist defaults: finances=false, nursing=true, settings=false",
+      "pass": true,
+      "evidence": "fin=false nur=true set=false"
+    },
+    {
+      "battery": "roles",
+      "name": "pharmacist: admin_settings UPDATE blocked by RLS (admin-only policy) — known finding D2",
+      "pass": true,
+      "evidence": "updated=0"
+    },
+    {
+      "battery": "roles",
+      "name": "pharmacist: admin_set_price allowed via 'medicines' permission (definer RPC)",
+      "pass": true,
+      "evidence": "{\"id\":\"QA-P1\",\"price\":100}"
+    },
+    {
+      "battery": "roles",
+      "name": "pharmacist: cannot cancel a ready/shipping order",
+      "pass": true,
+      "evidence": "error: pharmacist_transition_forbidden"
+    },
+    {
+      "battery": "roles",
+      "name": "pharmacist: cannot edit order money fields",
+      "pass": true,
+      "evidence": "error: pharmacist_field_forbidden"
+    },
+    {
+      "battery": "roles",
+      "name": "admin: has_permission always true; settings write allowed",
+      "pass": true,
+      "evidence": "fin=true updated=1"
+    },
+    {
+      "battery": "idempotency",
+      "name": "collection: courier records cash collection COL-<orderId>",
+      "pass": true,
+      "evidence": "insert ok"
+    },
+    {
+      "battery": "idempotency",
+      "name": "collection: duplicate COL-<orderId> rejected (PK)",
+      "pass": true,
+      "evidence": "error: duplicate key value violates unique constraint \"courier_collections_pkey\""
+    },
+    {
+      "battery": "money",
+      "name": "collection: wallet without from/to rejected by CHECK",
+      "pass": true,
+      "evidence": "error: new row for relation \"courier_collections\" violates check constraint \"courier_collections_wallet_fields\""
+    },
+    {
+      "battery": "money",
+      "name": "collection: wallet with from/to accepted, amount recorded verbatim",
+      "pass": true,
+      "evidence": "insert ok"
+    },
+    {
+      "battery": "roles",
+      "name": "admin (finances): reads collections ledger",
+      "pass": true,
+      "evidence": "rows=2"
+    },
+    {
+      "battery": "roles",
+      "name": "anon nursing booking: total != price+fee rejected",
+      "pass": true,
+      "evidence": "error: new row violates row-level security policy for table \"nursing_requests\""
+    },
+    {
+      "battery": "roles",
+      "name": "anon nursing booking: consistent totals accepted",
+      "pass": true,
+      "evidence": "insert ok"
+    },
+    {
+      "battery": "roles",
+      "name": "patient measurements reachable only via personal-code RPC",
+      "pass": true,
+      "evidence": "rpc rows=1"
+    }
+  ]
+}

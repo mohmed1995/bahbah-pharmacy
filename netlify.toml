@@ -1,0 +1,7 @@
+# Bahbah Pharmacy — Netlify build config
+# The app is a Next.js static export (output: "export" in next.config.ts),
+# so the real output folder is out/ — NOT .next/. This file overrides the
+# site's UI build settings so every deploy publishes the right folder.
+[build]
+  command = "npm run build"
+  publish = "out"

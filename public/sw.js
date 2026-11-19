@@ -3,7 +3,10 @@
  * Page shell: network-first with offline fallback.
  * Static assets (images, JS, CSS): cache-first, refreshed in background.
  */
-const VERSION = "bahbah-v3";
+/* IMPORTANT: bump VERSION on EVERY deploy. Cache invalidation is manual —
+   if this string does not change, returning visitors keep the old caches
+   (old assets, and product images are served under fixed unhashed names). */
+const VERSION = "bahbah-v5";
 const CORE_CACHE = `${VERSION}-core`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
@@ -58,8 +61,12 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CORE_CACHE).then((c) => c.put(req, copy));
+          /* ما نخزّنش غير الردود السليمة — صفحة 404/500 لو اتكاشت هتتعرض
+             أوفلاين كأنها الصفحة الحقيقية */
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CORE_CACHE).then((c) => c.put(req, copy));
+          }
           return res;
         })
         .catch(() =>
@@ -88,8 +95,10 @@ self.addEventListener("fetch", (event) => {
       caches.match(req).then((hit) => {
         const fetching = fetch(req)
           .then((res) => {
-            const copy = res.clone();
-            caches.open(ASSET_CACHE).then((c) => c.put(req, copy));
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(ASSET_CACHE).then((c) => c.put(req, copy));
+            }
             return res;
           })
           .catch(() => hit);

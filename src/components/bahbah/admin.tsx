@@ -19,6 +19,7 @@ import {
   Volume2,
   Bell,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import {
   AreaChart,
@@ -39,7 +40,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { LockKeyhole, LogOut } from "lucide-react";
+import { LockKeyhole, LogOut, ClipboardList, DatabaseBackup } from "lucide-react";
 import {
   categories,
   salesData,
@@ -47,13 +48,20 @@ import {
   driverById,
   carePlans,
   deliveryZones,
+  DEFAULT_LOYALTY_TIERS,
+  DEFAULT_LOYALTY_FREE_SHIP_QUOTA,
+  type LoyaltyPerk,
+  type LoyaltyTier,
 } from "@/lib/bahbah/data";
 import {
   useBahbah,
   useT,
   useAdminProducts,
+  useDemoActive,
   playOrderChime,
+  hasPermission,
   type AdminSection,
+  type PermissionKey,
 } from "@/lib/bahbah/store";
 import { fmtPrice } from "./product-card";
 import {
@@ -75,11 +83,24 @@ import {
   KpiCard,
   PIE_COLORS,
   daysUntil,
+  DashboardSyncBar,
 } from "./admin-ui";
 import { OrdersSection, ProductsSection, InventorySection } from "./admin-ops";
 import { DeliverySection } from "./admin-delivery";
-import { CustomersSection, ReportsSection } from "./admin-insights";
+import {
+  CustomersSection,
+  ReportsSection,
+  DemoModeBanner,
+  monthlySeriesFromOrders,
+  weeklySeriesFromOrders,
+  categoryShareFromOrders,
+} from "./admin-insights";
 import { PrescriptionsSection } from "./admin-rx";
+import { StaffPermissionsSection } from "./admin-staff";
+import { CollectionsSection } from "./admin-collections";
+import { DailyReportSection } from "./admin-daily";
+import { BackupArchiveSection } from "./admin-backup";
+import { NursingPricesCard } from "./admin-nursing";
 import { CouponsSection, AdsSection, CareAdminSection, VitalsAdminSection, MaintenanceSection } from "./admin-extra";
 import { toast } from "sonner";
 
@@ -147,22 +168,38 @@ export default function AdminView() {
     toast.success(t("adm.gate.locked"));
   };
 
-  const nav: { key: AdminSection; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { key: "overview", label: t("admin.overview"), icon: IconChartUp },
-    { key: "orders", label: t("admin.orders"), icon: ShoppingCart },
-    { key: "prescriptions", label: t("adm.rx.title"), icon: IconRxClipboard },
-    { key: "products", label: t("admin.products"), icon: IconCapsule },
-    { key: "inventory", label: t("adm.inventory"), icon: IconBoxes },
-    { key: "delivery", label: t("adm.delivery"), icon: IconScooter },
-    { key: "care", label: t("adm.care"), icon: IconRefill },
-    { key: "vitals", label: lang === "ar" ? "قياسات المرضى" : "Vitals", icon: IconHeartPulse },
-    { key: "coupons", label: t("adm.coupons"), icon: Ticket },
-    { key: "ads", label: t("adm.ads"), icon: Megaphone },
-    { key: "customers", label: t("admin.customers"), icon: Users },
-    { key: "reports", label: t("adm.reports"), icon: BarChart3 },
-    { key: "maintenance", label: t("adm.maintenance"), icon: Wrench },
-    { key: "settings", label: t("adm.settings"), icon: SettingsIcon },
+  const sessionRole = useBahbah((s) => s.sessionRole);
+  const staffPermissions = useBahbah((s) => s.staffPermissions);
+  const can = (k: PermissionKey) => hasPermission({ sessionRole, staffPermissions }, k);
+
+  const allNav: {
+    key: AdminSection;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    perm: PermissionKey;
+  }[] = [
+    { key: "overview", label: t("admin.overview"), icon: IconChartUp, perm: "finances" },
+    { key: "orders", label: t("admin.orders"), icon: ShoppingCart, perm: "orders" },
+    { key: "prescriptions", label: t("adm.rx.title"), icon: IconRxClipboard, perm: "prescriptions" },
+    { key: "products", label: t("admin.products"), icon: IconCapsule, perm: "medicines" },
+    { key: "inventory", label: t("adm.inventory"), icon: IconBoxes, perm: "medicines" },
+    { key: "delivery", label: t("adm.delivery"), icon: IconScooter, perm: "orders" },
+    { key: "collections", label: lang === "ar" ? "التوريد والتحصيل" : "Collections", icon: Wallet, perm: "finances" },
+    { key: "care", label: t("adm.care"), icon: IconRefill, perm: "orders" },
+    { key: "vitals", label: lang === "ar" ? "قياسات المرضى" : "Vitals", icon: IconHeartPulse, perm: "measurements" },
+    { key: "coupons", label: t("adm.coupons"), icon: Ticket, perm: "settings" },
+    { key: "ads", label: t("adm.ads"), icon: Megaphone, perm: "settings" },
+    { key: "customers", label: t("admin.customers"), icon: Users, perm: "orders" },
+    { key: "reports", label: t("adm.reports"), icon: BarChart3, perm: "finances" },
+    { key: "daily", label: lang === "ar" ? "التقرير اليومي" : "Daily Report", icon: ClipboardList, perm: "finances" },
+    { key: "backup", label: lang === "ar" ? "النسخ الاحتياطي والأرشفة" : "Backup & Archive", icon: DatabaseBackup, perm: "finances" },
+    { key: "maintenance", label: t("adm.maintenance"), icon: Wrench, perm: "settings" },
+    { key: "staff", label: lang === "ar" ? "الطاقم والصلاحيات" : "Staff & Permissions", icon: ShieldCheck, perm: "staff" },
+    { key: "settings", label: t("adm.settings"), icon: SettingsIcon, perm: "settings" },
   ];
+  /* أقسام اللوحة بتتفلتر بصلاحيات المدير الموزعة — من غير الصلاحية القسم
+     مش بيظهر أصلًا ومش بيترندر (الأدمن عنده الكل دايمًا). */
+  const nav = allNav.filter((n) => can(n.perm));
 
   const current = nav.find((n) => n.key === section) ?? nav[0];
 
@@ -338,6 +375,12 @@ export default function AdminView() {
                     } else {
                       toast.info("إذن الإشعارات: " + res);
                     }
+                  } else {
+                    toast.info(
+                      lang === "ar"
+                        ? "إشعارات المتصفح غير مدعومة على هذا الجهاز/المتصفح"
+                        : "Browser notifications are not supported on this device/browser"
+                    );
                   }
                 }}
               >
@@ -356,19 +399,23 @@ export default function AdminView() {
           </div>
 
           <div className="px-4 pt-5 md:px-6">
-            {section === "overview" && <OverviewSection />}
+            {section === "overview" && can("finances") && <OverviewSection />}
             {section === "orders" && <OrdersSection />}
             {section === "prescriptions" && <PrescriptionsSection />}
             {section === "products" && <ProductsSection />}
             {section === "inventory" && <InventorySection />}
             {section === "delivery" && <DeliverySection />}
+            {section === "collections" && can("finances") && <CollectionsSection />}
             {section === "care" && <CareAdminSection />}
             {section === "vitals" && <VitalsAdminSection />}
             {section === "coupons" && <CouponsSection />}
             {section === "ads" && <AdsSection />}
             {section === "customers" && <CustomersSection />}
-            {section === "reports" && <ReportsSection />}
+            {section === "reports" && can("finances") && <ReportsSection />}
+            {section === "daily" && can("finances") && <DailyReportSection />}
+            {section === "backup" && can("finances") && <BackupArchiveSection />}
             {section === "maintenance" && <MaintenanceSection />}
+            {section === "staff" && can("staff") && <StaffPermissionsSection />}
             {section === "settings" && <SettingsSection />}
           </div>
         </div>
@@ -386,6 +433,7 @@ function OverviewSection() {
   const products = useAdminProducts();
   const adminOrders = useBahbah((s) => s.adminOrders);
   const setSection = useBahbah((s) => s.setAdminSection);
+  const demo = useDemoActive();
   const orders = adminOrders ?? [];
 
   const nonCancelled = orders.filter((o) => o.status !== "cancelled");
@@ -400,14 +448,20 @@ function OverviewSection() {
     return d >= 0 && d < 120;
   }).length;
 
-  const chartData = salesData.map((m) => ({
-    name: lang === "ar" ? m.monthAr : m.monthEn,
-    revenue: ordersCount === 0 ? 0 : m.revenue,
-  }));
-  const weekly = weeklyData.map((d) => ({
-    name: lang === "ar" ? d.dayAr : d.dayEn,
-    orders: ordersCount === 0 ? 0 : d.orders,
-  }));
+  /* الرسوم من الطلبات الحقيقية — سلسلة المبيعات الجاهزة (salesData) كانت
+     بتتعرض كأنها حقيقية. دلوقتي بتظهر بس في وضع العرض التجريبي الصريح */
+  const chartData = demo
+    ? salesData.map((m) => ({
+        name: lang === "ar" ? m.monthAr : m.monthEn,
+        revenue: ordersCount === 0 ? 0 : m.revenue,
+      }))
+    : monthlySeriesFromOrders(orders, lang);
+  const weekly = demo
+    ? weeklyData.map((d) => ({
+        name: lang === "ar" ? d.dayAr : d.dayEn,
+        orders: ordersCount === 0 ? 0 : d.orders,
+      }))
+    : weeklySeriesFromOrders(orders, lang);
 
   const kpis = [
     { icon: <Wallet className="size-5" />, tint: "bg-[#EAF1F9]", color: "text-[#1E4E8F]", value: fmtPrice(revTotal, t), label: t("adm.revToday") },
@@ -418,15 +472,18 @@ function OverviewSection() {
     { icon: <AlertTriangle className="size-5" />, tint: "bg-[#DC4B4B]/10", color: "text-[#DC4B4B]", value: String(expiringCount), label: t("adm.invExpiring") },
   ];
 
-  /* category revenue share (donut) */
+  /* category revenue share (donut) — من بنود الطلبات الحقيقية.
+     في وضع العرض بس بنرجع للمعادلة القديمة (عدد المنتجات × رقم ثابت) */
   const catShare = useMemo(
     () =>
-      categories.map((c, i) => ({
-        name: lang === "ar" ? c.nameAr : c.nameEn,
-        value: products.filter((p) => p.category === c.id).length * 780 + (6 - i) * 320,
-        color: PIE_COLORS[i % PIE_COLORS.length],
-      })),
-    [lang, products]
+      demo
+        ? categories.map((c, i) => ({
+            name: lang === "ar" ? c.nameAr : c.nameEn,
+            value: products.filter((p) => p.category === c.id).length * 780 + (6 - i) * 320,
+            color: PIE_COLORS[i % PIE_COLORS.length],
+          }))
+        : categoryShareFromOrders(orders, lang),
+    [demo, lang, products, orders]
   );
 
   const alerts = products.filter((p) => p.stock < 30 || daysUntil(p.expiry) < 120);
@@ -434,6 +491,8 @@ function OverviewSection() {
 
   return (
     <div className="space-y-4">
+      {demo && <DemoModeBanner />}
+      <DashboardSyncBar />
       {/* KPI grid */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {kpis.map((k) => (
@@ -688,6 +747,199 @@ function OverviewSection() {
 /* ================================================================== */
 /* SETTINGS                                                            */
 /* ================================================================== */
+/* ------------------------------------------------------------------ */
+/* إعدادات نقاط الولاء والمستويات — بيانات في إعدادات الأدمن على       */
+/* السيرفر (settings.loyaltyTiers / loyaltyEarnEgpPerPoint). الرصيد    */
+/* والكسب والكروت بتتنفذ على السيرفر (ترقية loyalty-points).          */
+/* ------------------------------------------------------------------ */
+function LoyaltySettingsCard() {
+  const lang = useBahbah((s) => s.lang);
+  const settings = useBahbah((s) => s.settings);
+  const { updateSettings } = useBahbah();
+  const ar = lang === "ar";
+
+  const tiers: LoyaltyTier[] =
+    settings.loyaltyTiers && settings.loyaltyTiers.length > 0
+      ? settings.loyaltyTiers
+      : DEFAULT_LOYALTY_TIERS;
+  const egpPerPoint = settings.loyaltyEarnEgpPerPoint ?? 10;
+  const freeShipQuota = settings.loyaltyFreeShipQuota ?? DEFAULT_LOYALTY_FREE_SHIP_QUOTA;
+
+  const save = (next: LoyaltyTier[]) => updateSettings({ loyaltyTiers: next });
+  const patch = (i: number, p: Partial<LoyaltyTier>) =>
+    save(tiers.map((t, x) => (x === i ? { ...t, ...p } : t)));
+  const addTier = () => {
+    if (tiers.length >= 10) return;
+    const last = tiers[tiers.length - 1];
+    save([
+      ...tiers,
+      {
+        id: `lvl-${Date.now()}`,
+        nameAr: "عميل جديد",
+        nameEn: "New Client",
+        minPoints: (last?.minPoints ?? 0) + 500,
+        perk: "none" as LoyaltyPerk,
+      },
+    ]);
+  };
+  const removeTier = (i: number) => {
+    if (tiers.length <= 1) return;
+    save(tiers.filter((_, x) => x !== i));
+  };
+
+  const perkLabel = (p: LoyaltyPerk) =>
+    p === "discount_card_10"
+      ? ar
+        ? "كارت خصم ١٠٪ (مرة واحدة)"
+        : "10% discount card (one-time)"
+      : p === "free_delivery"
+        ? ar
+          ? "توصيل مجاني (برصيد شهري)"
+          : "Free delivery (monthly balance)"
+        : ar
+          ? "بدون ميزة"
+          : "No perk";
+
+  return (
+    <AdminCard className="lg:col-span-2">
+      <SectionTitle
+        icon={<Sparkles className="size-5 text-[#F09428]" />}
+        title={ar ? "نقاط الولاء ومستويات العميل" : "Loyalty points & client levels"}
+      />
+      <p className="mt-1 text-xs font-semibold text-muted-foreground">
+        {ar
+          ? "النقاط بتبدأ من صفر، والحساب الجديد بياخد 50 نقطة ترحيبية مرة واحدة على السيرفر. الكسب بيتحسب على السيرفر لما الطلب يتسلّم. التوصيل المجاني لعميل المستوى الأعلى وعميل العلاج الشهري المشترك بيتم من رصيد شهري محدود بتحدده هنا — مش مفتوح."
+          : "Points start at zero; a new account gets 50 welcome points once, server-side. Earning is credited server-side on delivery. Free delivery for the top level and subscribed monthly-treatment clients comes from a limited monthly balance you set here — not unlimited."}
+      </p>
+
+      <div className="flex flex-wrap gap-4">
+        <label className="mt-4 block w-full max-w-xs space-y-1.5">
+          <span className="text-xs font-bold text-foreground/75">
+            {ar ? "معدل الكسب: نقطة لكل كام جنيه؟" : "Earn rate: 1 point per how many EGP?"}
+          </span>
+          <Input
+            type="number"
+            min={1}
+            value={egpPerPoint}
+            onChange={(e) =>
+              updateSettings({
+                loyaltyEarnEgpPerPoint: Math.max(1, Math.floor(Number(e.target.value) || 10)),
+              })
+            }
+            className="h-11 rounded-xl"
+            dir="ltr"
+          />
+        </label>
+
+        <label className="mt-4 block w-full max-w-xs space-y-1.5">
+          <span className="text-xs font-bold text-foreground/75">
+            {ar
+              ? "رصيد التوصيل المجاني: كام توصيلة مجانية في الشهر؟"
+              : "Free-delivery balance: how many free deliveries per month?"}
+          </span>
+          <Input
+            type="number"
+            min={0}
+            value={freeShipQuota}
+            onChange={(e) =>
+              updateSettings({
+                loyaltyFreeShipQuota: Math.max(0, Math.floor(Number(e.target.value) || 0)),
+              })
+            }
+            className="h-11 rounded-xl"
+            dir="ltr"
+          />
+          <span className="block text-[11px] font-semibold text-muted-foreground">
+            {ar
+              ? "بيتطبق على عميل أعلى مستوى وعميل العلاج الشهري المشترك، وبيتجدد أول كل شهر. حملة التوصيل المجاني ما بتستهلكش من الرصيد."
+              : "Applies to top-level clients and subscribed monthly-treatment clients; renews on the 1st of each month. The free-shipping campaign does not consume the balance."}
+          </span>
+        </label>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {tiers.map((tier, i) => (
+          <div
+            key={tier.id}
+            className="grid items-end gap-2 rounded-xl border border-border/60 p-3 sm:grid-cols-[1fr_1fr_110px_190px_auto]"
+          >
+            <label className="block space-y-1">
+              <span className="text-[11px] font-bold text-muted-foreground">
+                {ar ? `اسم المستوى ${i + 1} (عربي)` : `Level ${i + 1} name (AR)`}
+              </span>
+              <Input
+                value={tier.nameAr}
+                onChange={(e) => patch(i, { nameAr: e.target.value })}
+                className="h-10 rounded-lg"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-[11px] font-bold text-muted-foreground">
+                {ar ? "الاسم (إنجليزي)" : "Name (EN)"}
+              </span>
+              <Input
+                value={tier.nameEn}
+                onChange={(e) => patch(i, { nameEn: e.target.value })}
+                className="h-10 rounded-lg"
+                dir="ltr"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-[11px] font-bold text-muted-foreground">
+                {ar ? "من كام نقطة" : "From points"}
+              </span>
+              <Input
+                type="number"
+                min={0}
+                value={tier.minPoints}
+                onChange={(e) =>
+                  patch(i, { minPoints: Math.max(0, Math.floor(Number(e.target.value) || 0)) })
+                }
+                className="h-10 rounded-lg"
+                dir="ltr"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-[11px] font-bold text-muted-foreground">
+                {ar ? "الميزة" : "Perk"}
+              </span>
+              <select
+                value={tier.perk}
+                onChange={(e) => patch(i, { perk: e.target.value as LoyaltyPerk })}
+                className="h-10 w-full rounded-lg border border-input bg-background px-2 text-sm font-semibold"
+              >
+                {(["none", "discount_card_10", "free_delivery"] as LoyaltyPerk[]).map((p) => (
+                  <option key={p} value={p}>
+                    {perkLabel(p)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-lg"
+              disabled={tiers.length <= 1}
+              onClick={() => removeTier(i)}
+            >
+              {ar ? "حذف" : "Delete"}
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        className="mt-3 rounded-xl"
+        disabled={tiers.length >= 10}
+        onClick={addTier}
+      >
+        {ar ? "+ إضافة مستوى (لحد 10 مستويات)" : "+ Add level (up to 10)"}
+      </Button>
+    </AdminCard>
+  );
+}
+
 function SettingsSection() {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
@@ -696,7 +948,9 @@ function SettingsSection() {
   const careEdits = useBahbah((s) => s.careEdits);
   const zoneEdits = useBahbah((s) => s.zoneEdits);
   const setSection = useBahbah((s) => s.setAdminSection);
-  const { updateSettings, updateSiteEdits, updateCareEdit, updateZoneEdit, resetAdminDemo } =
+  const demoMode = useBahbah((s) => s.demoMode);
+  const serverOrdersLoaded = useBahbah((s) => s.serverOrdersLoaded);
+  const { updateSettings, updateSiteEdits, updateCareEdit, updateZoneEdit, resetAdminDemo, setDemoMode } =
     useBahbah();
 
   return (
@@ -736,8 +990,33 @@ function SettingsSection() {
               ? "— " + t("adm.stOpen") + " · " + t("adm.stAccept")
               : t("admin.accessNote")}
           </p>
+          {/* وضع العرض التجريبي: بيانات وهمية للعرض فقط — بيتلغي تلقائيًا أول ما توصل بيانات سيرفر */}
+          <div className="flex items-center justify-between rounded-xl border border-dashed border-[#F59E0B]/50 bg-[#FFFBEB] p-3.5">
+            <div>
+              <span className="text-sm font-bold">
+                {lang === "ar" ? "وضع العرض التجريبي" : "Demo presentation mode"}
+              </span>
+              <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
+                {serverOrdersLoaded
+                  ? lang === "ar"
+                    ? "متعطّل تلقائيًا — وصلت بيانات حقيقية من السيرفر"
+                    : "Auto-disabled — real server data has arrived"
+                  : lang === "ar"
+                    ? "بيانات عرض وهمية في اللوحة (بتتلغي لوحدها مع أول بيانات سيرفر)"
+                    : "Fabricated figures in the dashboard (auto-off once server data exists)"}
+              </p>
+            </div>
+            <Switch
+              checked={demoMode && !serverOrdersLoaded}
+              disabled={serverOrdersLoaded}
+              onCheckedChange={(v) => setDemoMode(v)}
+            />
+          </div>
         </div>
       </AdminCard>
+
+      {/* loyalty points & levels */}
+      <LoyaltySettingsCard />
 
       {/* delivery settings & zone pricing control */}
       <AdminCard className="lg:col-span-2">
@@ -802,16 +1081,64 @@ function SettingsSection() {
           title={t("adm.delivery")}
         />
         <div className="mt-4 space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-xs font-bold text-foreground/75">{t("adm.stFree")}</span>
-            <Input
-              type="number"
-              value={settings.freeThreshold}
-              onChange={(e) => updateSettings({ freeThreshold: Number(e.target.value) || 0 })}
-              className="h-11 rounded-xl"
-              dir="ltr"
+          <div className="flex items-center justify-between rounded-xl border border-border/60 p-3.5">
+            <div>
+              <span className="text-sm font-bold">{t("adm.campaign")}</span>
+              <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
+                {t("adm.campaignHint")}
+              </p>
+            </div>
+            <Switch
+              checked={settings.freeShipCampaignOn}
+              onCheckedChange={(v) => updateSettings({ freeShipCampaignOn: v })}
             />
-          </label>
+          </div>
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-foreground/75 block">{t("adm.campaignImg")}</span>
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-24 shrink-0 overflow-hidden rounded-xl border bg-white shadow-xs">
+                {settings.freeShipCampaignImg ? (
+                  <img
+                    src={settings.freeShipCampaignImg}
+                    alt="Campaign Preview"
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <div className="grid size-full place-items-center px-1 text-center text-[10px] font-bold text-muted-foreground">
+                    {lang === "ar" ? "لا توجد صورة" : "No image"}
+                  </div>
+                )}
+              </div>
+              <Input
+                value={settings.freeShipCampaignImg ?? ""}
+                onChange={(e) => updateSettings({ freeShipCampaignImg: e.target.value })}
+                placeholder="رابط الصورة أو ارفع من جهازك.."
+                className="h-11 flex-1 rounded-xl text-xs"
+                dir="ltr"
+              />
+              <label className="cursor-pointer rounded-full bg-[#184C8A] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#112D51] shrink-0">
+                رفع صورة
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = async () => {
+                        if (typeof reader.result === "string") {
+                          const ok = await updateSettings({ freeShipCampaignImg: reader.result });
+                          if (ok) toast.success("تم تحديث صورة بانر الحملة بنجاح ✓");
+                        }
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+              </label>
+            </div>
+          </div>
           <label className="block space-y-1.5">
             <span className="text-xs font-bold text-foreground/75">{t("adm.stFee")}</span>
             <Input
@@ -824,12 +1151,77 @@ function SettingsSection() {
           </label>
           <Button
             className="h-11 w-full rounded-full font-bold"
-            onClick={() => toast.success(t("misc.saved"))}
+            onClick={async () => {
+              /* تأكيد حفظ فعلي: بنعيد مزامنة إعدادات المتجر الحالية وبنقول
+                 «تم» بس لو السيرفر أكّد الكتابة */
+              if (await updateSettings({})) toast.success(t("misc.saved"));
+            }}
           >
             {t("misc.save")}
           </Button>
         </div>
       </AdminCard>
+
+      {/* جدول توصيل القرى الأسبوعي — بيظهر في الرئيسية وبيتحفظ على السيرفر */}
+      <AdminCard className="lg:col-span-2">
+        <SectionTitle
+          icon={<IconScooter className="size-5 text-[#1E4E8F]" />}
+          title={lang === "ar" ? "يوم القرى — جدول التوصيل الأسبوعي" : "Village days — weekly delivery schedule"}
+        />
+        <p className="mt-1 text-xs font-semibold text-muted-foreground">
+          {lang === "ar"
+            ? "اكتب اليوم والقرى المغطاة فيه — بيظهر للعملاء في الصفحة الرئيسية وبيتحفظ في إعدادات السيرفر."
+            : "Weekday → villages covered. Shown on the home page and stored in the server settings."}
+        </p>
+        <div className="mt-4 space-y-2">
+          {(settings.villageDays ?? []).map((d, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
+              <Input
+                value={d.day}
+                onChange={(e) => {
+                  const next = [...(settings.villageDays ?? [])];
+                  next[i] = { ...next[i], day: e.target.value };
+                  updateSettings({ villageDays: next });
+                }}
+                placeholder={lang === "ar" ? "اليوم (مثال: السبت)" : "Day (e.g. Saturday)"}
+                className="h-10 w-36 rounded-xl font-bold"
+              />
+              <Input
+                value={d.villages}
+                onChange={(e) => {
+                  const next = [...(settings.villageDays ?? [])];
+                  next[i] = { ...next[i], villages: e.target.value };
+                  updateSettings({ villageDays: next });
+                }}
+                placeholder={lang === "ar" ? "القرى: مسارة، الكودية، دشلوط…" : "Villages: …"}
+                className="h-10 min-w-52 flex-1 rounded-xl"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 rounded-full font-bold"
+                onClick={() =>
+                  updateSettings({ villageDays: (settings.villageDays ?? []).filter((_, j) => j !== i) })
+                }
+              >
+                {lang === "ar" ? "حذف" : "Remove"}
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            className="h-10 rounded-full font-bold"
+            onClick={() =>
+              updateSettings({ villageDays: [...(settings.villageDays ?? []), { day: "", villages: "" }] })
+            }
+          >
+            {lang === "ar" ? "+ إضافة يوم" : "+ Add day"}
+          </Button>
+        </div>
+      </AdminCard>
+
+      {/* أسعار الخدمات التمريضية المنزلية (nursing_edits على السيرفر) */}
+      <NursingPricesCard />
 
       {/* contact info & address — live everywhere */}
       <AdminCard className="lg:col-span-2">
@@ -1018,10 +1410,10 @@ function SettingsSection() {
                     const file = e.target.files?.[0];
                     if (file) {
                       const reader = new FileReader();
-                      reader.onload = () => {
+                      reader.onload = async () => {
                         if (typeof reader.result === "string") {
-                          updateSiteEdits({ heroImage: reader.result });
-                          toast.success("تم تحديث صورة الهيرو بنجاح ✓");
+                          const ok = await updateSiteEdits({ heroImage: reader.result });
+                          if (ok) toast.success("تم تحديث صورة الهيرو بنجاح ✓");
                         }
                       };
                       reader.readAsDataURL(file);
@@ -1040,7 +1432,13 @@ function SettingsSection() {
           <Button
             size="sm"
             className="rounded-full bg-[#1E4E8F] px-5 font-bold text-white hover:bg-[#112D51]"
-            onClick={() => toast.success("تم تأكيد حفظ ونشر جميع النصوص والشعارات بنجاح ✓")}
+            onClick={async () => {
+              /* تأكيد حفظ فعلي: بنعيد مزامنة النصوص الحالية وبنقول «تم» بس
+                 لو السيرفر أكّد الكتابة */
+              if (await updateSiteEdits({})) {
+                toast.success("تم تأكيد حفظ ونشر جميع النصوص والشعارات بنجاح ✓");
+              }
+            }}
           >
             تأكيد الحفظ
           </Button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   ArrowLeft,
@@ -17,8 +17,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getProduct, alternativesOf, byCategory, discountPct } from "@/lib/bahbah/data";
+import { getProduct, alternativesOf, byCategory, discountPct, WASLY } from "@/lib/bahbah/data";
 import { useBahbah, useT, effStock } from "@/lib/bahbah/store";
+import { fetchWarehouseForProduct, type DbWarehouseProduct } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Rating, ProductVisual, ProductCard, SectionHead, fmtPrice, catOf } from "./product-card";
 import { IconWhatsapp } from "./icons";
@@ -38,9 +39,30 @@ export default function ProductView() {
   const stockAdj = useBahbah((s) => s.stockAdj);
   const previousView = useBahbah((s) => s.previousView);
   const { go, addToCart, toggleFavorite, setCartOpen } = useBahbah();
+  const user = useBahbah((s) => s.user);
+  const createWhatsappOrder = useBahbah((s) => s.createWhatsappOrder);
+  const setShortageOpen = useBahbah((s) => s.setShortageOpen);
   const [qty, setQty] = useState(1);
+  const [waBusy, setWaBusy] = useState(false);
+  const [warehouse, setWarehouse] = useState<DbWarehouseProduct | null>(null);
 
   const product = productId ? getProduct(productId) : undefined;
+
+  /* توفر مخزن الصيدلية الحي (warehouse_products) — بيظهر بس لو في تطابق */
+  useEffect(() => {
+    let live = true;
+    setWarehouse(null);
+    if (product) {
+      fetchWarehouseForProduct(product).then((r) => {
+        if (live) setWarehouse(r);
+      });
+    }
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]);
+
   if (!product) {
     return (
       <main className="flex flex-col items-center gap-4 py-24 text-center">
@@ -71,6 +93,40 @@ export default function ProductView() {
     isOutOfStock ? t("product.out") : availableStock < 30 ? t("product.low") : t("product.inStock");
   const stockColor =
     isOutOfStock ? "text-[#DC2626] bg-[#DC2626]/10" : availableStock < 30 ? "text-[#D97706] bg-[#FFFBEB] ring-1 ring-[#F59E0B]/20" : "text-[#059669] bg-[#ECFDF5] ring-1 ring-[#10B981]/20";
+
+  /* طلب سريع بواتساب: تسجيل في السيرفر بكود تتبع الأول، وبعدين فتح واتساب */
+  const handleWhatsappOrder = async () => {
+    if (waBusy) return;
+    setWaBusy(true);
+    const code = await createWhatsappOrder({
+      items: [
+        {
+          productId: product.id,
+          nameAr: product.nameAr,
+          nameEn: product.nameEn,
+          qty,
+          price: product.price,
+        },
+      ],
+      total: product.price * qty,
+      phone: user?.phone,
+      name: user?.name,
+    });
+    setWaBusy(false);
+    if (!code) {
+      toast.error(
+        lang === "ar"
+          ? "تعذر تسجيل الطلب السريع دلوقتي — حاول تاني أو كمل طلبك من السلة"
+          : "Couldn't log the quick order — please retry or check out from the cart"
+      );
+      return;
+    }
+    const msg =
+      lang === "ar"
+        ? `السلام عليكم صيدلية بحبح، أود طلب:\n- ${name} × ${qty} — ${product.price * qty} ج.م\nكود الطلب السريع: ${code}`
+        : `Hello Bahbah Pharmacy, I'd like to order:\n- ${name} x ${qty} — ${product.price * qty} EGP\nQuick order code: ${code}`;
+    window.open(`https://wa.me/${WASLY.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
+  };
 
   return (
     <main className="pb-28 md:pb-16">
@@ -117,6 +173,31 @@ export default function ProductView() {
               <Badge className={`rounded-full px-3 py-1 font-bold ${stockColor} border-0`}>
                 {stockLabel}
               </Badge>
+              {warehouse &&
+                ((warehouse.stock_boxes ?? 0) > 0 ? (
+                  <Badge className="rounded-full border-0 bg-[#EAF6F1] px-3 py-1 font-bold text-[#2E9E6B]">
+                    {lang === "ar"
+                      ? `في مخزن الصيدلية الآن: ${warehouse.stock_boxes} علبة`
+                      : `In pharmacy warehouse: ${warehouse.stock_boxes} boxes`}
+                  </Badge>
+                ) : (
+                  <>
+                    <Badge className="rounded-full border-0 bg-[#FFF4E5] px-3 py-1 font-bold text-[#B45E0A]">
+                      {lang === "ar" ? "غير متوفر في مخزن الصيدلية حالياً" : "Not in warehouse stock right now"}
+                    </Badge>
+                    <button
+                      onClick={() =>
+                        setShortageOpen(true, {
+                          itemName: lang === "ar" ? product.nameAr : product.nameEn,
+                          source: "product",
+                        })
+                      }
+                      className="rounded-full bg-[#B45E0A] px-3 py-1 text-xs font-black text-white transition hover:bg-[#9A5008] active:scale-95"
+                    >
+                      {lang === "ar" ? "طلب" : "Request"}
+                    </button>
+                  </>
+                ))}
               {product.rx && (
                 <Badge variant="outline" className="rounded-full border-[#D97706]/40 bg-[#FFFBEB] font-bold text-[#D97706]">
                   <FileWarning className="me-1 size-3" />
@@ -196,17 +277,29 @@ export default function ProductView() {
                 <ShoppingCart className="size-5" />
                 {isOutOfStock ? t("product.out") : t("product.addToCart")}
               </Button>
-              <a
-                href={`https://wa.me/201011500166?text=${encodeURIComponent(
-                  `السلام عليكم صيدلية بحبح، أود طلب: ${name} (الكمية: ${qty}) بسعر ${product.price} ج.م`
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-                className="bb-whatsapp-gradient flex size-13 shrink-0 items-center justify-center rounded-full text-white shadow-md transition hover:scale-105 active:scale-95"
-                title={lang === "ar" ? "طلب فوري عبر واتساب" : "Instant WhatsApp Order"}
+              <button
+                onClick={handleWhatsappOrder}
+                disabled={waBusy}
+                className="bb-whatsapp-gradient flex h-13 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-sm font-black text-white shadow-md transition hover:scale-[1.03] active:scale-95 disabled:opacity-60"
+                title={lang === "ar" ? "طلب سريع بواتساب — بكود تتبع" : "WhatsApp quick order — with tracking code"}
               >
-                <IconWhatsapp className="size-6" />
-              </a>
+                <IconWhatsapp className="size-5" />
+                {lang === "ar" ? "طلب سريع بواتساب" : "WhatsApp quick order"}
+              </button>
+              {isOutOfStock && (
+                <button
+                  onClick={() =>
+                    setShortageOpen(true, {
+                      itemName: lang === "ar" ? product.nameAr : product.nameEn,
+                      source: "product",
+                    })
+                  }
+                  className="flex h-13 shrink-0 items-center justify-center gap-2 rounded-full bg-[#B45E0A] px-5 text-sm font-black text-white shadow-md transition hover:scale-[1.03] active:scale-95"
+                  title={lang === "ar" ? "اطلب الصنف الناقص — هنرد عليك لما يتوفر" : "Request this missing item"}
+                >
+                  {lang === "ar" ? "طلب" : "Request"}
+                </button>
+              )}
             </div>
 
             {/* delivery perks */}

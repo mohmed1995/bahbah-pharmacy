@@ -11,10 +11,12 @@ import {
   CartDrawer,
   SearchDialog,
   RxDialog,
+  ShortageDialog,
   ConsultDialog,
   InstallAppModal,
 } from "./shell";
 import HomeView from "./home";
+import { NursingDialog } from "./nursing";
 import CatalogView from "./catalog";
 import ProductView from "./product";
 import OffersView from "./offers";
@@ -30,6 +32,7 @@ import { fmtPrice } from "./product-card";
 import { Button } from "@/components/ui/button";
 import { IconCartBagDuo, IconPhone } from "./icons";
 import { initSupabaseSync } from "@/lib/bahbah/supabase-sync";
+import { useViewHistory } from "@/lib/bahbah/history";
 
 /* hydration gate without setState-in-effect */
 const emptySubscribe = () => () => {};
@@ -115,11 +118,36 @@ function PharmacistFab() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Shop-closed banner — driven by the SYNCED dashboard settings        */
+/* (openNow / acceptOrders travel through admin_settings → realtime,   */
+/*  so closing the shop in the dashboard reaches every storefront)     */
+/* ------------------------------------------------------------------ */
+function ShopClosedBanner() {
+  const lang = useBahbah((s) => s.lang);
+  const settings = useBahbah((s) => s.settings);
+  if (settings.openNow && settings.acceptOrders) return null;
+  return (
+    <div className="bg-[#B45309] px-4 py-2.5 text-center text-[13px] font-black text-white">
+      {lang === "ar"
+        ? settings.acceptOrders
+          ? "الصيدلية مغلقة الآن — التصفح متاح، وهنفتح في مواعيد العمل الرسمية"
+          : "الصيدلية واقفة استقبال الطلبات مؤقتًا — التصفح متاح وهنرجع نستقبل طلبات قريبًا"
+        : settings.acceptOrders
+          ? "The pharmacy is currently closed — browsing is available"
+          : "The pharmacy is temporarily not accepting orders — browsing is available"}
+    </div>
+  );
+}
+
 export default function BahbahApp() {
   const view = useBahbah((s) => s.view);
   const user = useBahbah((s) => s.user);
   const sessionRole = useBahbah((s) => s.sessionRole);
   const mounted = useMounted();
+
+  /* browser back/forward buttons restore in-app views instead of exiting */
+  useViewHistory();
 
   /* scroll to top whenever the view changes */
   useEffect(() => {
@@ -188,6 +216,7 @@ export default function BahbahApp() {
     <div className="flex min-h-screen flex-col bg-background">
       <LangSync />
       {!staffView && <Header />}
+      {!staffView && <ShopClosedBanner />}
 
       <div className="flex-1">
         {view === "home" && <HomeView />}
@@ -213,6 +242,8 @@ export default function BahbahApp() {
       <CartDrawer />
       <SearchDialog />
       <RxDialog />
+      <ShortageDialog />
+      <NursingDialog />
       <ConsultDialog />
       <InstallAppModal />
       <UnifiedLoginModal />

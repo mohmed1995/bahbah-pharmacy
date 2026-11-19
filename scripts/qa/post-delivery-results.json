@@ -1,0 +1,248 @@
+[
+  {
+    "battery": "migration",
+    "name": "platform stubs + pre-existing-table stand-ins created",
+    "pass": true,
+    "evidence": "same harness as migration_delta.mjs"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: security.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: commerce.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: commerce-seed.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-whatsapp-orders.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: WAREHOUSE_SEED_DDL",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-warehouse-sync.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-shortage-requests.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-portals-permissions.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-collections-addresses.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-free-shipping-campaign.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-loyalty-points.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-nursing-services.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-security-layer1.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-wiring-fixes.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-loyalty-quota.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-integrity-fixes.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "migration",
+    "name": "chain file executes: upgrade-2026-11-19-courier-ratings.sql",
+    "pass": true,
+    "evidence": "no error"
+  },
+  {
+    "battery": "introspection",
+    "name": "courier_ratings exists with RLS enabled",
+    "pass": true,
+    "evidence": "{\"relrowsecurity\":true}"
+  },
+  {
+    "battery": "introspection",
+    "name": "courier_ratings.order_id is UNIQUE (one rating per order at the DB level)",
+    "pass": true,
+    "evidence": "unique indexes on order_id: 1"
+  },
+  {
+    "battery": "introspection",
+    "name": "policies: insert-own + select-own + staff-select, and NO update/delete policies",
+    "pass": true,
+    "evidence": "cr_insert_own:INSERT, cr_select_own:SELECT, cr_staff_select:SELECT"
+  },
+  {
+    "battery": "introspection",
+    "name": "rating_order_allowed is SECURITY DEFINER, EXECUTE for authenticated only",
+    "pass": true,
+    "evidence": "acl={postgres=X/postgres,authenticated=X/postgres}"
+  },
+  {
+    "battery": "introspection",
+    "name": "get_public_settings returns courier_msg_templates with the 3 seed messages",
+    "pass": true,
+    "evidence": "templates=[\"أنا في الطريق إليك دلوقتي\",\"قربت منك، دقايق وأكون عندك\",\"أنا وصلت وجاهز للتسليم\"]"
+  },
+  {
+    "battery": "phones_match",
+    "name": "identical numbers match; +20 format matches 0 format; last-10 rule works",
+    "pass": true,
+    "evidence": "three format variants of the same number"
+  },
+  {
+    "battery": "phones_match",
+    "name": "different numbers / empty values do NOT match",
+    "pass": true,
+    "evidence": "mismatch + empties rejected"
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "customer rates OWN delivered order — row persisted (5★ + comment)",
+    "pass": true,
+    "evidence": "{\"stars\":5,\"comment\":\"سريع ومحترم\"}"
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "order phone stored as +20… still rateable by the same customer (digit matching)",
+    "pass": true,
+    "evidence": "{\"stars\":4}"
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "SECOND rating for the same order is rejected (unique order_id)",
+    "pass": true,
+    "evidence": "error: duplicate key value violates unique constraint \"courier_ratings_order_id_key\""
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "rating SOMEONE ELSE'S delivered order is rejected by RLS",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"courier_ratings\""
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "rating with a FORGED customer_phone (not the session phone) is rejected",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"courier_ratings\""
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "rating an order still SHIPPING (not delivered) is rejected",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"courier_ratings\""
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "stars = 6 rejected (check constraint / policy)",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"courier_ratings\""
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "second customer rates her own delivered order (dr-2)",
+    "pass": true,
+    "evidence": "insert succeeded under her own claims"
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "customer SELECT sees ONLY own ratings",
+    "pass": true,
+    "evidence": "saw: QA-A1,QA-A2"
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "staff SELECT sees ALL ratings (admin averages source)",
+    "pass": true,
+    "evidence": "count=3"
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "customer UPDATE and DELETE affect 0 rows — rating is final once written",
+    "pass": true,
+    "evidence": "upd=0 del=0 stars still 5"
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "anon cannot insert a rating",
+    "pass": true,
+    "evidence": "error: new row violates row-level security policy for table \"courier_ratings\""
+  },
+  {
+    "battery": "ratings-rls",
+    "name": "anon cannot EXECUTE rating_order_allowed",
+    "pass": true,
+    "evidence": "error: permission denied for function rating_order_allowed"
+  },
+  {
+    "battery": "rating-math",
+    "name": "dr-1: ratings 5★ and 4★ → avg 4.50, count 2, latest comment present",
+    "pass": true,
+    "evidence": "{\"courier_id\":\"dr-1\",\"avg\":\"4.50\",\"n\":2,\"latest_comment\":\"سريع ومحترم\"}"
+  },
+  {
+    "battery": "rating-math",
+    "name": "dr-2: single 4★ rating → avg 4.00, count 1",
+    "pass": true,
+    "evidence": "{\"courier_id\":\"dr-2\",\"avg\":\"4.00\",\"n\":1,\"latest_comment\":\"كويس بس اتأخر شوية\"}"
+  }
+]

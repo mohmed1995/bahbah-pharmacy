@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Phone,
   MapPin,
@@ -14,13 +14,24 @@ import {
   ArrowRight,
   ArrowLeft,
   LogIn,
+  Banknote,
+  Smartphone,
+  Landmark,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { adminOrders as adminDemoOrders, driverById, BRANCH, PHARMACY, type Order } from "@/lib/bahbah/data";
-import { useBahbah, useT, useDrivers, type DictKey } from "@/lib/bahbah/store";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { adminOrders as adminDemoOrders, driverById, BRANCH, PHARMACY, type Order, type CollectionMethod } from "@/lib/bahbah/data";
+import { useBahbah, useT, useDrivers, hasPermission, type DictKey } from "@/lib/bahbah/store";
 import { fmtPrice } from "./product-card";
 import { KpiCard } from "./admin-ui";
+import { CustomerContactMenu } from "./contact-menu";
 import { IconScooter, IconPin, IconWhatsapp } from "./icons";
 
 /* ------------------------------------------------------------------ */
@@ -36,7 +47,10 @@ export default function CourierPortal() {
   const sessionRole = useBahbah((s) => s.sessionRole);
   const adminOrders = useBahbah((s) => s.adminOrders);
   const driverStatus = useBahbah((s) => s.driverStatus);
-  const { go, courierPickup, courierDeliver, cycleDriverStatus } = useBahbah();
+  const canOrders = useBahbah((s) => hasPermission(s, "orders"));
+  const { go, courierPickup, cycleDriverStatus } = useBahbah();
+  /* طلب مفتوح عليه نافذة تسجيل التحصيل — التسليم ما بيتمش من غيرها */
+  const [collectFor, setCollectFor] = useState<Order | null>(null);
 
   const myDriverId = user?.driverId ?? "dr-1";
   const driver = driverById(myDriverId);
@@ -46,7 +60,9 @@ export default function CourierPortal() {
     () => orders.filter((o) => o.delivery?.driverId === myDriverId && o.status !== "cancelled"),
     [orders, myDriverId]
   );
-  const active = mine.filter((o) => o.status === "pending" || o.status === "shipping");
+  const active = mine.filter(
+    (o) => o.status === "pending" || o.status === "ready" || o.status === "shipping"
+  );
   const doneToday = mine.filter((o) => o.status === "delivered");
   const codTotal = active.reduce((s, o) => (o.payment === "cod" ? s + o.total : s), 0);
   const earnings = doneToday.length * 15;
@@ -55,6 +71,30 @@ export default function CourierPortal() {
 
   /* ---- not signed in / wrong role ---- */
   if (!user || sessionRole !== "courier") return <StaffGate role="courier" />;
+
+  /* ---- صلاحية الطلبات مسحوبة من المدير لهذا المندوب ---- */
+  if (!canOrders) {
+    return (
+      <main className="mx-auto max-w-xl px-4 py-16 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <span className="grid size-20 place-items-center rounded-3xl bg-[#FFF4E5] text-[#B45E0A] shadow-sm">
+            <Package className="size-9" />
+          </span>
+          <div>
+            <h1 className="font-heading text-xl font-black md:text-2xl">{t("cour.title")}</h1>
+            <p className="mt-1.5 text-xs font-bold text-muted-foreground md:text-sm">
+              {lang === "ar"
+                ? "صلاحية استلام التوصيلات موقوفة لحسابك حاليًا من الإدارة — كلّم المدير لو ده مش مقصود."
+                : "Delivery access is currently disabled for your account by management."}
+            </p>
+          </div>
+          <Button size="lg" variant="ghost" className="rounded-full px-6 text-xs font-bold text-muted-foreground" onClick={() => go("home")}>
+            ← {t("nav.home")}
+          </Button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-5xl px-4 pb-24 pt-5 md:px-6 md:pb-12">
@@ -148,7 +188,7 @@ export default function CourierPortal() {
               key={o.id}
               o={o}
               onPickup={() => courierPickup(o.id)}
-              onDeliver={() => courierDeliver(o.id)}
+              onDeliver={() => setCollectFor(o)}
             />
           ))}
         </div>
@@ -175,6 +215,11 @@ export default function CourierPortal() {
             ))}
           </div>
         </>
+      )}
+
+      {/* نافذة تسجيل التحصيل — التسليم بيتم منها بعد كتابة التحصيل */}
+      {collectFor && (
+        <CollectionDialog order={collectFor} onClose={() => setCollectFor(null)} />
       )}
     </main>
   );
@@ -209,6 +254,11 @@ function ShipmentCard({
               <Clock className="size-3" />
               {t("admin.stPending")}
             </Badge>
+          ) : o.status === "ready" ? (
+            <Badge className="gap-1 rounded-full border-0 bg-[#EAF6F1] text-[#2E9E6B]">
+              <CheckCircle2 className="size-3" />
+              {t("admin.stReady")}
+            </Badge>
           ) : (
             <Badge className="gap-1 rounded-full border-0 bg-[#EAF1F9] text-[#1E4E8F]">
               <Truck className="size-3" />
@@ -217,6 +267,11 @@ function ShipmentCard({
           )}
         </div>
         <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
+          {o.discreetPackaging && (
+            <Badge className="rounded-full border-0 bg-[#0B1E38] font-bold text-white">
+              {lang === "ar" ? "تغليف خاص — سادة بدون علامات" : "Discreet packaging"}
+            </Badge>
+          )}
           {zoneAr && (
             <Badge variant="outline" className="rounded-full font-bold">
               {t("cour.zoneTag")}: {lang === "ar" ? zoneAr : zoneEn}
@@ -260,15 +315,28 @@ function ShipmentCard({
               <Phone className="size-3.5" />
               {t("cour.callCust")}
             </a>
+            {/* رسائل جاهزة للعميل (أنا في الطريق / قربت / وصلت) — بيعدّلها المدير */}
+            <CustomerContactMenu
+              phone={o.phone}
+              label={lang === "ar" ? "رسائل جاهزة" : "Quick msgs"}
+              className="inline-flex h-10 items-center gap-1.5 rounded-full border border-[#25D366]/50 bg-white px-3.5 text-xs font-black text-[#128C4B] shadow-xs transition hover:bg-[#ECFDF5] active:scale-95"
+            />
           </div>
         </div>
 
-        {/* address + map */}
+        {/* address + map — الدبوس لو موجود بيودي للمكان بالظبط، غير كده بحث بالعنوان */}
         <div className="flex items-start gap-3 rounded-2xl bg-muted/50 p-3.5">
           <MapPin className="mt-0.5 size-4 shrink-0 text-[#DC4B4B]" />
-          <p className="flex-1 text-sm font-bold leading-relaxed">{o.address}</p>
+          <div className="flex-1">
+            <p className="text-sm font-bold leading-relaxed">{o.address}</p>
+            {o.lat != null && o.lng != null && (
+              <p className="mt-1 text-[11px] font-bold text-[#2E9E6B]">
+                📍 {lang === "ar" ? "العميل حدّد موقعه على الخريطة — الزرار بيفتح المكان بالظبط" : "Customer pinned the exact location"}
+              </p>
+            )}
+          </div>
           <a
-            href={mapsUrl(o.address)}
+            href={mapsUrl(o.lat != null && o.lng != null ? `${o.lat},${o.lng}` : o.address)}
             target="_blank"
             rel="noreferrer"
             className="grid size-9 shrink-0 place-items-center rounded-full bg-white text-[#1E4E8F] shadow-sm ring-1 ring-black/5 transition hover:bg-[#EAF1F9]"
@@ -302,7 +370,7 @@ function ShipmentCard({
             </Badge>
             <p className="mt-1.5 font-heading text-xl font-black text-[#1E4E8F]">{fmtPrice(o.total, t)}</p>
           </div>
-          {o.status === "pending" ? (
+          {o.status === "pending" || o.status === "ready" ? (
             <Button className="h-12 rounded-full px-6 font-black" onClick={onPickup}>
               <Package className="size-4" />
               {t("cour.pickup")}
@@ -354,5 +422,217 @@ export function StaffGate({ role }: { role: "courier" | "pharmacist" | "admin" }
         </div>
       </div>
     </main>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Collection dialog — المندوب بيسجّل هو حصّل كام وإزاي قبل ما التسليم  */
+/* يتم. السجل بيروح للسيرفر الأول (التوريد عند المدير بس)، ولو فشل       */
+/* التسجيل الطلب يفضل «في الطريق» — مفيش تسليم من غير أثر للفلوس.      */
+/* ------------------------------------------------------------------ */
+function CollectionDialog({ order, onClose }: { order: Order; onClose: () => void }) {
+  const t = useT();
+  const lang = useBahbah((s) => s.lang);
+  const courierDeliverWithCollection = useBahbah((s) => s.courierDeliverWithCollection);
+
+  const defaultMethod: CollectionMethod =
+    order.payment === "instapay" || order.payment === "vodafone"
+      ? "wallet"
+      : order.payment === "card"
+        ? "bank"
+        : "cash";
+  const [amount, setAmount] = useState<string>(
+    order.payment === "cod" ? String(order.total) : "0"
+  );
+  const [method, setMethod] = useState<CollectionMethod>(defaultMethod);
+  const [walletFrom, setWalletFrom] = useState("");
+  const [walletTo, setWalletTo] = useState("");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const amountNum = Number(amount);
+  const diff = Number.isFinite(amountNum) ? amountNum - order.total : 0;
+
+  const methods: { key: CollectionMethod; ar: string; en: string; icon: React.ReactNode }[] = [
+    { key: "cash", ar: "كاش", en: "Cash", icon: <Banknote className="size-4" /> },
+    { key: "wallet", ar: "محفظة إلكترونية", en: "E-Wallet", icon: <Smartphone className="size-4" /> },
+    { key: "bank", ar: "تحويل بنكي", en: "Bank Transfer", icon: <Landmark className="size-4" /> },
+  ];
+
+  const submit = async () => {
+    if (!Number.isFinite(amountNum) || amountNum < 0 || amount.trim() === "") {
+      setErr(lang === "ar" ? "اكتب المبلغ اللي استلمته بالظبط" : "Enter the exact amount collected");
+      return;
+    }
+    if (method === "wallet" && (!walletFrom.trim() || !walletTo.trim())) {
+      setErr(
+        lang === "ar"
+          ? "لازم تسجل التحويل: من رقم إيه ولحساب إيه"
+          : "For wallet payments, record the sender number and the receiving account"
+      );
+      return;
+    }
+    setErr(null);
+    setBusy(true);
+    const ok = await courierDeliverWithCollection(order.id, {
+      amount: amountNum,
+      method,
+      walletFrom: method === "wallet" ? walletFrom : undefined,
+      walletTo: method === "wallet" || method === "bank" ? walletTo : undefined,
+      note: note || undefined,
+    });
+    setBusy(false);
+    if (ok) onClose();
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v && !busy) onClose(); }}>
+      <DialogContent aria-describedby={undefined} className="max-w-md rounded-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-heading text-lg font-black">
+            <span className="grid size-9 place-items-center rounded-xl bg-[#EAF6F1] text-[#2E9E6B]">
+              <Wallet className="size-4.5" />
+            </span>
+            {lang === "ar" ? "تسليم الطلب وتسجيل التحصيل" : "Deliver & Record Collection"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-2xl bg-muted/50 px-4 py-3">
+            <span className="text-xs font-bold text-muted-foreground">
+              {lang === "ar" ? `إجمالي الطلب #${order.id}` : `Order #${order.id} total`}
+            </span>
+            <span className="font-heading text-lg font-black text-[#1E4E8F]">{fmtPrice(order.total, t)}</span>
+          </div>
+
+          {/* method */}
+          <div>
+            <p className="mb-2 text-xs font-bold text-foreground/75">
+              {lang === "ar" ? "استلمت الفلوس إزاي؟" : "How did you collect it?"}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {methods.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => setMethod(m.key)}
+                  className={`flex items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-2.5 text-xs font-black transition active:scale-[0.98] ${
+                    method === m.key
+                      ? "border-[#1E4E8F] bg-[#EAF1F9]/70 text-[#1E4E8F]"
+                      : "border-border text-muted-foreground hover:border-[#1E4E8F]/40"
+                  }`}
+                >
+                  {m.icon}
+                  {lang === "ar" ? m.ar : m.en}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* amount */}
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/75">
+              {lang === "ar" ? "المبلغ اللي استلمته بالظبط (ج.م)" : "Exact amount collected (EGP)"}
+            </span>
+            <Input
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+              inputMode="decimal"
+              dir="ltr"
+              className="h-12 rounded-xl text-center font-heading text-lg font-black"
+            />
+            {amount.trim() !== "" && Number.isFinite(amountNum) && diff !== 0 && (
+              <span className="block text-[11px] font-bold text-[#B45E0A]">
+                {lang === "ar"
+                  ? `خد بالك: المبلغ مختلف عن إجمالي الطلب بـ ${diff > 0 ? "+" : ""}${diff} ج.م — سجّل اللي استلمته فعليًا`
+                  : `Note: differs from the order total by ${diff > 0 ? "+" : ""}${diff} EGP — record what you actually received`}
+              </span>
+            )}
+          </label>
+
+          {/* wallet fields */}
+          {method === "wallet" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block space-y-1.5">
+                <span className="text-xs font-bold text-foreground/75">
+                  {lang === "ar" ? "اتحولت من رقم إيه؟" : "Sent from number"}
+                </span>
+                <Input
+                  value={walletFrom}
+                  onChange={(e) => setWalletFrom(e.target.value)}
+                  inputMode="tel"
+                  dir="ltr"
+                  placeholder="01xxxxxxxxx"
+                  className="h-11 rounded-xl"
+                />
+              </label>
+              <label className="block space-y-1.5">
+                <span className="text-xs font-bold text-foreground/75">
+                  {lang === "ar" ? "راحت لحساب/رقم إيه؟" : "Received on account/number"}
+                </span>
+                <Input
+                  value={walletTo}
+                  onChange={(e) => setWalletTo(e.target.value)}
+                  dir="ltr"
+                  placeholder="01xxxxxxxxx"
+                  className="h-11 rounded-xl"
+                />
+              </label>
+            </div>
+          )}
+          {method === "bank" && (
+            <label className="block space-y-1.5">
+              <span className="text-xs font-bold text-foreground/75">
+                {lang === "ar" ? "اتحولت لحساب بنكي إيه؟ (اختياري)" : "Bank account it went to (optional)"}
+              </span>
+              <Input
+                value={walletTo}
+                onChange={(e) => setWalletTo(e.target.value)}
+                dir="ltr"
+                className="h-11 rounded-xl"
+              />
+            </label>
+          )}
+
+          {/* note */}
+          <label className="block space-y-1.5">
+            <span className="text-xs font-bold text-foreground/75">
+              {lang === "ar" ? "ملحوظة للمدير (اختياري)" : "Note for the manager (optional)"}
+            </span>
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={lang === "ar" ? "مثال: العميل دفع جزء والباقي تحويل لاحقًا" : ""}
+              className="h-11 rounded-xl"
+            />
+          </label>
+
+          {err && (
+            <p className="rounded-xl bg-[#DC4B4B]/10 px-3.5 py-2.5 text-xs font-bold text-[#DC4B4B]">{err}</p>
+          )}
+
+          <p className="text-[11px] font-bold leading-relaxed text-muted-foreground">
+            {lang === "ar"
+              ? "التحصيل ده بيظهر للمدير بس في سجل التوريد — الصيدلية مش هتشوف أي مبلغ."
+              : "This collection is visible only to the manager in the settlement log."}
+          </p>
+
+          <Button
+            disabled={busy}
+            onClick={submit}
+            className="h-12 w-full rounded-full bg-[#2E9E6B] font-black text-white hover:bg-[#278a5e] disabled:opacity-60"
+          >
+            <CheckCircle2 className="size-4" />
+            {busy
+              ? lang === "ar"
+                ? "جارٍ تسجيل التحصيل…"
+                : "Recording…"
+              : lang === "ar"
+                ? "تأكيد التسليم والتحصيل"
+                : "Confirm Delivery & Collection"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

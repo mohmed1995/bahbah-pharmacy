@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { BadgeCheck, FileWarning, ShieldCheck } from "lucide-react";
+import { BadgeCheck, FileWarning, ShieldCheck, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { setProductPriceOnServer } from "@/lib/supabase";
 import {
   discountPct,
   type Product,
@@ -74,7 +76,7 @@ export function SafeMedicinePackshot({
           ? "h-72 md:h-80 p-5 rounded-3xl shadow-sm"
           : isSm
             ? "h-full w-full p-2.5 rounded-xl"
-            : "h-36 md:h-44 p-3 rounded-t-2xl"
+            : "aspect-[4/3] p-3 rounded-t-2xl"
       }`}
     >
       {/* Top medical gradient strip */}
@@ -176,7 +178,7 @@ export function ProductVisual({
             ? "h-72 md:h-80 rounded-3xl bg-gradient-to-b from-white via-white to-[#F8FAFC] border border-slate-100"
             : isSm
               ? "h-full w-full rounded-xl bg-gradient-to-b from-white to-[#F8FAFC]"
-              : "h-36 bg-gradient-to-b from-white to-[#F8FAFC] md:h-44 rounded-t-2xl"
+              : "aspect-[4/3] bg-gradient-to-b from-white to-[#F8FAFC] rounded-t-2xl"
         }`}
       >
         {isLg && (
@@ -189,6 +191,7 @@ export function ProductVisual({
           src={product.img}
           alt={product.nameEn}
           fill
+          loading="lazy"
           sizes={isLg ? "(max-width:768px) 100vw, 560px" : isSm ? "130px" : "280px"}
           className={
             isLg
@@ -204,12 +207,13 @@ export function ProductVisual({
     );
   }
 
-  // Fallback icon visual for non-medicine categories
+  // Fallback icon visual for non-medicine categories — نفس أبعاد صورة المنتج
+  // بالظبط (aspect ثابت للـ md وارتفاع الـ lg) عشان الكارت ما يقفزش أثناء التحميل
   const box = size === "lg" ? "size-36" : size === "sm" ? "size-14" : "size-20";
   return (
     <div
       className={`${cat.tint} relative flex w-full items-center justify-center overflow-hidden ${
-        size === "lg" ? "h-56 rounded-3xl" : size === "sm" ? "h-full rounded-xl" : "h-36 rounded-t-2xl"
+        size === "lg" ? "h-72 md:h-80 rounded-3xl" : size === "sm" ? "h-full rounded-xl" : "aspect-[4/3] rounded-t-2xl"
       }`}
     >
       <div className="absolute -top-8 -end-8 size-28 rounded-full bg-white/50" />
@@ -361,6 +365,109 @@ function FavButton({ product }: { product: Product }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Quick price edit — ADMIN ONLY. The pencil sits next to the price;   */
+/* saving calls admin_set_price on the server and updates the local    */
+/* priceOverride (cache/fallback) so the new price reflects instantly  */
+/* everywhere. Customer-facing cards render nothing extra.             */
+/* ------------------------------------------------------------------ */
+export function QuickPriceEdit({ product }: { product: Product }) {
+  const t = useT();
+  const lang = useBahbah((s) => s.lang);
+  const sessionRole = useBahbah((s) => s.sessionRole);
+  const setPrice = useBahbah((s) => s.setPrice);
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  if (sessionRole !== "admin") return null;
+
+  if (!editing) {
+    return (
+      <button
+        aria-label={lang === "ar" ? "تعديل السعر" : "Edit price"}
+        title={lang === "ar" ? "تعديل سريع للسعر" : "Quick price edit"}
+        onClick={(e) => {
+          e.stopPropagation();
+          setValue(String(product.price));
+          setEditing(true);
+        }}
+        className="grid size-6 shrink-0 place-items-center self-center rounded-full bg-[#F09428]/15 text-[#B45E0A] ring-1 ring-[#F09428]/30 transition hover:bg-[#F09428]/25 active:scale-90"
+      >
+        <Pencil className="size-3.5" />
+      </button>
+    );
+  }
+
+  const save = async () => {
+    const p = Number(value);
+    if (!p || p <= 0) {
+      toast.error(lang === "ar" ? "ادخل سعر صحيح أكبر من صفر" : "Enter a valid price");
+      return;
+    }
+    setSaving(true);
+    const onServer = await setProductPriceOnServer(product.id, p);
+    /* الـ override المحلي بينعكس فورًا على الكتالوج والسلة، وهو أول مصدر سعر
+       بيقرأه place_order — فالسعر بيثبت حتى لو الـ RPC لسه مش متاحة */
+    setPrice(product.id, p);
+    setSaving(false);
+    setEditing(false);
+    toast.success(
+      onServer
+        ? lang === "ar"
+          ? `تم حفظ السعر الجديد (${p} ج.م) على السيرفر`
+          : `New price (${p}) saved on server`
+        : lang === "ar"
+          ? `تم حفظ السعر الجديد (${p} ج.م) — هيتزامن مع السيرفر`
+          : `New price (${p}) saved — will sync to server`
+    );
+  };
+
+  const pct = discountPct(product);
+  return (
+    <span
+      className="flex items-center gap-1 self-center"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <Input
+        type="number"
+        min="0"
+        step="0.5"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") void save();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        className="h-8 w-20 rounded-full px-2.5 text-xs font-black"
+        dir="ltr"
+        autoFocus
+      />
+      <button
+        aria-label="save"
+        disabled={saving}
+        onClick={() => void save()}
+        className="grid size-7 shrink-0 place-items-center rounded-full bg-[#2E9E6B] text-white transition active:scale-90 disabled:opacity-50"
+      >
+        <Check className="size-4" />
+      </button>
+      <button
+        aria-label="cancel"
+        onClick={() => setEditing(false)}
+        className="grid size-7 shrink-0 place-items-center rounded-full bg-muted text-foreground/60 transition active:scale-90"
+      >
+        <X className="size-4" />
+      </button>
+      {product.oldPrice ? (
+        <span className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground">
+          <span className="line-through">{fmtPrice(product.oldPrice, t)}</span>
+          {pct > 0 && <span className="text-[#EA580C]">-{pct}%</span>}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Price block                                                         */
 /* ------------------------------------------------------------------ */
 function Price({ product, t, big = false }: { product: Product; t: (k: DictKey) => string; big?: boolean }) {
@@ -392,6 +499,25 @@ function RxNote({ product, t }: { product: Product; t: (k: DictKey) => string })
 /* ================================================================== */
 /* COZY card — vertical, pure 4 elements: photo, name+form, price, CTA */
 /* ================================================================== */
+/* زرار «طلب» صغير جنب «غير متوفر» — بيفتح طلب ناقص معبّأ باسم الصنف */
+export function ShortageAskButton({ product, className = "" }: { product: Product; className?: string }) {
+  const lang = useBahbah((s) => s.lang);
+  const setShortageOpen = useBahbah((s) => s.setShortageOpen);
+  return (
+    <Button
+      onClick={() =>
+        setShortageOpen(true, {
+          itemName: lang === "ar" ? product.nameAr : product.nameEn,
+          source: "product",
+        })
+      }
+      className={`rounded-full bg-[#B45E0A] font-black text-white hover:bg-[#9A5008] ${className}`}
+    >
+      {lang === "ar" ? "طلب" : "Request"}
+    </Button>
+  );
+}
+
 function CozyCard({ product }: { product: Product }) {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
@@ -410,7 +536,7 @@ function CozyCard({ product }: { product: Product }) {
         onClick={() => openProduct(product.id)}
         aria-label={name}
       >
-        <div className="relative h-44 w-full overflow-hidden">
+        <div className="relative w-full overflow-hidden">
           <ProductVisual product={product} size="md" />
         </div>
       </button>
@@ -440,18 +566,22 @@ function CozyCard({ product }: { product: Product }) {
               {fmtPrice(product.oldPrice, t)}
             </span>
           )}
+          <QuickPriceEdit product={product} />
         </div>
 
         {/* 4. زر طلب سلس ومريح */}
         <div className="mt-3">
           {product.stock <= 0 ? (
-            <Button
-              disabled
-              variant="secondary"
-              className="h-9 w-full rounded-full text-xs font-bold opacity-60"
-            >
-              {t("product.out")}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                disabled
+                variant="secondary"
+                className="h-9 flex-1 rounded-full text-xs font-bold opacity-60"
+              >
+                {t("product.out")}
+              </Button>
+              <ShortageAskButton product={product} className="h-9 px-4 text-xs" />
+            </div>
           ) : inCartQty > 0 ? (
             <div className="flex h-9 w-full items-center justify-between rounded-full border-2 border-[#184C8A] bg-white px-1.5 shadow-xs">
               <button
@@ -534,13 +664,17 @@ function ListCard({ product }: { product: Product }) {
                 {fmtPrice(product.oldPrice, t)}
               </span>
             )}
+            <QuickPriceEdit product={product} />
           </div>
 
           {/* زر الطلب */}
           {product.stock <= 0 ? (
-            <Button disabled variant="secondary" className="h-8.5 rounded-full px-4 text-xs font-bold opacity-60">
-              {t("product.out")}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button disabled variant="secondary" className="h-8.5 rounded-full px-4 text-xs font-bold opacity-60">
+                {t("product.out")}
+              </Button>
+              <ShortageAskButton product={product} className="h-8.5 px-3.5 text-xs" />
+            </div>
           ) : inCartQty > 0 ? (
             <div className="flex h-8.5 w-28 items-center justify-between rounded-full border-2 border-[#184C8A] bg-white px-1.5 shadow-xs">
               <button

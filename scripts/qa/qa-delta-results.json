@@ -1,0 +1,476 @@
+{
+  "at": "2026-11-19T13:53:19.698Z",
+  "chainBroken": false,
+  "byBattery": {
+    "migration": {
+      "pass": 26,
+      "fail": 0
+    },
+    "delta-migration": {
+      "pass": 3,
+      "fail": 0
+    },
+    "delta-introspection": {
+      "pass": 11,
+      "fail": 0
+    },
+    "D1": {
+      "pass": 12,
+      "fail": 0
+    },
+    "D2": {
+      "pass": 3,
+      "fail": 0
+    },
+    "loyalty-admin": {
+      "pass": 19,
+      "fail": 0
+    }
+  },
+  "results": [
+    {
+      "battery": "migration",
+      "name": "platform stubs + pre-existing-table stand-ins created",
+      "pass": true,
+      "evidence": "auth schema/jwt/uid, roles, publication, orders/rx/care/measurements stand-ins (chain has no CREATE TABLE for these four — D10)"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: security.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: commerce.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: commerce-seed.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-whatsapp-orders.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: WAREHOUSE_SEED_DDL",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-warehouse-sync.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-shortage-requests.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-portals-permissions.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-collections-addresses.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-free-shipping-campaign.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-loyalty-points.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-nursing-services.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-security-layer1.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-wiring-fixes.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-loyalty-quota.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "chain file executes: upgrade-2026-11-19-integrity-fixes.sql",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order retains campaign check",
+      "pass": true,
+      "evidence": "pg_proc source of winning place_order"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order retains loyalty card logic",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order contains quota gate + consumption",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final place_order retains discreet packaging + lat/lng",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final has_permission includes nursing in pharmacist defaults",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "final guard_order_update knows the ready step",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "migration",
+      "name": "get_public_settings returns every settings key the client reads",
+      "pass": true,
+      "evidence": "20 keys returned; missing: none"
+    },
+    {
+      "battery": "migration",
+      "name": "RLS enabled on every public table",
+      "pass": true,
+      "evidence": "all tables row-secured"
+    },
+    {
+      "battery": "delta-migration",
+      "name": "post-repair: integrity file contains NO truncation-marker line",
+      "pass": true,
+      "evidence": "junk lines: []"
+    },
+    {
+      "battery": "delta-migration",
+      "name": "post-repair: the chain run itself installs integrity-fixes (care_self_update present)",
+      "pass": true,
+      "evidence": "care_self_update exists after chain: true"
+    },
+    {
+      "battery": "delta-migration",
+      "name": "post-repair: re-executing the repaired integrity file is clean (idempotent)",
+      "pass": true,
+      "evidence": "no error"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "care_self_update exists and is SECURITY DEFINER",
+      "pass": true,
+      "evidence": "acl={postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "care_self_update: EXECUTE granted to authenticated only (not anon, not PUBLIC)",
+      "pass": true,
+      "evidence": "acl={postgres=X/postgres,authenticated=X/postgres}"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "care_self_update source: phone-digit matching + status whitelist present",
+      "pass": true,
+      "evidence": "pg_proc source"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "settings_admin_write policy widened: admin OR has_permission('settings') in USING and WITH CHECK",
+      "pass": true,
+      "evidence": "qual=((app_role() = 'admin'::text) OR has_permission('settings'::text))"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "admin_settings.driver_removed column exists",
+      "pass": true,
+      "evidence": "found=1"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "get_public_settings still returns all keys, now incl. driver_removed (>=19 keys)",
+      "pass": true,
+      "evidence": "20 keys: id,ads_off,coupons,ad_edits,settings,stock_adj,care_edits,site_edits,updated_at,zone_edits,offer_edits,img_override,driver_status,nursing_edits,zone_disabled,custom_drivers,driver_removed,nursing_custom,price_override,custom_products"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "loyalty_cards status constraint widened to include 'voided'",
+      "pass": true,
+      "evidence": "CHECK ((status = ANY (ARRAY['active'::text, 'used'::text, 'voided'::text])))"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "admin_loyalty_lookup exists and is SECURITY DEFINER",
+      "pass": true,
+      "evidence": "definer"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "admin_loyalty_adjust exists and is SECURITY DEFINER",
+      "pass": true,
+      "evidence": "definer"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "admin_loyalty_set_card_status is defined (client calls it at supabase.ts:1682)",
+      "pass": true,
+      "evidence": "defined"
+    },
+    {
+      "battery": "delta-introspection",
+      "name": "loyalty_resolve_phone is internal: no EXECUTE for authenticated/PUBLIC",
+      "pass": true,
+      "evidence": "acl={postgres=X/postgres}"
+    },
+    {
+      "battery": "D1",
+      "name": "before: active sub A counts as care member (free-delivery eligible)",
+      "pass": true,
+      "evidence": "loyalty_is_care_member"
+    },
+    {
+      "battery": "D1",
+      "name": "patient A pauses OWN sub via care_self_update; patient B's row untouched",
+      "pass": true,
+      "evidence": "A={\"status\":\"paused\",\"day_pref\":5} B={\"status\":\"active\",\"day_pref\":7}"
+    },
+    {
+      "battery": "D1",
+      "name": "patient A changes box day (previously had NO server write at all)",
+      "pass": true,
+      "evidence": "{\"status\":\"paused\",\"day_pref\":15}"
+    },
+    {
+      "battery": "D1",
+      "name": "patient A resumes own sub",
+      "pass": true,
+      "evidence": "{\"status\":\"active\",\"day_pref\":15}"
+    },
+    {
+      "battery": "D1",
+      "name": "invalid status rejected",
+      "pass": true,
+      "evidence": "error: bad_status"
+    },
+    {
+      "battery": "D1",
+      "name": "day_pref out of range rejected",
+      "pass": true,
+      "evidence": "error: bad_day_pref"
+    },
+    {
+      "battery": "D1",
+      "name": "no-identity session rejected",
+      "pass": true,
+      "evidence": "error: no_identity"
+    },
+    {
+      "battery": "D1",
+      "name": "anon cannot EXECUTE care_self_update (grant is authenticated-only)",
+      "pass": true,
+      "evidence": "error: permission denied for function care_self_update"
+    },
+    {
+      "battery": "D1",
+      "name": "patient A cancels own sub — and it PERSISTS server-side (the original D1 defect)",
+      "pass": true,
+      "evidence": "{\"status\":\"cancelled\",\"day_pref\":15}"
+    },
+    {
+      "battery": "D1",
+      "name": "cancelled sub no longer counts for loyalty_is_care_member; B (active) still does",
+      "pass": true,
+      "evidence": "eligibility flip verified"
+    },
+    {
+      "battery": "D1",
+      "name": "money layer: cancelled member A pays full delivery fee again",
+      "pass": true,
+      "evidence": "{\"id\":\"D-ORD-A1\",\"total\":220,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":20}"
+    },
+    {
+      "battery": "D1",
+      "name": "money layer (control): active member B still gets the waiver",
+      "pass": true,
+      "evidence": "{\"id\":\"D-ORD-B1\",\"total\":200,\"discount\":0,\"subtotal\":200,\"duplicate\":false,\"delivery_fee\":0}"
+    },
+    {
+      "battery": "D2",
+      "name": "pharmacist WITHOUT 'settings' grant: still blocked from admin_settings writes",
+      "pass": true,
+      "evidence": "perm=false updated=0"
+    },
+    {
+      "battery": "D2",
+      "name": "pharmacist WITH the manager-granted 'settings' permission: write allowed (restock/prices can persist)",
+      "pass": true,
+      "evidence": "perm=true updated=1"
+    },
+    {
+      "battery": "D2",
+      "name": "admin: settings write still allowed",
+      "pass": true,
+      "evidence": "updated=1"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "pharmacist: admin_loyalty_lookup raises admin_only",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "pharmacist: admin_loyalty_adjust raises admin_only",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "patient: admin_loyalty_lookup raises admin_only",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "anon: EXECUTE on admin_loyalty_lookup denied (revoked)",
+      "pass": true,
+      "evidence": "error: permission denied for function admin_loyalty_lookup"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin lookup: found, balance + latest card reported",
+      "pass": true,
+      "evidence": "{\"found\":true,\"phone\":\"01000000021\",\"balance\":600,\"card_code\":\"BBH-DELTA1\",\"free_used\":0,\"free_quota\":4,\"card_status\":\"active\",\"care_member\":false,\"card_percent\":10,\"free_remaining\":4}"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin lookup: unknown phone returns found=false (no throw)",
+      "pass": true,
+      "evidence": "{\"found\":false}"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin adjust +50: returns new balance 650 and writes an audited 'adjust' ledger row",
+      "pass": true,
+      "evidence": "balance=650 adjustRows=1"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin adjust -50: balance back to 600 (via loyalty_credit, no back door)",
+      "pass": true,
+      "evidence": "balance=600"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin adjust: unknown account rejected",
+      "pass": true,
+      "evidence": "error: account_not_found"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin adjust: zero delta rejected",
+      "pass": true,
+      "evidence": "error: bad_delta"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "pharmacist: admin_loyalty_set_card_status raises admin_only",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "patient: admin_loyalty_set_card_status raises admin_only",
+      "pass": true,
+      "evidence": "error: admin_only"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "anon: EXECUTE on admin_loyalty_set_card_status denied (revoked)",
+      "pass": true,
+      "evidence": "error: permission denied for function admin_loyalty_set_card_status"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin voids an active card: returns true, status now voided",
+      "pass": true,
+      "evidence": "ret=true status=voided"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "re-voiding an already-voided card: returns false (no change)",
+      "pass": true,
+      "evidence": "ret=false"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin reactivates the voided card: returns true, status now active",
+      "pass": true,
+      "evidence": "ret=true status=active"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "a USED card is never touched: returns false, status stays used",
+      "pass": true,
+      "evidence": "ret=false status=used"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin set_card_status: invalid status rejected",
+      "pass": true,
+      "evidence": "error: bad_status"
+    },
+    {
+      "battery": "loyalty-admin",
+      "name": "admin set_card_status: unknown account rejected",
+      "pass": true,
+      "evidence": "error: account_not_found"
+    }
+  ]
+}

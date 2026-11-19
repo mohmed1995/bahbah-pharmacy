@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import type { RxStatus } from "@/lib/bahbah/data";
 import { useBahbah, useT, type RxRequest } from "@/lib/bahbah/store";
 import { IconRxClipboard, IconRxSheet } from "./icons";
+import { RxPhotoLink } from "./rx-photo";
 import { AdminCard, KpiCard, SectionTitle } from "./admin-ui";
 import { toast } from "sonner";
 
@@ -124,7 +125,7 @@ function RxCard({
   onSet,
 }: {
   rx: RxRequest;
-  onSet: (id: string, status: RxStatus) => void;
+  onSet: (id: string, status: RxStatus) => Promise<boolean>;
 }) {
   const t = useT();
   const lang = useBahbah((s) => s.lang);
@@ -156,20 +157,22 @@ function RxCard({
           </p>
           <p className="mt-1 flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
             <FileImage className="size-3.5 shrink-0" />
-            {rx.fileName && (rx.fileName.startsWith("http://") || rx.fileName.startsWith("https://")) ? (
-              <a
-                href={rx.fileName}
-                target="_blank"
-                rel="noopener noreferrer"
+            {rx.fileName ? (
+              <RxPhotoLink
+                value={rx.fileName}
                 className="inline-flex items-center gap-1 font-bold text-[#1E4E8F] underline hover:text-[#163a6b]"
-                dir="ltr"
+                fallbackText={
+                  <span className="truncate" dir="ltr">
+                    {rx.fileName}
+                  </span>
+                }
               >
                 <span>عرض صورة الروشتة</span>
                 <ExternalLink className="size-3" />
-              </a>
+              </RxPhotoLink>
             ) : (
               <span className="truncate" dir="ltr">
-                {rx.fileName || "بدون ملف"}
+                بدون ملف
               </span>
             )}
             <span className="shrink-0 text-border">•</span>
@@ -187,9 +190,11 @@ function RxCard({
           <Button
             size="sm"
             className="h-9 flex-1 rounded-full bg-[#2E9E6B] text-xs font-bold hover:bg-[#278a5e]"
-            onClick={() => {
-              onSet(rx.id, "approved");
-              toast.success(t("adm.rx.done"));
+            onClick={async () => {
+              /* النجاح بيظهر بس لو السيرفر أكّد تغيير الحالة فعلًا —
+                 قبله كان بيظهر دايمًا حتى لو الحفظ فشل */
+              const ok = await onSet(rx.id, "approved");
+              if (ok) toast.success(t("adm.rx.done"));
             }}
           >
             <BadgeCheck className="size-4" />
@@ -199,9 +204,9 @@ function RxCard({
             size="sm"
             variant="outline"
             className="h-9 flex-1 rounded-full border-[#DC4B4B]/40 text-xs font-bold text-[#DC4B4B] hover:bg-[#DC4B4B]/10 hover:text-[#DC4B4B]"
-            onClick={() => {
-              onSet(rx.id, "rejected");
-              toast.success(t("adm.rx.done"));
+            onClick={async () => {
+              const ok = await onSet(rx.id, "rejected");
+              if (ok) toast.success(t("adm.rx.done"));
             }}
           >
             <Ban className="size-4" />

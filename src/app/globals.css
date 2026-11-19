@@ -501,3 +501,33 @@ html.bahbah-elder span {
   50% { box-shadow: 0 0 0 6px rgba(220, 75, 75, 0); }
 }
 .bb-count { animation: bb-count-pulse 1.6s ease-in-out infinite; }
+
+/* ---- لافتة النيون الليلية (00:00–05:00) — هيدر الصفحة الرئيسية ---- */
+@keyframes bb-neon-breathe {
+  0%, 100% { text-shadow: 0 0 6px rgba(245, 158, 11, 0.9), 0 0 18px rgba(234, 88, 12, 0.75), 0 0 42px rgba(234, 88, 12, 0.5); }
+  50% { text-shadow: 0 0 8px rgba(245, 158, 11, 1), 0 0 26px rgba(234, 88, 12, 0.95), 0 0 60px rgba(234, 88, 12, 0.65); }
+}
+.bb-neon-sign {
+  color: #ffd9a0;
+  animation: bb-neon-breathe 3.2s ease-in-out infinite;
+}
+.bb-night-sky {
+  background:
+    radial-gradient(1.5px 1.5px at 12% 30%, rgba(255, 255, 255, 0.9) 50%, transparent 51%),
+    radial-gradient(1px 1px at 28% 65%, rgba(255, 255, 255, 0.7) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 46% 22%, rgba(255, 255, 255, 0.8) 50%, transparent 51%),
+    radial-gradient(1px 1px at 63% 55%, rgba(255, 255, 255, 0.6) 50%, transparent 51%),
+    radial-gradient(2px 2px at 78% 28%, rgba(255, 255, 255, 0.85) 50%, transparent 51%),
+    radial-gradient(1px 1px at 90% 60%, rgba(255, 255, 255, 0.7) 50%, transparent 51%),
+    linear-gradient(135deg, #060d1f 0%, #0b1e38 55%, #12294d 100%);
+}
+.bb-crescent {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  box-shadow: -6px 3px 0 0 #fcd34d;
+  transform: rotate(-24deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bb-neon-sign { animation: none; }
+}
