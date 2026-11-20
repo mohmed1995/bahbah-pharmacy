@@ -6,7 +6,7 @@
 /* IMPORTANT: bump VERSION on EVERY deploy. Cache invalidation is manual —
    if this string does not change, returning visitors keep the old caches
    (old assets, and product images are served under fixed unhashed names). */
-const VERSION = "bahbah-v5";
+const VERSION = "bahbah-v8";
 const CORE_CACHE = `${VERSION}-core`;
 const ASSET_CACHE = `${VERSION}-assets`;
 
